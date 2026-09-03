@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>واجهة السائق</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; text-align: center; }
+    input, select { padding: 10px; font-size: 16px; width: 80%; max-width: 300px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; }
+    button { padding: 15px 30px; font-size: 18px; background: #2c3e50; color: white; border: none; border-radius: 8px; margin-top: 15px; cursor: pointer; width: 85%; max-width: 320px; }
+    button:disabled { background: #999; }
+    .checkout-btn { background: #c0392b; }
+    .order-open-btn { background: #27ae60; }
+    .order-close-btn { background: #e67e22; }
+    #result, #resultOut, #resultOrderOpen, #resultOrderClose {
+      margin-top: 20px; font-size: 16px; background: white; padding: 15px; border-radius: 8px; min-height: 20px;
+    }
+    #reader { width: 90%; max-width: 350px; margin: 15px auto; }
+    #qrStatus { font-weight: bold; color: #2c3e50; }
+    hr { margin: 40px 0; border: none; border-top: 2px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>تسجيل حضور</h1>
+
+  <div>
+    <input type="number" id="driverId" placeholder="رقم السائق"><br>
+  </div>
+
+  <div id="qrStatus">امسح كود QR بتاع التوكتوك</div>
+  <div id="reader"></div>
+
+  <button id="checkInBtn" onclick="checkIn()" disabled>تسجيل الحضور</button>
+  <div id="result">جاهز</div>
+
+  <hr>
+
+  <h1>فتح أوردر</h1>
+  <div>
+    <input type="number" id="driverIdOrder" placeholder="رقم السائق"><br>
+    <input type="number" id="shiftIdOrder" placeholder="رقم الوردية"><br>
+    <select id="orderType">
+      <option value="delivery">توصيل عميل</option>
+      <option value="full_trip">رحلة كاملة</option>
+    </select>
+  </div>
+  <button class="order-open-btn" onclick="openOrder()">فتح الأوردر</button>
+  <div id="resultOrderOpen">جاهز</div>
+
+  <hr>
+
+  <h1>قفل أوردر</h1>
+  <div>
+    <input type="number" id="orderIdClose" placeholder="رقم الأوردر">
+  </div>
+  <button class="order-close-btn" onclick="closeOrder()">قفل الأوردر</button>
+  <div id="resultOrderClose">جاهز</div>
+
+  <hr>
+
+  <h1>تسجيل انصراف</h1>
+  <div>
+    <input type="number" id="driverIdOut" placeholder="رقم السائق"><br>
+  </div>
+  <button class="checkout-btn" onclick="checkOut()">تسجيل الانصراف</button>
+  <div id="resultOut">جاهز</div>
+
+  <script>
+    let scannedQrCode = null;
+
+    function onScanSuccess(decodedText) {
+      scannedQrCode = decodedText;
+      document.getElementById('qrStatus').textContent = 'تم مسح الكود: ' + decodedText;
+      document.getElementById('checkInBtn').disabled = false;
+      html5QrCode.stop();
+    }
+
+    const html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 200 },
+      onScanSuccess
+    ).catch(err => {
+      document.getElementById('qrStatus').textContent = 'مش قادر أوصل للكاميرا: ' + err;
+    });
+
+    function checkIn() {
+      const resultDiv = document.getElementById('result');
+      const btn = document.getElementById('checkInBtn');
+      const driver_id = document.getElementById('driverId').value;
+
+      if (!driver_id || !scannedQrCode) {
+        resultDiv.textContent = 'من فضلك اكتب رقم السائق وامسح كود QR الأول';
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        resultDiv.textContent = 'المتصفح ده مش بيدعم تحديد الموقع';
+        return;
+      }
+
+      btn.disabled = true;
+      resultDiv.textContent = 'جاري تحديد موقعك...';
+
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+
+          resultDiv.textContent = 'جاري تسجيل الحضور...';
+
+          fetch('/shifts/check-in', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              driver_id: driver_id,
+              tuktuk_qr_code: scannedQrCode,
+              lat: lat,
+              lng: lng,
+              photo: 'placeholder_photo.jpg'
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            btn.disabled = false;
+            if (data.error) {
+              resultDiv.textContent = 'خطأ: ' + data.error;
+            } else {
+              resultDiv.textContent = data.message + ' - رقم الوردية: ' + data.shift_id;
+            }
+          })
+          .catch(err => {
+            btn.disabled = false;
+            resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر';
+          });
+        },
+        function(error) {
+          btn.disabled = false;
+          resultDiv.textContent = 'حصل خطأ في تحديد الموقع: ' + error.message;
+        }
+      );
+    }
+
+    function openOrder() {
+      const resultDiv = document.getElementById('resultOrderOpen');
+      const driver_id = document.getElementById('driverIdOrder').value;
+      const shift_id = document.getElementById('shiftIdOrder').value;
+      const order_type = document.getElementById('orderType').value;
+
+      if (!driver_id || !shift_id) {
+        resultDiv.textContent = 'من فضلك اكتب رقم السائق ورقم الوردية';
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        resultDiv.textContent = 'المتصفح ده مش بيدعم تحديد الموقع';
+        return;
+      }
+
+      resultDiv.textContent = 'جاري تحديد موقعك...';
+
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+
+          resultDiv.textContent = 'جاري فتح الأوردر...';
+
+          fetch('/orders/open', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              shift_id: shift_id,
+              driver_id: driver_id,
+              order_type: order_type,
+              start_lat: lat,
+              start_lng: lng
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.error) {
+              resultDiv.textContent = 'خطأ: ' + data.error;
+            } else {
+              resultDiv.textContent = data.message + ' - رقم الأوردر: ' + data.order_id;
+              document.getElementById('orderIdClose').value = data.order_id;
+            }
+          })
+          .catch(err => {
+            resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر';
+          });
+        },
+        function(error) {
+          resultDiv.textContent = 'حصل خطأ في تحديد الموقع: ' + error.message;
+        }
+      );
+    }
+
+    function closeOrder() {
+      const resultDiv = document.getElementById('resultOrderClose');
+      const order_id = document.getElementById('orderIdClose').value;
+
+      if (!order_id) {
+        resultDiv.textContent = 'من فضلك اكتب رقم الأوردر';
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        resultDiv.textContent = 'المتصفح ده مش بيدعم تحديد الموقع';
+        return;
+      }
+
+      resultDiv.textContent = 'جاري تحديد موقعك...';
+
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+
+          resultDiv.textContent = 'جاري قفل الأوردر...';
+
+          fetch('/orders/close', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              order_id: order_id,
+              end_lat: lat,
+              end_lng: lng
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.error) {
+              resultDiv.textContent = 'خطأ: ' + data.error;
+            } else {
+              resultDiv.textContent =
+                data.message +
+                ' | المسافة: ' + data.distance_km + ' كم' +
+                ' | السعر: ' + data.price + ' جنيه' +
+                ' | مستحقاتك: ' + data.driver_earning + ' جنيه';
+            }
+          })
+          .catch(err => {
+            resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر';
+          });
+        },
+        function(error) {
+          resultDiv.textContent = 'حصل خطأ في تحديد الموقع: ' + error.message;
+        }
+      );
+    }
+
+    function checkOut() {
+      const resultDiv = document.getElementById('resultOut');
+      const driver_id = document.getElementById('driverIdOut').value;
+
+      if (!driver_id) {
+        resultDiv.textContent = 'من فضلك اكتب رقم السائق';
+        return;
+      }
+
+      resultDiv.textContent = 'جاري البحث عن الوردية المفتوحة...';
+
+      fetch('/shifts/open/' + driver_id)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            resultDiv.textContent = 'خطأ: ' + data.error;
+            return;
+          }
+
+          const shift_id = data.id;
+          resultDiv.textContent = 'جاري تسجيل الانصراف...';
+
+          fetch('/shifts/check-out', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              shift_id: shift_id,
+              photo: 'checkout_placeholder.jpg'
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.error) {
+              resultDiv.textContent = 'خطأ: ' + data.error;
+            } else {
+              resultDiv.textContent = data.message;
+            }
+          });
+        })
+        .catch(err => {
+          resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر';
+        });
+    }
+  </script>
+</body>
+</html>

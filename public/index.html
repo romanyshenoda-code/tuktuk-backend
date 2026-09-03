@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لوحة تحكم الأدمن</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    h1 { color: #333; }
+    h2 { color: #2c3e50; margin-top: 40px; }
+    table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: right; }
+    th { background: #2c3e50; color: white; }
+    .status-open { color: green; font-weight: bold; }
+    .status-closed { color: gray; }
+    form { background: white; padding: 15px; margin-top: 10px; border-radius: 6px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 8px 16px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #34495e; }
+    #addDriverMsg { margin-top: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>لوحة تحكم الأدمن</h1>
+
+  <h2>إضافة سائق جديد</h2>
+  <form id="addDriverForm">
+    <input type="text" id="newName" placeholder="الاسم" required>
+    <input type="text" id="newPhone" placeholder="رقم التليفون" required>
+    <input type="text" id="newNationalId" placeholder="الرقم القومي">
+    <button type="submit">إضافة السائق</button>
+  </form>
+  <div id="addDriverMsg"></div>
+
+  <h2>السواقين</h2>
+  <table id="driversTable">
+    <thead><tr><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الحالة</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>التوكتوكات</h2>
+  <form id="addTuktukForm">
+  <input type="text" id="newTuktukNumber" placeholder="رقم التوكتوك" required>
+  <input type="text" id="newQrCode" placeholder="كود QR" required>
+  <button type="submit">إضافة التوكتوك</button>
+</form>
+<div id="addTuktukMsg"></div>
+  <table id="tuktuksTable">
+    <thead><tr><th>الرقم</th><th>رقم التوكتوك</th><th>QR Code</th><th>الحالة</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>الورديات</h2>
+  <table id="shiftsTable">
+    <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th><th>وقت الانصراف</th><th>الحالة</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>الأوردرات</h2>
+  <table id="ordersTable">
+    <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>المسافة (كم)</th><th>السعر</th><th>مستحقات السائق</th><th>الحالة</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>ملخصات الورديات</h2>
+  <table id="summariesTable">
+    <thead><tr><th>الرقم</th><th>السائق</th><th>عدد الأوردرات</th><th>رحلات كاملة</th><th>توصيلات</th><th>إجمالي السعر</th><th>مستحقات السائق</th><th>معدّل يدوي؟</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    function loadTable(url, tableId, rowBuilder) {
+      const tbody = document.querySelector(`#${tableId} tbody`);
+      tbody.innerHTML = '';
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          data.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = rowBuilder(item);
+            tbody.appendChild(row);
+          });
+        });
+    }
+
+    function loadAllTables() {
+      loadTable('/drivers', 'driversTable', d => `
+        <td>${d.id}</td><td>${d.name}</td><td>${d.phone}</td><td>${d.status}</td>
+      `);
+
+      loadTable('/tuktuks', 'tuktuksTable', t => `
+        <td>${t.id}</td><td>${t.tuktuk_number}</td><td>${t.qr_code}</td><td>${t.status}</td>
+      `);
+
+      loadTable('/shifts', 'shiftsTable', s => `
+        <td>${s.id}</td>
+        <td>${s.driver_name}</td>
+        <td>${s.tuktuk_number}</td>
+        <td>${s.check_in_time ? new Date(s.check_in_time).toLocaleString('ar-EG') : '-'}</td>
+        <td>${s.check_out_time ? new Date(s.check_out_time).toLocaleString('ar-EG') : '-'}</td>
+        <td class="status-${s.status}">${s.status === 'open' ? 'مفتوحة' : 'مقفولة'}</td>
+      `);
+
+      loadTable('/orders', 'ordersTable', o => `
+        <td>${o.id}</td>
+        <td>${o.driver_name}</td>
+        <td>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'}</td>
+        <td>${o.distance_km || '-'}</td>
+        <td>${o.price || '-'}</td>
+        <td>${o.driver_earning || '-'}</td>
+        <td class="status-${o.status}">${o.status === 'open' ? 'مفتوح' : 'مقفول'}</td>
+      `);
+
+      loadTable('/shift-summaries', 'summariesTable', sm => `
+        <td>${sm.id}</td>
+        <td>${sm.driver_name}</td>
+        <td>${sm.total_orders}</td>
+        <td>${sm.full_trip_count}</td>
+        <td>${sm.delivery_count}</td>
+        <td>${sm.total_price}</td>
+        <td>${sm.total_driver_earning}</td>
+        <td>${sm.is_manually_edited ? 'نعم' : 'لا'}</td>
+      `);
+    }
+
+    document.getElementById('addDriverForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('newName').value;
+      const phone = document.getElementById('newPhone').value;
+      const national_id = document.getElementById('newNationalId').value;
+
+      fetch('/drivers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, national_id })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('addDriverMsg').textContent = data.message || data.error;
+        document.getElementById('addDriverForm').reset();
+        loadAllTables(); // نحدّث كل الجداول تلقائي بعد الإضافة
+      });
+    });
+document.getElementById('addTuktukForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const tuktuk_number = document.getElementById('newTuktukNumber').value;
+  const qr_code = document.getElementById('newQrCode').value;
+
+  fetch('/tuktuks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tuktuk_number, qr_code })
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById('addTuktukMsg').textContent = data.message || data.error;
+    document.getElementById('addTuktukForm').reset();
+    loadAllTables();
+  });
+});
+    loadAllTables();
+  </script>
+</body>
+</html>
