@@ -7,14 +7,17 @@ const connection = mysql.createConnection({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl: { rejectUnauthorized: false },
+  connectTimeout: 20000
+});
+
+connection.on('error', (err) => {
+  console.error('خطأ في الاتصال بقاعدة البيانات:', err.message);
 });
 
 connection.connect((err) => {
   if (err) {
-    console.error('فشل الاتصال بقاعدة البيانات:', err.message);
+    console.error('فشل الاتصال بقاعدة البيانات:', err.message, err.code);
     return;
   }
   console.log('تم الاتصال بقاعدة البيانات بنجاح!');
