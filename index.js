@@ -1,11 +1,36 @@
 const express = require('express');
 const session = require('express-session');
+const multer = require('multer');
+const path = require('path');
 const db = require('./db');
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+// إعداد رفع الصور
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e9) + path.extname(file.originalname);
+    cb(null, uniqueName);
+  }
+});
+const upload = multer({ storage: storage });
+app.use('/uploads', express.static('uploads'));
+
+// دالة تجيب قيمة إعداد معين من قاعدة البيانات
+function getSetting(key, callback) {
+  db.query('SELECT setting_value FROM system_settings WHERE setting_key = ?', [key], (err, results) => {
+    if (err || results.length === 0) {
+      return callback(null, 'false');
+    }
+    callback(null, results[0].setting_value);
+  });
+}
 
 app.use(session({
   secret: 'tuktuk-secret-key-2026',
@@ -36,13 +61,40 @@ app.get('/api/logout', (req, res) => {
   res.redirect('/login.html');
 });
 
-// نحمي الصفحة الرئيسية بس (الداشبورد)، لازم تكون قبل express.static
 app.get('/', requireLogin, (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
 
 app.use(express.static('public'));
 
+// ==================== الإعدادات ====================
+app.get('/settings', (req, res) => {
+  db.query('SELECT setting_key, setting_value FROM system_settings', (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' });
+    }
+    res.json(results);
+  });
+});
+
+app.put('/settings/:key', (req, res) => {
+  const { key } = req.params;
+  const { value } = req.body;
+
+  db.query('UPDATE system_settings SET setting_value = ? WHERE setting_key = ?', [value, key], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تحديث الإعداد' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'الإعداد غير موجود' });
+    }
+    res.json({ message: 'تم تحديث الإعداد بنجاح' });
+  });
+});
+
+// ==================== السواقين ====================
 app.post('/drivers', (req, res) => {
   const { name, phone, national_id } = req.body;
 
@@ -67,6 +119,7 @@ app.get('/drivers', (req, res) => {
   });
 });
 
+// ==================== التوكتوكات ====================
 app.post('/tuktuks', (req, res) => {
   const { tuktuk_number, qr_code } = req.body;
 
@@ -91,6 +144,7 @@ app.get('/tuktuks', (req, res) => {
   });
 });
 
+// ==================== مواقع الحضور ====================
 app.post('/admin-locations', (req, res) => {
   const { name, latitude, longitude, radius_meters } = req.body;
 
@@ -104,55 +158,72 @@ app.post('/admin-locations', (req, res) => {
   });
 });
 
-app.post('/shifts/check-in', (req, res) => {
-  const { driver_id, tuktuk_qr_code, lat, lng, photo } = req.body;
+// ==================== الحضور (Check-in) ====================
+app.post('/shifts/check-in', upload.single('photo'), (req, res) => {
+  const { driver_id, tuktuk_qr_code, lat, lng } = req.body;
+  const photo = req.file ? req.file.filename : null;
 
-  const findTuktuk = 'SELECT id FROM tuktuks WHERE qr_code = ?';
-  db.query(findTuktuk, [tuktuk_qr_code], (err, tuktukResults) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في البحث عن التوكتوك' });
-    }
-    if (tuktukResults.length === 0) {
-      return res.status(404).json({ error: 'كود QR غير معروف' });
+  getSetting('photo_required_checkin', (err, required) => {
+    if (required === 'true' && !photo) {
+      return res.status(400).json({ error: 'الصورة إجبارية عند تسجيل الحضور' });
     }
 
-    const tuktuk_id = tuktukResults[0].id;
-
-    const insertShift = `
-      INSERT INTO shifts (driver_id, tuktuk_id, check_in_time, check_in_photo, check_in_lat, check_in_lng, status)
-      VALUES (?, ?, NOW(), ?, ?, ?, 'open')
-    `;
-    db.query(insertShift, [driver_id, tuktuk_id, photo, lat, lng], (err, result) => {
+    const findTuktuk = 'SELECT id FROM tuktuks WHERE qr_code = ?';
+    db.query(findTuktuk, [tuktuk_qr_code], (err, tuktukResults) => {
       if (err) {
         console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تسجيل الحضور' });
+        return res.status(500).json({ error: 'حصل خطأ في البحث عن التوكتوك' });
       }
-      res.status(201).json({ message: 'تم تسجيل الحضور بنجاح', shift_id: result.insertId, tuktuk_id });
+      if (tuktukResults.length === 0) {
+        return res.status(404).json({ error: 'كود QR غير معروف' });
+      }
+
+      const tuktuk_id = tuktukResults[0].id;
+
+      const insertShift = `
+        INSERT INTO shifts (driver_id, tuktuk_id, check_in_time, check_in_photo, check_in_lat, check_in_lng, status)
+        VALUES (?, ?, NOW(), ?, ?, ?, 'open')
+      `;
+      db.query(insertShift, [driver_id, tuktuk_id, photo, lat, lng], (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: 'حصل خطأ في تسجيل الحضور' });
+        }
+        res.status(201).json({ message: 'تم تسجيل الحضور بنجاح', shift_id: result.insertId, tuktuk_id });
+      });
     });
   });
 });
 
-app.post('/shifts/check-out', (req, res) => {
-  const { shift_id, photo } = req.body;
+// ==================== الانصراف (Check-out) ====================
+app.post('/shifts/check-out', upload.single('photo'), (req, res) => {
+  const { shift_id } = req.body;
+  const photo = req.file ? req.file.filename : null;
 
-  const updateShift = `
-    UPDATE shifts
-    SET check_out_time = NOW(), check_out_photo = ?, status = 'closed'
-    WHERE id = ? AND status = 'open'
-  `;
-  db.query(updateShift, [photo, shift_id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تسجيل الانصراف' });
+  getSetting('photo_required_checkout', (err, required) => {
+    if (required === 'true' && !photo) {
+      return res.status(400).json({ error: 'الصورة إجبارية عند تسجيل الانصراف' });
     }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'الوردية غير موجودة أو مقفولة بالفعل' });
-    }
-    res.json({ message: 'تم تسجيل الانصراف بنجاح' });
+
+    const updateShift = `
+      UPDATE shifts
+      SET check_out_time = NOW(), check_out_photo = ?, status = 'closed'
+      WHERE id = ? AND status = 'open'
+    `;
+    db.query(updateShift, [photo, shift_id], (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في تسجيل الانصراف' });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'الوردية غير موجودة أو مقفولة بالفعل' });
+      }
+      res.json({ message: 'تم تسجيل الانصراف بنجاح' });
+    });
   });
 });
 
+// ==================== فتح أوردر ====================
 app.post('/orders/open', (req, res) => {
   const { shift_id, driver_id, order_type, start_lat, start_lng } = req.body;
 
@@ -193,6 +264,7 @@ app.post('/orders/open', (req, res) => {
   });
 });
 
+// دالة حساب المسافة بمعادلة Haversine
 function calculateDistance(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -205,61 +277,70 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
   return R * c;
 }
 
-app.post('/orders/close', (req, res) => {
+// ==================== قفل أوردر (مع صورة اختيارية) ====================
+app.post('/orders/close', upload.single('photo'), (req, res) => {
   const { order_id, end_lat, end_lng } = req.body;
+  const photo = req.file ? req.file.filename : null;
 
-  const getOrder = 'SELECT * FROM orders WHERE id = ? AND status = "open"';
-  db.query(getOrder, [order_id], (err, orderResults) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الأوردر' });
-    }
-    if (orderResults.length === 0) {
-      return res.status(404).json({ error: 'الأوردر غير موجود أو مقفول بالفعل' });
+  getSetting('photo_required_order_close', (err, required) => {
+    if (required === 'true' && !photo) {
+      return res.status(400).json({ error: 'الصورة إجبارية عند قفل الأوردر' });
     }
 
-    const order = orderResults[0];
-    const distance_km = calculateDistance(order.start_lat, order.start_lng, end_lat, end_lng);
-
-    const getPricing = 'SELECT * FROM pricing_rules WHERE order_type = ? ORDER BY effective_from DESC LIMIT 1';
-    db.query(getPricing, [order.order_type], (err, pricingResults) => {
+    const getOrder = 'SELECT * FROM orders WHERE id = ? AND status = "open"';
+    db.query(getOrder, [order_id], (err, orderResults) => {
       if (err) {
         console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في جلب التسعيرة' });
+        return res.status(500).json({ error: 'حصل خطأ في جلب الأوردر' });
+      }
+      if (orderResults.length === 0) {
+        return res.status(404).json({ error: 'الأوردر غير موجود أو مقفول بالفعل' });
       }
 
-      const pricing = pricingResults[0];
-      let price = 0;
+      const order = orderResults[0];
+      const distance_km = calculateDistance(order.start_lat, order.start_lng, end_lat, end_lng);
 
-      if (order.order_type === 'delivery') {
-        price = distance_km * pricing.price_per_km;
-      } else if (order.order_type === 'full_trip') {
-        price = pricing.price_per_day;
-      }
-
-      const driver_earning = price * (order.driver_commission_pct / 100);
-
-      const updateOrder = `
-        UPDATE orders
-        SET end_lat = ?, end_lng = ?, end_time = NOW(), distance_km = ?, price = ?, driver_earning = ?, status = 'closed'
-        WHERE id = ?
-      `;
-      db.query(updateOrder, [end_lat, end_lng, distance_km.toFixed(2), price.toFixed(2), driver_earning.toFixed(2), order_id], (err, result) => {
+      const getPricing = 'SELECT * FROM pricing_rules WHERE order_type = ? ORDER BY effective_from DESC LIMIT 1';
+      db.query(getPricing, [order.order_type], (err, pricingResults) => {
         if (err) {
           console.error(err);
-          return res.status(500).json({ error: 'حصل خطأ في قفل الأوردر' });
+          return res.status(500).json({ error: 'حصل خطأ في جلب التسعيرة' });
         }
-        res.json({
-          message: 'تم قفل الأوردر بنجاح',
-          distance_km: distance_km.toFixed(2),
-          price: price.toFixed(2),
-          driver_earning: driver_earning.toFixed(2)
+
+        const pricing = pricingResults[0];
+        let price = 0;
+
+        if (order.order_type === 'delivery') {
+          price = distance_km * pricing.price_per_km;
+        } else if (order.order_type === 'full_trip') {
+          price = pricing.price_per_day;
+        }
+
+        const driver_earning = price * (order.driver_commission_pct / 100);
+
+        const updateOrder = `
+          UPDATE orders
+          SET end_lat = ?, end_lng = ?, end_time = NOW(), distance_km = ?, price = ?, driver_earning = ?, status = 'closed', delivery_photo = ?
+          WHERE id = ?
+        `;
+        db.query(updateOrder, [end_lat, end_lng, distance_km.toFixed(2), price.toFixed(2), driver_earning.toFixed(2), photo, order_id], (err, result) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'حصل خطأ في قفل الأوردر' });
+          }
+          res.json({
+            message: 'تم قفل الأوردر بنجاح',
+            distance_km: distance_km.toFixed(2),
+            price: price.toFixed(2),
+            driver_earning: driver_earning.toFixed(2)
+          });
         });
       });
     });
   });
 });
 
+// ==================== ملخص الوردية ====================
 app.post('/shifts/:shift_id/summary', (req, res) => {
   const { shift_id } = req.params;
 
@@ -341,6 +422,7 @@ app.put('/shift-summary/:id', (req, res) => {
   });
 });
 
+// ==================== جلب البيانات ====================
 app.get('/shifts', (req, res) => {
   const query = `
     SELECT shifts.*, drivers.name AS driver_name, tuktuks.tuktuk_number
