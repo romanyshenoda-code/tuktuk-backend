@@ -3,101 +3,143 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>واجهة السائق</title>
+  <title>صفحة السائق</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; text-align: center; }
-    input, select { padding: 10px; font-size: 16px; width: 80%; max-width: 300px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; }
-    button { padding: 15px 30px; font-size: 18px; background: #2c3e50; color: white; border: none; border-radius: 8px; margin-top: 15px; cursor: pointer; width: 85%; max-width: 320px; }
-    button:disabled { background: #999; }
-    .checkout-btn { background: #c0392b; }
-    .order-open-btn { background: #27ae60; }
-    .order-close-btn { background: #e67e22; }
-    .photo-btn { background: #8e44ad; padding: 10px 20px; font-size: 15px; width: auto; }
-    #result, #resultOut, #resultOrderOpen, #resultOrderClose {
-      margin-top: 20px; font-size: 16px; background: white; padding: 15px; border-radius: 8px; min-height: 20px;
-    }
-    #reader { width: 90%; max-width: 350px; margin: 15px auto; }
-    #qrStatus { font-weight: bold; color: #2c3e50; }
-    hr { margin: 40px 0; border: none; border-top: 2px solid #ccc; }
-    .photo-preview { max-width: 200px; margin: 10px auto; display: block; border-radius: 8px; }
-    .photo-section { margin: 15px 0; }
-    .required-label { color: #c0392b; font-weight: bold; font-size: 13px; }
-    .optional-label { color: #777; font-size: 13px; }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 15px; margin: 0; }
+    .header { background: #2c3e50; color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px; }
+    .header h2 { margin: 0; }
+    .logout-link { color: #ecf0f1; font-size: 13px; text-decoration: underline; }
+    .card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .card h3 { margin-top: 0; color: #2c3e50; }
+    input, select, textarea { width: 100%; padding: 10px; margin: 6px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 15px; font-family: inherit; }
+    button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 8px; color: white; }
+    .btn-primary { background: #27ae60; }
+    .btn-danger { background: #c0392b; }
+    .btn-warning { background: #e67e22; }
+    .btn-info { background: #8e44ad; }
+    .btn-secondary { background: #7f8c8d; }
+    .result { margin-top: 10px; font-size: 14px; background: #f9f9f9; padding: 10px; border-radius: 6px; min-height: 15px; }
+    #reader { width: 100%; margin: 10px auto; }
+    .photo-preview { max-width: 150px; margin: 10px auto; display: block; border-radius: 8px; }
+    .required-label { color: #c0392b; font-weight: bold; font-size: 12px; }
+    .optional-label { color: #777; font-size: 12px; }
+    .notification-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+    .notification-item:last-child { border-bottom: none; }
+    .notification-unread { background: #fff9e6; }
+    .hidden { display: none; }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; color: white; }
+    .status-pending { background: #f39c12; }
+    .status-approved { background: #27ae60; }
+    .status-rejected { background: #c0392b; }
+    .history-item { padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
   </style>
 </head>
 <body>
-  <h1>تسجيل حضور</h1>
 
-  <div>
-    <input type="number" id="driverId" placeholder="رقم السائق"><br>
+  <div class="header">
+    <h2 id="driverNameDisplay">جاري التحميل...</h2>
+    <a href="/api/driver-logout" class="logout-link">تسجيل خروج</a>
   </div>
 
-  <div id="qrStatus">امسح كود QR بتاع التوكتوك</div>
-  <div id="reader"></div>
+  <!-- قسم الإشعارات -->
+  <div class="card">
+    <h3>🔔 الإشعارات</h3>
+    <div id="notificationsList">مفيش إشعارات جديدة</div>
+  </div>
 
-  <div class="photo-section">
-    <button class="photo-btn" onclick="capturePhoto('photoInputCheckIn')">📷 صورة التوكتوك</button>
-    <input type="file" id="photoInputCheckIn" accept="image/*" capture="environment" style="display:none">
-    <img id="photoPreviewCheckIn" class="photo-preview" style="display:none">
+  <!-- قسم الوردية -->
+  <div class="card" id="checkinCard">
+    <h3>بدء الوردية</h3>
+    <div id="qrStatus">امسح كود QR بتاع التوكتوك</div>
+    <div id="reader"></div>
+
+    <button class="btn-info" onclick="capturePhoto('photoInputCheckIn')">📷 صورة التوكتوك</button>
+    <input type="file" id="photoInputCheckIn" accept="image/*" capture="environment" class="hidden">
+    <img id="photoPreviewCheckIn" class="photo-preview hidden">
     <div id="checkinPhotoLabel" class="required-label">الصورة إجبارية لاستلام التوكتوك</div>
+
+    <button id="checkInBtn" class="btn-primary" onclick="checkIn()" disabled>تسجيل الحضور وبدء الوردية</button>
+    <div id="result" class="result">جاهز</div>
   </div>
 
-  <button id="checkInBtn" onclick="checkIn()" disabled>تسجيل الحضور</button>
-  <div id="result">جاهز</div>
-
-  <hr>
-
-  <h1>فتح أوردر</h1>
-  <div>
-    <input type="number" id="driverIdOrder" placeholder="رقم السائق"><br>
-    <input type="number" id="shiftIdOrder" placeholder="رقم الوردية"><br>
+  <!-- قسم فتح/قفل الأوردر -->
+  <div class="card hidden" id="orderCard">
+    <h3>فتح أوردر</h3>
     <select id="orderType">
       <option value="delivery">توصيل عميل</option>
       <option value="full_trip">رحلة كاملة</option>
     </select>
-  </div>
-  <button class="order-open-btn" onclick="openOrder()">فتح الأوردر</button>
-  <div id="resultOrderOpen">جاهز</div>
+    <button class="btn-primary" onclick="openOrder()">فتح الأوردر</button>
+    <div id="resultOrderOpen" class="result">جاهز</div>
 
-  <hr>
+    <hr>
 
-  <h1>قفل أوردر</h1>
-  <div>
+    <h3>قفل أوردر</h3>
     <input type="number" id="orderIdClose" placeholder="رقم الأوردر">
-  </div>
-
-  <div class="photo-section">
-    <button class="photo-btn" onclick="capturePhoto('photoInputOrderClose')">📷 صورة توثيق الوصول</button>
-    <input type="file" id="photoInputOrderClose" accept="image/*" capture="environment" style="display:none">
-    <img id="photoPreviewOrderClose" class="photo-preview" style="display:none">
+    <button class="btn-info" onclick="capturePhoto('photoInputOrderClose')">📷 صورة توثيق الوصول</button>
+    <input type="file" id="photoInputOrderClose" accept="image/*" capture="environment" class="hidden">
+    <img id="photoPreviewOrderClose" class="photo-preview hidden">
     <div id="orderClosePhotoLabel" class="optional-label">صورة اختيارية لتوثيق وصول الأوردر</div>
+    <button class="btn-warning" onclick="closeOrder()">قفل الأوردر</button>
+    <div id="resultOrderClose" class="result">جاهز</div>
   </div>
 
-  <button class="order-close-btn" onclick="closeOrder()">قفل الأوردر</button>
-  <div id="resultOrderClose">جاهز</div>
-
-  <hr>
-
-  <h1>تسجيل انصراف</h1>
-  <div>
-    <input type="number" id="driverIdOut" placeholder="رقم السائق"><br>
-  </div>
-
-  <div class="photo-section">
-    <button class="photo-btn" onclick="capturePhoto('photoInputCheckOut')">📷 صورة تسليم التوكتوك</button>
-    <input type="file" id="photoInputCheckOut" accept="image/*" capture="environment" style="display:none">
-    <img id="photoPreviewCheckOut" class="photo-preview" style="display:none">
+  <!-- قسم إنهاء الوردية -->
+  <div class="card hidden" id="checkoutCard">
+    <h3>إنهاء الوردية</h3>
+    <button class="btn-info" onclick="capturePhoto('photoInputCheckOut')">📷 صورة تسليم التوكتوك</button>
+    <input type="file" id="photoInputCheckOut" accept="image/*" capture="environment" class="hidden">
+    <img id="photoPreviewCheckOut" class="photo-preview hidden">
     <div id="checkoutPhotoLabel" class="required-label">الصورة إجبارية لتسليم التوكتوك</div>
+    <button class="btn-danger" onclick="checkOut()">تسجيل الانصراف وإنهاء الوردية</button>
+    <div id="resultOut" class="result">جاهز</div>
   </div>
 
-  <button class="checkout-btn" onclick="checkOut()">تسجيل الانصراف</button>
-  <div id="resultOut">جاهز</div>
+  <!-- قسم طلب إجازة -->
+  <div class="card">
+    <h3>📅 طلب إجازة</h3>
+    <input type="date" id="leaveStart">
+    <input type="date" id="leaveEnd">
+    <textarea id="leaveReason" placeholder="سبب الإجازة (اختياري)" rows="2"></textarea>
+    <button class="btn-secondary" onclick="requestLeave()">إرسال طلب الإجازة</button>
+    <div id="resultLeave" class="result">جاهز</div>
+    <div id="leaveHistory"></div>
+  </div>
+
+  <!-- قسم طلب سلفة -->
+  <div class="card">
+    <h3>💰 طلب سلفة</h3>
+    <input type="number" id="advanceAmount" placeholder="المبلغ المطلوب">
+    <textarea id="advanceReason" placeholder="سبب طلب السلفة (اختياري)" rows="2"></textarea>
+    <button class="btn-secondary" onclick="requestAdvance()">إرسال طلب السلفة</button>
+    <div id="resultAdvance" class="result">جاهز</div>
+    <div id="advanceHistory"></div>
+  </div>
 
   <script>
     let scannedQrCode = null;
     let settings = {};
+    let currentDriverId = null;
+    let currentShiftId = null;
 
+    // نتحقق من تسجيل الدخول أول حاجة
+    fetch('/api/driver-session')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.loggedIn) {
+          window.location.href = '/driver-login.html';
+          return;
+        }
+        currentDriverId = data.driverId;
+        document.getElementById('driverNameDisplay').textContent = 'أهلاً، ' + data.driverName;
+        loadNotifications();
+        loadLeaveHistory();
+        loadAdvanceHistory();
+        checkCurrentShift();
+      });
+
+    // نجيب إعدادات الصور
     fetch('/settings')
       .then(res => res.json())
       .then(data => {
@@ -116,6 +158,110 @@
           document.getElementById('orderClosePhotoLabel').className = 'required-label';
         }
       });
+
+    // نتأكد لو عنده وردية مفتوحة بالفعل
+    function checkCurrentShift() {
+      fetch('/shifts/open/' + currentDriverId)
+        .then(res => res.json())
+        .then(data => {
+          if (data.id) {
+            currentShiftId = data.id;
+            document.getElementById('checkinCard').classList.add('hidden');
+            document.getElementById('orderCard').classList.remove('hidden');
+            document.getElementById('checkoutCard').classList.remove('hidden');
+          }
+        });
+    }
+
+    function loadNotifications() {
+      fetch('/notifications/driver/' + currentDriverId)
+        .then(res => res.json())
+        .then(data => {
+          const list = document.getElementById('notificationsList');
+          if (data.length === 0) {
+            list.innerHTML = 'مفيش إشعارات جديدة';
+            return;
+          }
+          list.innerHTML = data.map(n => `
+            <div class="notification-item ${n.is_read ? '' : 'notification-unread'}">
+              ${n.message}
+            </div>
+          `).join('');
+        });
+    }
+
+    function loadLeaveHistory() {
+      fetch('/leave-requests/driver/' + currentDriverId)
+        .then(res => res.json())
+        .then(data => {
+          const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+          document.getElementById('leaveHistory').innerHTML = data.map(r => `
+            <div class="history-item">
+              ${r.start_date} إلى ${r.end_date}
+              <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
+            </div>
+          `).join('');
+        });
+    }
+
+    function loadAdvanceHistory() {
+      fetch('/advances/driver/' + currentDriverId)
+        .then(res => res.json())
+        .then(data => {
+          const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+          document.getElementById('advanceHistory').innerHTML = data.map(r => `
+            <div class="history-item">
+              ${r.amount} جنيه
+              <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
+            </div>
+          `).join('');
+        });
+    }
+
+    function requestLeave() {
+      const start_date = document.getElementById('leaveStart').value;
+      const end_date = document.getElementById('leaveEnd').value;
+      const reason = document.getElementById('leaveReason').value;
+      const resultDiv = document.getElementById('resultLeave');
+
+      if (!start_date || !end_date) {
+        resultDiv.textContent = 'من فضلك اختر تاريخ البداية والنهاية';
+        return;
+      }
+
+      fetch('/leave-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_id: currentDriverId, start_date, end_date, reason })
+      })
+      .then(res => res.json())
+      .then(data => {
+        resultDiv.textContent = data.message || data.error;
+        loadLeaveHistory();
+      });
+    }
+
+    function requestAdvance() {
+      const amount = document.getElementById('advanceAmount').value;
+      const reason = document.getElementById('advanceReason').value;
+      const resultDiv = document.getElementById('resultAdvance');
+
+      if (!amount) {
+        resultDiv.textContent = 'من فضلك اكتب المبلغ المطلوب';
+        return;
+      }
+
+      fetch('/advances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_id: currentDriverId, amount, reason })
+      })
+      .then(res => res.json())
+      .then(data => {
+        resultDiv.textContent = data.message || data.error;
+        loadAdvanceHistory();
+      });
+    }
 
     function onScanSuccess(decodedText) {
       scannedQrCode = decodedText;
@@ -153,7 +299,7 @@
       const reader = new FileReader();
       reader.onload = function(e) {
         preview.src = e.target.result;
-        preview.style.display = 'block';
+        preview.classList.remove('hidden');
       };
       reader.readAsDataURL(file);
     }
@@ -161,11 +307,10 @@
     function checkIn() {
       const resultDiv = document.getElementById('result');
       const btn = document.getElementById('checkInBtn');
-      const driver_id = document.getElementById('driverId').value;
       const photoFile = document.getElementById('photoInputCheckIn').files[0];
 
-      if (!driver_id || !scannedQrCode) {
-        resultDiv.textContent = 'من فضلك اكتب رقم السائق وامسح كود QR الأول';
+      if (!scannedQrCode) {
+        resultDiv.textContent = 'من فضلك امسح كود QR الأول';
         return;
       }
 
@@ -190,7 +335,7 @@
           resultDiv.textContent = 'جاري تسجيل الحضور...';
 
           const formData = new FormData();
-          formData.append('driver_id', driver_id);
+          formData.append('driver_id', currentDriverId);
           formData.append('tuktuk_qr_code', scannedQrCode);
           formData.append('lat', lat);
           formData.append('lng', lng);
@@ -206,7 +351,11 @@
             if (data.error) {
               resultDiv.textContent = 'خطأ: ' + data.error;
             } else {
-              resultDiv.textContent = data.message + ' - رقم الوردية: ' + data.shift_id;
+              resultDiv.textContent = data.message;
+              currentShiftId = data.shift_id;
+              document.getElementById('checkinCard').classList.add('hidden');
+              document.getElementById('orderCard').classList.remove('hidden');
+              document.getElementById('checkoutCard').classList.remove('hidden');
             }
           })
           .catch(err => {
@@ -223,14 +372,7 @@
 
     function openOrder() {
       const resultDiv = document.getElementById('resultOrderOpen');
-      const driver_id = document.getElementById('driverIdOrder').value;
-      const shift_id = document.getElementById('shiftIdOrder').value;
       const order_type = document.getElementById('orderType').value;
-
-      if (!driver_id || !shift_id) {
-        resultDiv.textContent = 'من فضلك اكتب رقم السائق ورقم الوردية';
-        return;
-      }
 
       if (!navigator.geolocation) {
         resultDiv.textContent = 'المتصفح ده مش بيدعم تحديد الموقع';
@@ -250,8 +392,8 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              shift_id: shift_id,
-              driver_id: driver_id,
+              shift_id: currentShiftId,
+              driver_id: currentDriverId,
               order_type: order_type,
               start_lat: lat,
               start_lng: lng
@@ -339,52 +481,37 @@
 
     function checkOut() {
       const resultDiv = document.getElementById('resultOut');
-      const driver_id = document.getElementById('driverIdOut').value;
       const photoFile = document.getElementById('photoInputCheckOut').files[0];
-
-      if (!driver_id) {
-        resultDiv.textContent = 'من فضلك اكتب رقم السائق';
-        return;
-      }
 
       if (settings.photo_required_checkout === 'true' && !photoFile) {
         resultDiv.textContent = 'من فضلك التقط صورة تسليم التوكتوك، الصورة إجبارية';
         return;
       }
 
-      resultDiv.textContent = 'جاري البحث عن الوردية المفتوحة...';
+      resultDiv.textContent = 'جاري تسجيل الانصراف...';
 
-      fetch('/shifts/open/' + driver_id)
-        .then(res => res.json())
-        .then(data => {
-          if (data.error) {
-            resultDiv.textContent = 'خطأ: ' + data.error;
-            return;
-          }
+      const formData = new FormData();
+      formData.append('shift_id', currentShiftId);
+      if (photoFile) formData.append('photo', photoFile);
 
-          const shift_id = data.id;
-          resultDiv.textContent = 'جاري تسجيل الانصراف...';
-
-          const formData = new FormData();
-          formData.append('shift_id', shift_id);
-          if (photoFile) formData.append('photo', photoFile);
-
-          fetch('/shifts/check-out', {
-            method: 'POST',
-            body: formData
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (data.error) {
-              resultDiv.textContent = 'خطأ: ' + data.error;
-            } else {
-              resultDiv.textContent = data.message;
-            }
-          });
-        })
-        .catch(err => {
-          resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر';
-        });
+      fetch('/shifts/check-out', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          resultDiv.textContent = 'خطأ: ' + data.error;
+        } else {
+          resultDiv.textContent = data.message;
+          document.getElementById('orderCard').classList.add('hidden');
+          document.getElementById('checkoutCard').classList.add('hidden');
+          document.getElementById('checkinCard').classList.remove('hidden');
+        }
+      })
+      .catch(err => {
+        resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر';
+      });
     }
   </script>
 </body>

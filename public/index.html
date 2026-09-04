@@ -12,11 +12,16 @@
     th { background: #2c3e50; color: white; }
     .status-open { color: green; font-weight: bold; }
     .status-closed { color: gray; }
+    .status-pending { color: #f39c12; font-weight: bold; }
+    .status-approved { color: green; font-weight: bold; }
+    .status-rejected { color: #c0392b; font-weight: bold; }
     form { background: white; padding: 15px; margin-top: 10px; border-radius: 6px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
     button { padding: 8px 16px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; }
     button:hover { background: #34495e; }
-    #addDriverMsg { margin-top: 10px; font-weight: bold; }
+    .btn-approve { background: #27ae60; }
+    .btn-reject { background: #c0392b; }
+    #addDriverMsg, #addTuktukMsg { margin-top: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -27,6 +32,7 @@
     <input type="text" id="newName" placeholder="الاسم" required>
     <input type="text" id="newPhone" placeholder="رقم التليفون" required>
     <input type="text" id="newNationalId" placeholder="الرقم القومي">
+    <input type="password" id="newPassword" placeholder="كلمة مرور السائق" required>
     <button type="submit">إضافة السائق</button>
   </form>
   <div id="addDriverMsg"></div>
@@ -39,11 +45,11 @@
 
   <h2>التوكتوكات</h2>
   <form id="addTuktukForm">
-  <input type="text" id="newTuktukNumber" placeholder="رقم التوكتوك" required>
-  <input type="text" id="newQrCode" placeholder="كود QR" required>
-  <button type="submit">إضافة التوكتوك</button>
-</form>
-<div id="addTuktukMsg"></div>
+    <input type="text" id="newTuktukNumber" placeholder="رقم التوكتوك" required>
+    <input type="text" id="newQrCode" placeholder="كود QR" required>
+    <button type="submit">إضافة التوكتوك</button>
+  </form>
+  <div id="addTuktukMsg"></div>
   <table id="tuktuksTable">
     <thead><tr><th>الرقم</th><th>رقم التوكتوك</th><th>QR Code</th><th>الحالة</th></tr></thead>
     <tbody></tbody>
@@ -66,6 +72,27 @@
     <thead><tr><th>الرقم</th><th>السائق</th><th>عدد الأوردرات</th><th>رحلات كاملة</th><th>توصيلات</th><th>إجمالي السعر</th><th>مستحقات السائق</th><th>معدّل يدوي؟</th></tr></thead>
     <tbody></tbody>
   </table>
+
+  <h2>طلبات الإجازة</h2>
+  <table id="leaveTable">
+    <thead><tr><th>الرقم</th><th>السائق</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>طلبات السلف</h2>
+  <table id="advancesTable">
+    <thead><tr><th>الرقم</th><th>السائق</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>تسجيل خصم على سائق</h2>
+  <form id="addDeductionForm">
+    <input type="number" id="deductionDriverId" placeholder="رقم السائق" required>
+    <input type="number" id="deductionAmount" placeholder="المبلغ" required>
+    <input type="text" id="deductionReason" placeholder="السبب" required>
+    <button type="submit">تسجيل الخصم</button>
+  </form>
+  <div id="addDeductionMsg"></div>
 
   <script>
     function loadTable(url, tableId, rowBuilder) {
@@ -120,6 +147,84 @@
         <td>${sm.total_driver_earning}</td>
         <td>${sm.is_manually_edited ? 'نعم' : 'لا'}</td>
       `);
+
+      loadLeaveRequests();
+      loadAdvances();
+    }
+
+    function loadLeaveRequests() {
+      const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+      fetch('/leave-requests')
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.querySelector('#leaveTable tbody');
+          tbody.innerHTML = '';
+          data.forEach(r => {
+            const row = document.createElement('tr');
+            const actionHtml = r.status === 'pending'
+              ? `<button class="btn-approve" onclick="reviewLeave(${r.id}, 'approved')">موافقة</button>
+                 <button class="btn-reject" onclick="reviewLeave(${r.id}, 'rejected')">رفض</button>`
+              : (r.admin_note || '-');
+            row.innerHTML = `
+              <td>${r.id}</td>
+              <td>${r.driver_name}</td>
+              <td>${r.start_date}</td>
+              <td>${r.end_date}</td>
+              <td>${r.reason || '-'}</td>
+              <td class="status-${r.status}">${statusText[r.status]}</td>
+              <td>${actionHtml}</td>
+            `;
+            tbody.appendChild(row);
+          });
+        });
+    }
+
+    function reviewLeave(id, status) {
+      const admin_note = status === 'rejected' ? prompt('سبب الرفض (اختياري):') : prompt('ملاحظة (اختياري):');
+      fetch(`/leave-requests/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, admin_note: admin_note || '' })
+      })
+      .then(res => res.json())
+      .then(() => loadLeaveRequests());
+    }
+
+    function loadAdvances() {
+      const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+      fetch('/advances')
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.querySelector('#advancesTable tbody');
+          tbody.innerHTML = '';
+          data.forEach(r => {
+            const row = document.createElement('tr');
+            const actionHtml = r.status === 'pending'
+              ? `<button class="btn-approve" onclick="reviewAdvance(${r.id}, 'approved')">موافقة</button>
+                 <button class="btn-reject" onclick="reviewAdvance(${r.id}, 'rejected')">رفض</button>`
+              : (r.admin_note || '-');
+            row.innerHTML = `
+              <td>${r.id}</td>
+              <td>${r.driver_name}</td>
+              <td>${r.amount}</td>
+              <td>${r.reason || '-'}</td>
+              <td class="status-${r.status}">${statusText[r.status]}</td>
+              <td>${actionHtml}</td>
+            `;
+            tbody.appendChild(row);
+          });
+        });
+    }
+
+    function reviewAdvance(id, status) {
+      const admin_note = status === 'rejected' ? prompt('سبب الرفض (اختياري):') : prompt('ملاحظة (اختياري):');
+      fetch(`/advances/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, admin_note: admin_note || '' })
+      })
+      .then(res => res.json())
+      .then(() => loadAdvances());
     }
 
     document.getElementById('addDriverForm').addEventListener('submit', function(e) {
@@ -128,37 +233,59 @@
       const name = document.getElementById('newName').value;
       const phone = document.getElementById('newPhone').value;
       const national_id = document.getElementById('newNationalId').value;
+      const password = document.getElementById('newPassword').value;
 
       fetch('/drivers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, national_id })
+        body: JSON.stringify({ name, phone, national_id, password })
       })
       .then(res => res.json())
       .then(data => {
         document.getElementById('addDriverMsg').textContent = data.message || data.error;
         document.getElementById('addDriverForm').reset();
-        loadAllTables(); // نحدّث كل الجداول تلقائي بعد الإضافة
+        loadAllTables();
       });
     });
-document.getElementById('addTuktukForm').addEventListener('submit', function(e) {
-  e.preventDefault();
 
-  const tuktuk_number = document.getElementById('newTuktukNumber').value;
-  const qr_code = document.getElementById('newQrCode').value;
+    document.getElementById('addTuktukForm').addEventListener('submit', function(e) {
+      e.preventDefault();
 
-  fetch('/tuktuks', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tuktuk_number, qr_code })
-  })
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById('addTuktukMsg').textContent = data.message || data.error;
-    document.getElementById('addTuktukForm').reset();
-    loadAllTables();
-  });
-});
+      const tuktuk_number = document.getElementById('newTuktukNumber').value;
+      const qr_code = document.getElementById('newQrCode').value;
+
+      fetch('/tuktuks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tuktuk_number, qr_code })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('addTuktukMsg').textContent = data.message || data.error;
+        document.getElementById('addTuktukForm').reset();
+        loadAllTables();
+      });
+    });
+
+    document.getElementById('addDeductionForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const driver_id = document.getElementById('deductionDriverId').value;
+      const amount = document.getElementById('deductionAmount').value;
+      const reason = document.getElementById('deductionReason').value;
+
+      fetch('/deductions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_id, amount, reason })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('addDeductionMsg').textContent = data.message || data.error;
+        document.getElementById('addDeductionForm').reset();
+      });
+    });
+
     loadAllTables();
   </script>
 </body>

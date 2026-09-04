@@ -39,6 +39,7 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 8 }
 }));
 
+// ==================== تسجيل دخول الأدمن ====================
 function requireLogin(req, res, next) {
   if (req.session && req.session.loggedIn) {
     return next();
@@ -61,6 +62,47 @@ app.get('/api/logout', (req, res) => {
   res.redirect('/login.html');
 });
 
+// ==================== تسجيل دخول السائق ====================
+function requireDriverLogin(req, res, next) {
+  if (req.session && req.session.driverId) {
+    return next();
+  }
+  return res.redirect('/driver-login.html');
+}
+
+app.post('/api/driver-login', (req, res) => {
+  const { driver_id, password } = req.body;
+
+  db.query('SELECT * FROM drivers WHERE id = ? AND password = ?', [driver_id, password], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' });
+    }
+    if (results.length === 0) {
+      return res.status(401).json({ error: 'رقم السائق أو الباسورد غلط' });
+    }
+
+    req.session.driverId = results[0].id;
+    req.session.driverName = results[0].name;
+    res.json({ message: 'تم تسجيل الدخول بنجاح', driver: results[0] });
+  });
+});
+
+app.get('/api/driver-logout', (req, res) => {
+  req.session.driverId = null;
+  req.session.driverName = null;
+  res.redirect('/driver-login.html');
+});
+
+app.get('/api/driver-session', (req, res) => {
+  if (req.session && req.session.driverId) {
+    res.json({ loggedIn: true, driverId: req.session.driverId, driverName: req.session.driverName });
+  } else {
+    res.json({ loggedIn: false });
+  }
+});
+
+// ==================== الصفحات الرئيسية ====================
 app.get('/', requireLogin, (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
@@ -96,10 +138,10 @@ app.put('/settings/:key', (req, res) => {
 
 // ==================== السواقين ====================
 app.post('/drivers', (req, res) => {
-  const { name, phone, national_id } = req.body;
+  const { name, phone, national_id, password } = req.body;
 
-  const query = 'INSERT INTO drivers (name, phone, national_id) VALUES (?, ?, ?)';
-  db.query(query, [name, phone, national_id], (err, result) => {
+  const query = 'INSERT INTO drivers (name, phone, national_id, password) VALUES (?, ?, ?, ?)';
+  db.query(query, [name, phone, national_id, password], (err, result) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: 'حصل خطأ في حفظ السائق' });
@@ -485,6 +527,205 @@ app.get('/shifts/open/:driver_id', (req, res) => {
       return res.status(404).json({ error: 'مفيش وردية مفتوحة للسائق ده' });
     }
     res.json(results[0]);
+  });
+});
+
+// ==================== طلبات الإجازة ====================
+app.post('/leave-requests', (req, res) => {
+  const { driver_id, start_date, end_date, reason } = req.body;
+
+  const query = 'INSERT INTO leave_requests (driver_id, start_date, end_date, reason) VALUES (?, ?, ?, ?)';
+  db.query(query, [driver_id, start_date, end_date, reason], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تسجيل طلب الإجازة' });
+    }
+    res.status(201).json({ message: 'تم إرسال طلب الإجازة بنجاح', request_id: result.insertId });
+  });
+});
+
+app.get('/leave-requests', (req, res) => {
+  const query = `
+    SELECT leave_requests.*, drivers.name AS driver_name
+    FROM leave_requests
+    JOIN drivers ON leave_requests.driver_id = drivers.id
+    ORDER BY leave_requests.created_at DESC
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب طلبات الإجازة' });
+    }
+    res.json(results);
+  });
+});
+
+app.get('/leave-requests/driver/:driver_id', (req, res) => {
+  const { driver_id } = req.params;
+  db.query('SELECT * FROM leave_requests WHERE driver_id = ? ORDER BY created_at DESC', [driver_id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب طلبات الإجازة' });
+    }
+    res.json(results);
+  });
+});
+
+app.put('/leave-requests/:id', (req, res) => {
+  const { id } = req.params;
+  const { status, admin_note } = req.body;
+
+  db.query('SELECT * FROM leave_requests WHERE id = ?', [id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب الطلب' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'الطلب غير موجود' });
+    }
+
+    const request = results[0];
+
+    db.query('UPDATE leave_requests SET status = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?', [status, admin_note, id], (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في تحديث الطلب' });
+      }
+
+      const statusText = status === 'approved' ? 'تمت الموافقة' : 'تم الرفض';
+      const message = `طلب الإجازة الخاص بك من ${request.start_date} إلى ${request.end_date}: ${statusText}${admin_note ? ' - ' + admin_note : ''}`;
+
+      db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [request.driver_id, message], (err) => {
+        if (err) console.error(err);
+        res.json({ message: 'تم تحديث حالة الطلب بنجاح' });
+      });
+    });
+  });
+});
+
+// ==================== طلبات السلف ====================
+app.post('/advances', (req, res) => {
+  const { driver_id, amount, reason } = req.body;
+
+  const query = 'INSERT INTO advances (driver_id, amount, reason) VALUES (?, ?, ?)';
+  db.query(query, [driver_id, amount, reason], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تسجيل طلب السلفة' });
+    }
+    res.status(201).json({ message: 'تم إرسال طلب السلفة بنجاح', request_id: result.insertId });
+  });
+});
+
+app.get('/advances', (req, res) => {
+  const query = `
+    SELECT advances.*, drivers.name AS driver_name
+    FROM advances
+    JOIN drivers ON advances.driver_id = drivers.id
+    ORDER BY advances.created_at DESC
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب طلبات السلف' });
+    }
+    res.json(results);
+  });
+});
+
+app.get('/advances/driver/:driver_id', (req, res) => {
+  const { driver_id } = req.params;
+  db.query('SELECT * FROM advances WHERE driver_id = ? ORDER BY created_at DESC', [driver_id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب طلبات السلف' });
+    }
+    res.json(results);
+  });
+});
+
+app.put('/advances/:id', (req, res) => {
+  const { id } = req.params;
+  const { status, admin_note } = req.body;
+
+  db.query('SELECT * FROM advances WHERE id = ?', [id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب الطلب' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'الطلب غير موجود' });
+    }
+
+    const request = results[0];
+
+    db.query('UPDATE advances SET status = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?', [status, admin_note, id], (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في تحديث الطلب' });
+      }
+
+      const statusText = status === 'approved' ? 'تمت الموافقة' : 'تم الرفض';
+      const message = `طلب السلفة بمبلغ ${request.amount} جنيه: ${statusText}${admin_note ? ' - ' + admin_note : ''}`;
+
+      db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [request.driver_id, message], (err) => {
+        if (err) console.error(err);
+        res.json({ message: 'تم تحديث حالة الطلب بنجاح' });
+      });
+    });
+  });
+});
+
+// ==================== الخصومات ====================
+app.post('/deductions', (req, res) => {
+  const { driver_id, amount, reason } = req.body;
+
+  const query = 'INSERT INTO deductions (driver_id, amount, reason) VALUES (?, ?, ?)';
+  db.query(query, [driver_id, amount, reason], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تسجيل الخصم' });
+    }
+
+    const message = `تم تسجيل خصم بمبلغ ${amount} جنيه - السبب: ${reason}`;
+    db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [driver_id, message], (err) => {
+      if (err) console.error(err);
+      res.status(201).json({ message: 'تم تسجيل الخصم بنجاح', deduction_id: result.insertId });
+    });
+  });
+});
+
+app.get('/deductions/driver/:driver_id', (req, res) => {
+  const { driver_id } = req.params;
+  db.query('SELECT * FROM deductions WHERE driver_id = ? ORDER BY created_at DESC', [driver_id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب الخصومات' });
+    }
+    res.json(results);
+  });
+});
+
+// ==================== الإشعارات ====================
+app.get('/notifications/driver/:driver_id', (req, res) => {
+  const { driver_id } = req.params;
+  db.query('SELECT * FROM notifications WHERE driver_id = ? ORDER BY created_at DESC LIMIT 20', [driver_id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب الإشعارات' });
+    }
+    res.json(results);
+  });
+});
+
+app.put('/notifications/:id/read', (req, res) => {
+  const { id } = req.params;
+  db.query('UPDATE notifications SET is_read = TRUE WHERE id = ?', [id], (err) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تحديث الإشعار' });
+    }
+    res.json({ message: 'تم' });
   });
 });
 
