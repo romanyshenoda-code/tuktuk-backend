@@ -1,11 +1,11 @@
 const express = require('express');
+const session = require('express-session');
 const db = require('./db');
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-const session = require('express-session');
 
 app.use(session({
   secret: 'tuktuk-secret-key-2026',
@@ -36,14 +36,12 @@ app.get('/api/logout', (req, res) => {
   res.redirect('/login.html');
 });
 
+// نحمي الصفحة الرئيسية بس (الداشبورد)، لازم تكون قبل express.static
 app.get('/', requireLogin, (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
-app.use(express.static('public'));
 
-app.get('/', (req, res) => {
-  res.send('السيرفر شغال تمام!');
-});
+app.use(express.static('public'));
 
 app.post('/drivers', (req, res) => {
   const { name, phone, national_id } = req.body;
@@ -68,6 +66,7 @@ app.get('/drivers', (req, res) => {
     res.json(results);
   });
 });
+
 app.post('/tuktuks', (req, res) => {
   const { tuktuk_number, qr_code } = req.body;
 
@@ -91,6 +90,7 @@ app.get('/tuktuks', (req, res) => {
     res.json(results);
   });
 });
+
 app.post('/admin-locations', (req, res) => {
   const { name, latitude, longitude, radius_meters } = req.body;
 
@@ -103,10 +103,10 @@ app.post('/admin-locations', (req, res) => {
     res.status(201).json({ message: 'تم تسجيل الموقع بنجاح', location_id: result.insertId });
   });
 });
+
 app.post('/shifts/check-in', (req, res) => {
   const { driver_id, tuktuk_qr_code, lat, lng, photo } = req.body;
 
-  // أول حاجة: نلاقي رقم التوكتوك من الـ QR code
   const findTuktuk = 'SELECT id FROM tuktuks WHERE qr_code = ?';
   db.query(findTuktuk, [tuktuk_qr_code], (err, tuktukResults) => {
     if (err) {
@@ -119,7 +119,6 @@ app.post('/shifts/check-in', (req, res) => {
 
     const tuktuk_id = tuktukResults[0].id;
 
-    // ندخل الوردية الجديدة
     const insertShift = `
       INSERT INTO shifts (driver_id, tuktuk_id, check_in_time, check_in_photo, check_in_lat, check_in_lng, status)
       VALUES (?, ?, NOW(), ?, ?, ?, 'open')
@@ -133,6 +132,7 @@ app.post('/shifts/check-in', (req, res) => {
     });
   });
 });
+
 app.post('/shifts/check-out', (req, res) => {
   const { shift_id, photo } = req.body;
 
@@ -152,48 +152,7 @@ app.post('/shifts/check-out', (req, res) => {
     res.json({ message: 'تم تسجيل الانصراف بنجاح' });
   });
 });
-app.post('/orders/open', (req, res) => {
-  const { shift_id, driver_id, order_type, start_lat, start_lng } = req.body;
 
-  // أول حاجة: نتأكد إن السائق مفيش أوردر مفتوح بالفعل
-  const checkOpen = 'SELECT id FROM orders WHERE driver_id = ? AND status = "open"';
-  db.query(checkOpen, [driver_id], (err, openResults) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في التحقق من الأوردرات' });
-    }
-    if (openResults.length > 0) {
-      return res.status(400).json({ error: 'السائق عنده أوردر مفتوح بالفعل، لازم يقفله الأول' });
-    }
-
-    // نجيب آخر تسعيرة سارية لنوع الرحلة ده
-    const getPricing = 'SELECT driver_commission_pct FROM pricing_rules WHERE order_type = ? ORDER BY effective_from DESC LIMIT 1';
-    db.query(getPricing, [order_type], (err, pricingResults) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في جلب التسعيرة' });
-      }
-      if (pricingResults.length === 0) {
-        return res.status(400).json({ error: 'مفيش تسعيرة محددة لنوع الرحلة ده' });
-      }
-
-      const commission_pct = pricingResults[0].driver_commission_pct;
-
-      // نفتح الأوردر
-      const insertOrder = `
-        INSERT INTO orders (shift_id, driver_id, order_type, start_lat, start_lng, start_time, driver_commission_pct, status)
-        VALUES (?, ?, ?, ?, ?, NOW(), ?, 'open')
-      `;
-      db.query(insertOrder, [shift_id, driver_id, order_type, start_lat, start_lng, commission_pct], (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: 'حصل خطأ في فتح الأوردر' });
-        }
-        res.status(201).json({ message: 'تم فتح الأوردر بنجاح', order_id: result.insertId });
-      });
-    });
-  });
-});
 app.post('/orders/open', (req, res) => {
   const { shift_id, driver_id, order_type, start_lat, start_lng } = req.body;
 
@@ -233,9 +192,9 @@ app.post('/orders/open', (req, res) => {
     });
   });
 });
-// دالة حساب المسافة بمعادلة Haversine
+
 function calculateDistance(lat1, lng1, lat2, lng2) {
-  const R = 6371; // نصف قطر الأرض بالكيلومتر
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a =
@@ -243,13 +202,12 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // المسافة بالكيلومتر
+  return R * c;
 }
 
 app.post('/orders/close', (req, res) => {
   const { order_id, end_lat, end_lng } = req.body;
 
-  // نجيب بيانات الأوردر الأول
   const getOrder = 'SELECT * FROM orders WHERE id = ? AND status = "open"';
   db.query(getOrder, [order_id], (err, orderResults) => {
     if (err) {
@@ -261,11 +219,8 @@ app.post('/orders/close', (req, res) => {
     }
 
     const order = orderResults[0];
-
-    // نحسب المسافة
     const distance_km = calculateDistance(order.start_lat, order.start_lng, end_lat, end_lng);
 
-    // نجيب التسعيرة الحالية لنوع الرحلة ده
     const getPricing = 'SELECT * FROM pricing_rules WHERE order_type = ? ORDER BY effective_from DESC LIMIT 1';
     db.query(getPricing, [order.order_type], (err, pricingResults) => {
       if (err) {
@@ -284,7 +239,6 @@ app.post('/orders/close', (req, res) => {
 
       const driver_earning = price * (order.driver_commission_pct / 100);
 
-      // نقفل الأوردر ونسجل كل الحسابات
       const updateOrder = `
         UPDATE orders
         SET end_lat = ?, end_lng = ?, end_time = NOW(), distance_km = ?, price = ?, driver_earning = ?, status = 'closed'
@@ -305,10 +259,10 @@ app.post('/orders/close', (req, res) => {
     });
   });
 });
+
 app.post('/shifts/:shift_id/summary', (req, res) => {
   const { shift_id } = req.params;
 
-  // نجيب كل الأوردرات المقفولة بتاعة الوردية دي
   const getOrders = 'SELECT * FROM orders WHERE shift_id = ? AND status = "closed"';
   db.query(getOrders, [shift_id], (err, orders) => {
     if (err) {
@@ -343,6 +297,7 @@ app.post('/shifts/:shift_id/summary', (req, res) => {
     });
   });
 });
+
 app.put('/shift-summary/:id', (req, res) => {
   const { id } = req.params;
   const { field_name, new_value, admin_id } = req.body;
@@ -385,6 +340,7 @@ app.put('/shift-summary/:id', (req, res) => {
     });
   });
 });
+
 app.get('/shifts', (req, res) => {
   const query = `
     SELECT shifts.*, drivers.name AS driver_name, tuktuks.tuktuk_number
@@ -417,6 +373,7 @@ app.get('/orders', (req, res) => {
     res.json(results);
   });
 });
+
 app.get('/shift-summaries', (req, res) => {
   const query = `
     SELECT shift_summary.*, drivers.name AS driver_name
@@ -433,6 +390,7 @@ app.get('/shift-summaries', (req, res) => {
     res.json(results);
   });
 });
+
 app.get('/shifts/open/:driver_id', (req, res) => {
   const { driver_id } = req.params;
   const query = 'SELECT * FROM shifts WHERE driver_id = ? AND status = "open"';
@@ -447,43 +405,7 @@ app.get('/shifts/open/:driver_id', (req, res) => {
     res.json(results[0]);
   });
 });
-// نظام تسجيل دخول بسيط بجلسة (session) مبنية على كوكيز
-const session = require('express-session');
 
-app.use(session({
-  secret: 'tuktuk-secret-key-2026',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 8 } // الجلسة تفضل شغالة 8 ساعات
-}));
-
-// دالة تتحقق إن الأدمن مسجل دخول قبل أي طلب لصفحات الداشبورد
-function requireLogin(req, res, next) {
-  if (req.session && req.session.loggedIn) {
-    return next();
-  }
-  return res.redirect('/login.html');
-}
-
-app.post('/api/login', (req, res) => {
-  const { password } = req.body;
-  if (password === process.env.ADMIN_PASSWORD) {
-    req.session.loggedIn = true;
-    res.json({ message: 'تم تسجيل الدخول بنجاح' });
-  } else {
-    res.status(401).json({ error: 'الباسورد غلط' });
-  }
-});
-
-app.get('/api/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/login.html');
-});
-
-// نحمي الصفحة الرئيسية بس (الداشبورد)، وواجهة السائق تفضل مفتوحة عادي
-app.get('/', requireLogin, (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
-});
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
