@@ -33,6 +33,7 @@
     .status-approved { background: #27ae60; }
     .status-rejected { background: #c0392b; }
     .history-item { padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+    .history-item:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -42,13 +43,11 @@
     <a href="/api/driver-logout" class="logout-link">تسجيل خروج</a>
   </div>
 
-  <!-- قسم الإشعارات -->
   <div class="card">
     <h3>🔔 الإشعارات</h3>
     <div id="notificationsList">مفيش إشعارات جديدة</div>
   </div>
 
-  <!-- قسم الوردية -->
   <div class="card" id="checkinCard">
     <h3>بدء الوردية</h3>
     <div id="qrStatus">امسح كود QR بتاع التوكتوك</div>
@@ -63,7 +62,6 @@
     <div id="result" class="result">جاهز</div>
   </div>
 
-  <!-- قسم فتح/قفل الأوردر -->
   <div class="card hidden" id="orderCard">
     <h3>فتح أوردر</h3>
     <select id="orderType">
@@ -85,7 +83,6 @@
     <div id="resultOrderClose" class="result">جاهز</div>
   </div>
 
-  <!-- قسم إنهاء الوردية -->
   <div class="card hidden" id="checkoutCard">
     <h3>إنهاء الوردية</h3>
     <button class="btn-info" onclick="capturePhoto('photoInputCheckOut')">📷 صورة تسليم التوكتوك</button>
@@ -96,7 +93,6 @@
     <div id="resultOut" class="result">جاهز</div>
   </div>
 
-  <!-- قسم طلب إجازة -->
   <div class="card">
     <h3>📅 طلب إجازة</h3>
     <input type="date" id="leaveStart">
@@ -107,7 +103,6 @@
     <div id="leaveHistory"></div>
   </div>
 
-  <!-- قسم طلب سلفة -->
   <div class="card">
     <h3>💰 طلب سلفة</h3>
     <input type="number" id="advanceAmount" placeholder="المبلغ المطلوب">
@@ -117,13 +112,22 @@
     <div id="advanceHistory"></div>
   </div>
 
+  <div class="card">
+    <h3>📋 سجل الورديات (آخر 10)</h3>
+    <div id="shiftsHistoryList">جاري التحميل...</div>
+  </div>
+
+  <div class="card">
+    <h3>🚕 سجل الأوردرات (آخر 20)</h3>
+    <div id="ordersHistoryList">جاري التحميل...</div>
+  </div>
+
   <script>
     let scannedQrCode = null;
     let settings = {};
     let currentDriverId = null;
     let currentShiftId = null;
 
-    // نتحقق من تسجيل الدخول أول حاجة
     fetch('/api/driver-session')
       .then(res => res.json())
       .then(data => {
@@ -136,10 +140,11 @@
         loadNotifications();
         loadLeaveHistory();
         loadAdvanceHistory();
+        loadShiftsHistory();
+        loadOrdersHistory();
         checkCurrentShift();
       });
 
-    // نجيب إعدادات الصور
     fetch('/settings')
       .then(res => res.json())
       .then(data => {
@@ -159,7 +164,6 @@
         }
       });
 
-    // نتأكد لو عنده وردية مفتوحة بالفعل
     function checkCurrentShift() {
       fetch('/shifts/open/' + currentDriverId)
         .then(res => res.json())
@@ -213,6 +217,45 @@
             <div class="history-item">
               ${r.amount} جنيه
               <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
+            </div>
+          `).join('');
+        });
+    }
+
+    function loadShiftsHistory() {
+      fetch('/shifts/history/' + currentDriverId)
+        .then(res => res.json())
+        .then(data => {
+          const list = document.getElementById('shiftsHistoryList');
+          if (data.length === 0) {
+            list.innerHTML = 'مفيش ورديات مسجلة';
+            return;
+          }
+          list.innerHTML = data.map(s => `
+            <div class="history-item">
+              توكتوك ${s.tuktuk_number} —
+              حضور: ${s.check_in_time ? new Date(s.check_in_time).toLocaleString('ar-EG') : '-'} —
+              انصراف: ${s.check_out_time ? new Date(s.check_out_time).toLocaleString('ar-EG') : 'لسه شغال'}
+            </div>
+          `).join('');
+        });
+    }
+
+    function loadOrdersHistory() {
+      fetch('/orders/history/' + currentDriverId)
+        .then(res => res.json())
+        .then(data => {
+          const list = document.getElementById('ordersHistoryList');
+          if (data.length === 0) {
+            list.innerHTML = 'مفيش أوردرات مسجلة';
+            return;
+          }
+          list.innerHTML = data.map(o => `
+            <div class="history-item">
+              ${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'} —
+              ${o.distance_km || '-'} كم —
+              ${o.price || '-'} جنيه —
+              مستحقاتك: ${o.driver_earning || '-'} جنيه
             </div>
           `).join('');
         });
@@ -467,6 +510,7 @@
                 ' | المسافة: ' + data.distance_km + ' كم' +
                 ' | السعر: ' + data.price + ' جنيه' +
                 ' | مستحقاتك: ' + data.driver_earning + ' جنيه';
+              loadOrdersHistory();
             }
           })
           .catch(err => {
@@ -507,6 +551,7 @@
           document.getElementById('orderCard').classList.add('hidden');
           document.getElementById('checkoutCard').classList.add('hidden');
           document.getElementById('checkinCard').classList.remove('hidden');
+          loadShiftsHistory();
         }
       })
       .catch(err => {
