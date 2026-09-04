@@ -728,7 +728,43 @@ app.put('/notifications/:id/read', (req, res) => {
     res.json({ message: 'تم' });
   });
 });
+// سجل ورديات سائق معين
+app.get('/shifts/history/:driver_id', (req, res) => {
+  const { driver_id } = req.params;
+  const query = `
+    SELECT shifts.*, tuktuks.tuktuk_number
+    FROM shifts
+    JOIN tuktuks ON shifts.tuktuk_id = tuktuks.id
+    WHERE shifts.driver_id = ?
+    ORDER BY shifts.check_in_time DESC
+    LIMIT 10
+  `;
+  db.query(query, [driver_id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الورديات' });
+    }
+    res.json(results);
+  });
+});
 
+// سجل أوردرات سائق معين
+app.get('/orders/history/:driver_id', (req, res) => {
+  const { driver_id } = req.params;
+  const query = `
+    SELECT * FROM orders
+    WHERE driver_id = ? AND status = 'closed'
+    ORDER BY start_time DESC
+    LIMIT 20
+  `;
+  db.query(query, [driver_id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الأوردرات' });
+    }
+    res.json(results);
+  });
+});
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
