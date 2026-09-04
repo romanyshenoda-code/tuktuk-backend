@@ -5,6 +5,40 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+const session = require('express-session');
+
+app.use(session({
+  secret: 'tuktuk-secret-key-2026',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 1000 * 60 * 60 * 8 }
+}));
+
+function requireLogin(req, res, next) {
+  if (req.session && req.session.loggedIn) {
+    return next();
+  }
+  return res.redirect('/login.html');
+}
+
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.ADMIN_PASSWORD) {
+    req.session.loggedIn = true;
+    res.json({ message: 'تم تسجيل الدخول بنجاح' });
+  } else {
+    res.status(401).json({ error: 'الباسورد غلط' });
+  }
+});
+
+app.get('/api/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/login.html');
+});
+
+app.get('/', requireLogin, (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
 app.use(express.static('public'));
 
 app.get('/', (req, res) => {
@@ -412,6 +446,43 @@ app.get('/shifts/open/:driver_id', (req, res) => {
     }
     res.json(results[0]);
   });
+});
+// نظام تسجيل دخول بسيط بجلسة (session) مبنية على كوكيز
+const session = require('express-session');
+
+app.use(session({
+  secret: 'tuktuk-secret-key-2026',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 1000 * 60 * 60 * 8 } // الجلسة تفضل شغالة 8 ساعات
+}));
+
+// دالة تتحقق إن الأدمن مسجل دخول قبل أي طلب لصفحات الداشبورد
+function requireLogin(req, res, next) {
+  if (req.session && req.session.loggedIn) {
+    return next();
+  }
+  return res.redirect('/login.html');
+}
+
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.ADMIN_PASSWORD) {
+    req.session.loggedIn = true;
+    res.json({ message: 'تم تسجيل الدخول بنجاح' });
+  } else {
+    res.status(401).json({ error: 'الباسورد غلط' });
+  }
+});
+
+app.get('/api/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/login.html');
+});
+
+// نحمي الصفحة الرئيسية بس (الداشبورد)، وواجهة السائق تفضل مفتوحة عادي
+app.get('/', requireLogin, (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
 });
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
