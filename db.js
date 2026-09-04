@@ -7,12 +7,11 @@ const connection = mysql.createConnection({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  ssl: { rejectUnauthorized: false },
   connectTimeout: 20000
 });
 
 connection.on('error', (err) => {
-  console.error('خطأ في الاتصال بقاعدة البيانات:', err.message);
+  console.error('خطأ في الاتصال بقاعدة البيانات:', err.message, err.code);
 });
 
 connection.connect((err) => {
