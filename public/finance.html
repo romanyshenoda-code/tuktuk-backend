@@ -21,12 +21,14 @@
     .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
     .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
     .section-head h2 { font-size: 18px; margin: 0; }
-    input, select, textarea { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
+    input, select, textarea { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); width: 100%; }
     input:focus, select:focus, textarea:focus { outline: 2px solid var(--nile); outline-offset: 1px; }
-    .search-input { width: 220px; }
-    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 30px; }
-    form.panel { padding: 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    button.submit-btn { padding: 10px 20px; background: var(--nile); color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+    .search-input { width: 220px !important; }
+    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 30px; padding: 18px; }
+    .field-group { display: flex; flex-direction: column; min-width: 150px; }
+    .field-group label { font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .fields-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+    button.submit-btn { padding: 10px 20px; background: var(--nile); color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; height: 41px; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
     th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; }
@@ -38,7 +40,8 @@
     .btn-edit { background: var(--amber); }
     .btn-delete { background: var(--rust); }
     .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
-    .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+    .form-msg { padding: 10px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+    .form-msg.error-msg { color: var(--rust); }
     .form-msg-inline { font-size: 13px; font-weight: 600; color: var(--nile); }
     .hidden { display: none !important; }
 
@@ -50,16 +53,21 @@
     .stat-card .num { font-size: 24px; font-weight: 800; }
     .stat-card .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-    .days-picker { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 18px 0; width: 100%; }
+    .days-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
     .day-chip { padding: 7px 14px; border: 1px solid var(--line); border-radius: 20px; font-size: 13px; cursor: pointer; background: var(--sand); user-select: none; }
     .day-chip.active { background: var(--nile); color: white; border-color: var(--nile); }
+
+    .drivers-checklist { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+    .driver-check-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .driver-check-row input { width: auto; }
+    .select-all-row { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+    .select-all-row input { width: auto; }
 
     .modal-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
     .modal-backdrop.open { display: flex; }
     .modal-box { background: var(--paper); border-radius: 16px; padding: 26px; width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; border-top: 5px solid var(--amber); }
     .modal-box h3 { margin: 0 0 4px; font-size: 18px; }
     .modal-box .modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 18px; }
-    .modal-box input, .modal-box select { width: 100%; margin-bottom: 10px; }
     .modal-box label.field-label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; font-weight: 700; }
     .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
     .checkbox-row input { width: auto; margin: 0; }
@@ -70,8 +78,7 @@
 
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transition: opacity 0.25s; pointer-events: none; max-width: 90%; text-align: center; }
     .toast.show { opacity: 1; }
-
-    .sub-panel-title { font-size: 13px; font-weight: 700; color: var(--muted); margin: 16px 18px 4px; }
+    .toast.error { background: var(--rust); }
   </style>
 </head>
 <body>
@@ -95,45 +102,93 @@
     <!-- إعدادات الدخل العامة -->
     <div class="section-head"><h2>إعدادات الدخل العامة</h2></div>
     <form id="settingsForm" class="panel">
-      <select id="incomeType">
-        <option value="commission">عمولة فقط</option>
-        <option value="salary">مرتب فقط</option>
-        <option value="both">مرتب + عمولة</option>
-      </select>
-      <input type="number" id="monthlySalary" placeholder="المرتب الشهري">
-      <input type="number" id="commissionPct" placeholder="نسبة العمولة %">
-      <input type="number" id="deliveryBasePrice" placeholder="سعر أوردر التوصيل الثابت">
-      <input type="number" id="fullTripBasePrice" placeholder="سعر الرحلة الكاملة الثابت">
-      <button type="submit" class="submit-btn">حفظ إعدادات الدخل</button>
+      <div class="fields-row">
+        <div class="field-group">
+          <label>نوع الدخل</label>
+          <select id="incomeType">
+            <option value="commission">عمولة فقط</option>
+            <option value="salary">مرتب فقط</option>
+            <option value="both">مرتب + عمولة</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>المرتب الشهري (جنيه)</label>
+          <input type="number" id="monthlySalary" placeholder="مثال: 2000">
+        </div>
+        <div class="field-group">
+          <label>نسبة العمولة %</label>
+          <input type="number" id="commissionPct" placeholder="مثال: 70">
+        </div>
+        <div class="field-group">
+          <label>سعر أوردر التوصيل الثابت</label>
+          <input type="number" id="deliveryBasePrice" placeholder="مثال: 30">
+        </div>
+        <div class="field-group">
+          <label>سعر الرحلة الكاملة الثابت</label>
+          <input type="number" id="fullTripBasePrice" placeholder="مثال: 300">
+        </div>
+        <button type="submit" class="submit-btn">حفظ إعدادات الدخل</button>
+      </div>
     </form>
     <div id="settingsMsg" class="form-msg"></div>
 
     <!-- إعدادات الإجازات العامة -->
     <div class="section-head"><h2>إعدادات الإجازات العامة</h2></div>
     <form id="leaveConfigForm" class="panel">
-      <input type="number" id="workingDaysPerMonth" placeholder="أيام العمل الفعلية بالشهر">
-      <input type="number" id="personalLeaveBalance" placeholder="رصيد الإجازة بسبب شهرياً">
-      <button type="submit" class="submit-btn">حفظ إعدادات الإجازات</button>
-      <div class="days-picker" id="restDaysPicker">
-        <span class="day-chip" data-day="saturday">السبت</span>
-        <span class="day-chip" data-day="sunday">الأحد</span>
-        <span class="day-chip" data-day="monday">الاثنين</span>
-        <span class="day-chip" data-day="tuesday">الثلاثاء</span>
-        <span class="day-chip" data-day="wednesday">الأربعاء</span>
-        <span class="day-chip" data-day="thursday">الخميس</span>
-        <span class="day-chip" data-day="friday">الجمعة</span>
+      <div class="fields-row">
+        <div class="field-group">
+          <label>أيام العمل الفعلية بالشهر</label>
+          <input type="number" id="workingDaysPerMonth" placeholder="مثال: 26">
+        </div>
+        <div class="field-group">
+          <label>رصيد إجازة "بسبب" شهرياً</label>
+          <input type="number" id="personalLeaveBalance" placeholder="مثال: 2">
+        </div>
+        <button type="submit" class="submit-btn">حفظ إعدادات الإجازات</button>
+      </div>
+      <div class="field-group">
+        <label>أيام الراحة الأسبوعية (اختار من أيام الأسبوع)</label>
+        <div class="days-picker" id="restDaysPicker">
+          <span class="day-chip" data-day="saturday">السبت</span>
+          <span class="day-chip" data-day="sunday">الأحد</span>
+          <span class="day-chip" data-day="monday">الاثنين</span>
+          <span class="day-chip" data-day="tuesday">الثلاثاء</span>
+          <span class="day-chip" data-day="wednesday">الأربعاء</span>
+          <span class="day-chip" data-day="thursday">الخميس</span>
+          <span class="day-chip" data-day="friday">الجمعة</span>
+        </div>
       </div>
     </form>
     <div id="leaveConfigMsg" class="form-msg"></div>
 
-    <!-- إضافة إجازة عيد يدوياً -->
-    <div class="section-head"><h2>إضافة إجازة عيد (مرتب كامل، بدون خصم رصيد)</h2></div>
+    <!-- المناسبات الجماعية -->
+    <div class="section-head"><h2>إضافة مناسبة / عيد (مرتب كامل، بدون خصم رصيد)</h2></div>
     <form id="holidayForm" class="panel">
-      <select id="holidayDriver"></select>
-      <input type="date" id="holidayStart">
-      <input type="date" id="holidayEnd">
-      <input type="text" id="holidayReason" placeholder="اسم المناسبة (اختياري)">
-      <button type="submit" class="submit-btn">تسجيل إجازة العيد</button>
+      <div class="fields-row">
+        <div class="field-group">
+          <label>اسم المناسبة</label>
+          <input type="text" id="holidayName" placeholder="مثال: عيد الفطر">
+        </div>
+        <div class="field-group">
+          <label>من تاريخ</label>
+          <input type="date" id="holidayStart">
+        </div>
+        <div class="field-group">
+          <label>إلى تاريخ</label>
+          <input type="date" id="holidayEnd">
+        </div>
+        <button type="submit" class="submit-btn">حفظ المناسبة</button>
+      </div>
+      <div class="field-group">
+        <label>السواقين المشمولين بالإجازة</label>
+        <div class="drivers-checklist">
+          <div class="select-all-row">
+            <input type="checkbox" id="selectAllDrivers" checked>
+            <label for="selectAllDrivers">تحديد الكل</label>
+          </div>
+          <div id="holidayDriversList"></div>
+        </div>
+      </div>
     </form>
     <div id="holidayMsg" class="form-msg"></div>
 
@@ -145,9 +200,9 @@
         <button class="row-btn btn-edit" onclick="loadDriversAndPayroll()">تحديث الجدول</button>
       </div>
     </div>
-    <div class="panel table-scroll">
+    <div class="panel table-scroll" style="padding:0;">
       <table id="payrollTable">
-        <thead><tr><th>السائق</th><th>نوع الدخل</th><th>أيام العمل المتوقعة</th><th>حضور فعلي</th><th>أيام أعياد</th><th>المرتب</th><th>العمولة</th><th>الإجمالي</th><th>خصومات وسلف</th><th>الصافي</th><th>تخصيص</th></tr></thead>
+        <thead><tr><th>السائق</th><th>نوع الدخل</th><th>أيام العمل المطلوبة</th><th>حضور فعلي</th><th>أيام أعياد</th><th>المرتب</th><th>العمولة</th><th>الإجمالي</th><th>خصومات وسلف</th><th>الصافي</th><th>تخصيص</th></tr></thead>
         <tbody><tr class="empty-row"><td colspan="11">جاري التحميل...</td></tr></tbody>
       </table>
     </div>
@@ -156,16 +211,36 @@
     <div class="section-head"><h2>صيانة التوكتوكات</h2></div>
     <form id="maintenanceForm" class="panel">
       <input type="hidden" id="maintEditId">
-      <select id="maintTuktuk"></select>
-      <select id="maintDriver"><option value="">بدون سائق محدد</option></select>
-      <select id="maintType">
-        <option value="scheduled">صيانة دورية</option>
-        <option value="repair">إصلاح عطل</option>
-      </select>
-      <input type="text" id="maintDesc" placeholder="وصف المصروف">
-      <input type="number" id="maintCost" placeholder="التكلفة">
-      <input type="date" id="maintDate">
-      <button type="submit" class="submit-btn" id="maintSubmitBtn">تسجيل مصروف الصيانة</button>
+      <div class="fields-row">
+        <div class="field-group">
+          <label>التوكتوك</label>
+          <select id="maintTuktuk"></select>
+        </div>
+        <div class="field-group">
+          <label>السائق وقت المصروف</label>
+          <select id="maintDriver"><option value="">بدون سائق محدد</option></select>
+        </div>
+        <div class="field-group">
+          <label>نوع المصروف</label>
+          <select id="maintType">
+            <option value="scheduled">صيانة دورية</option>
+            <option value="repair">إصلاح عطل</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>وصف المصروف</label>
+          <input type="text" id="maintDesc" placeholder="مثال: تغيير زيت">
+        </div>
+        <div class="field-group">
+          <label>التكلفة (جنيه)</label>
+          <input type="number" id="maintCost" placeholder="مثال: 250">
+        </div>
+        <div class="field-group">
+          <label>تاريخ المصروف</label>
+          <input type="date" id="maintDate">
+        </div>
+        <button type="submit" class="submit-btn" id="maintSubmitBtn">تسجيل مصروف الصيانة</button>
+      </div>
     </form>
     <div id="maintMsg" class="form-msg"></div>
 
@@ -173,7 +248,7 @@
       <h2>سجل الصيانة</h2>
       <input type="text" id="maintSearch" class="search-input" placeholder="بحث برقم التوكتوك أو السائق..." oninput="filterMaintenance()">
     </div>
-    <div class="panel table-scroll">
+    <div class="panel table-scroll" style="padding:0;">
       <table id="maintenanceTable">
         <thead><tr><th>التاريخ</th><th>التوكتوك</th><th>السائق وقتها</th><th>النوع</th><th>الوصف</th><th>التكلفة</th><th>إجراء</th></tr></thead>
         <tbody></tbody>
@@ -198,15 +273,27 @@
         <option value="salary">مرتب فقط</option>
         <option value="both">مرتب + عمولة</option>
       </select>
-      <input type="number" id="customSalary" placeholder="المرتب الشهري المخصص">
-      <input type="number" id="customCommission" placeholder="نسبة العمولة المخصصة %">
-      <input type="number" id="customDeliveryPrice" placeholder="سعر أوردر التوصيل المخصص">
-      <input type="number" id="customFullTripPrice" placeholder="سعر الرحلة الكاملة المخصص">
 
-      <label class="field-label">إعدادات الإجازات المخصصة</label>
-      <input type="number" id="customWorkingDays" placeholder="أيام العمل الفعلية المخصصة">
-      <input type="number" id="customLeave" placeholder="رصيد الإجازة بسبب المخصص">
-      <div class="days-picker" id="customRestDaysPicker" style="padding:0 0 10px;">
+      <label class="field-label">المرتب الشهري المخصص</label>
+      <input type="number" id="customSalary" placeholder="مثال: 2000">
+
+      <label class="field-label">نسبة العمولة المخصصة %</label>
+      <input type="number" id="customCommission" placeholder="مثال: 70">
+
+      <label class="field-label">سعر أوردر التوصيل المخصص</label>
+      <input type="number" id="customDeliveryPrice" placeholder="مثال: 30">
+
+      <label class="field-label">سعر الرحلة الكاملة المخصص</label>
+      <input type="number" id="customFullTripPrice" placeholder="مثال: 300">
+
+      <label class="field-label">أيام العمل الفعلية المخصصة</label>
+      <input type="number" id="customWorkingDays" placeholder="مثال: 26">
+
+      <label class="field-label">رصيد إجازة "بسبب" المخصص</label>
+      <input type="number" id="customLeave" placeholder="مثال: 2">
+
+      <label class="field-label">أيام الراحة الأسبوعية المخصصة</label>
+      <div class="days-picker" id="customRestDaysPicker">
         <span class="day-chip" data-day="saturday">السبت</span>
         <span class="day-chip" data-day="sunday">الأحد</span>
         <span class="day-chip" data-day="monday">الاثنين</span>
@@ -235,23 +322,21 @@
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
-    const dayLabels = { saturday: 'السبت', sunday: 'الأحد', monday: 'الاثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة' };
 
     fetch('/api/finance-session').then(res => res.json()).then(data => {
       if (!data.loggedIn) window.location.href = '/finance-login.html';
     });
 
-    function showToast(msg) {
+    function showToast(msg, isError) {
       const t = document.getElementById('toast');
       t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 2500);
+      t.className = 'toast show' + (isError ? ' error' : '');
+      setTimeout(() => { t.className = 'toast'; }, 3000);
     }
 
     function openModal() { document.getElementById('customizeModal').classList.add('open'); }
     function closeModal() { document.getElementById('customizeModal').classList.remove('open'); }
 
-    // ==================== منتقي أيام الراحة (عام) ====================
     document.querySelectorAll('#restDaysPicker .day-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const day = chip.dataset.day;
@@ -278,20 +363,11 @@
       });
     });
 
-    function setRestDayChips(containerId, days, stateArrRef) {
+    function setRestDayChips(containerId, days) {
       const container = document.getElementById(containerId);
       container.querySelectorAll('.day-chip').forEach(chip => {
-        if (days.includes(chip.dataset.day)) {
-          chip.classList.add('active');
-        } else {
-          chip.classList.remove('active');
-        }
+        chip.classList.toggle('active', days.includes(chip.dataset.day));
       });
-    }
-
-    // ==================== إعدادات الدخل ====================
-    function toggleIncomeFields() {
-      // مش هنخفي الحقول في نموذج الإعدادات العامة نفسه، لأنها إعدادات لكل السواقين ومختلفة الاستخدام
     }
 
     function loadSettings() {
@@ -320,12 +396,12 @@
       .then(res => res.json())
       .then(data => {
         document.getElementById('settingsMsg').textContent = data.message || data.error;
-        showToast(data.message || data.error);
+        document.getElementById('settingsMsg').className = 'form-msg' + (data.error ? ' error-msg' : '');
+        showToast(data.message || data.error, !!data.error);
         loadDriversAndPayroll();
       });
     });
 
-    // ==================== إعدادات الإجازات ====================
     function loadLeaveConfig() {
       fetch('/leave-config').then(res => res.json()).then(data => {
         document.getElementById('workingDaysPerMonth').value = data.working_days_per_month || 26;
@@ -349,29 +425,46 @@
       .then(res => res.json())
       .then(data => {
         document.getElementById('leaveConfigMsg').textContent = data.message || data.error;
-        showToast(data.message || data.error);
-        loadDriversAndPayroll();
+        document.getElementById('leaveConfigMsg').className = 'form-msg' + (data.error ? ' error-msg' : '');
+        showToast(data.message || data.error, !!data.error);
+        if (data.message) loadDriversAndPayroll();
       });
     });
 
-    // ==================== إضافة إجازة عيد ====================
-    function loadHolidayDriverDropdown() {
+    // ==================== المناسبات الجماعية ====================
+    function loadHolidayDriversList() {
       fetch('/drivers').then(res => res.json()).then(data => {
-        const select = document.getElementById('holidayDriver');
-        select.innerHTML = data.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+        const container = document.getElementById('holidayDriversList');
+        container.innerHTML = data.map(d => `
+          <div class="driver-check-row">
+            <input type="checkbox" class="holiday-driver-cb" value="${d.id}" checked>
+            <label>${d.name}</label>
+          </div>
+        `).join('');
       });
     }
 
+    document.getElementById('selectAllDrivers').addEventListener('change', function() {
+      document.querySelectorAll('.holiday-driver-cb').forEach(cb => cb.checked = this.checked);
+    });
+
     document.getElementById('holidayForm').addEventListener('submit', function(e) {
       e.preventDefault();
-      fetch('/leave-requests/holiday', {
+      const driver_ids = Array.from(document.querySelectorAll('.holiday-driver-cb:checked')).map(cb => parseInt(cb.value));
+
+      if (driver_ids.length === 0) {
+        document.getElementById('holidayMsg').textContent = 'اختار سائق واحد على الأقل';
+        return;
+      }
+
+      fetch('/holiday-events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          driver_id: document.getElementById('holidayDriver').value,
+          event_name: document.getElementById('holidayName').value,
           start_date: document.getElementById('holidayStart').value,
           end_date: document.getElementById('holidayEnd').value,
-          reason: document.getElementById('holidayReason').value
+          driver_ids
         })
       })
       .then(res => res.json())
@@ -379,13 +472,13 @@
         document.getElementById('holidayMsg').textContent = data.message || data.error;
         if (data.message) {
           document.getElementById('holidayForm').reset();
+          document.querySelectorAll('.holiday-driver-cb').forEach(cb => cb.checked = true);
           showToast(data.message);
           loadDriversAndPayroll();
         }
       });
     });
 
-    // ==================== كشف المرتبات ====================
     function loadDriversAndPayroll() {
       fetch('/drivers').then(res => res.json()).then(data => {
         allDrivers = data;
@@ -409,8 +502,8 @@
       Promise.all(promises).then(results => {
         allPayrollRows = results;
         results.forEach(p => {
-          totalNet += parseFloat(p.net_pay);
-          totalRevenue += parseFloat(p.total_revenue);
+          totalNet += parseFloat(p.net_pay || 0);
+          totalRevenue += parseFloat(p.total_revenue || 0);
         });
         document.getElementById('statRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
         loadFinancialSummary(totalRevenue, totalNet);
@@ -429,7 +522,7 @@
         <tr>
           <td>${p.driver_name}</td>
           <td>${incomeLabel[p.income_type] || p.income_type}</td>
-          <td>${p.expected_working_days}</td>
+          <td>${p.required_working_days}</td>
           <td>${p.days_present}</td>
           <td>${p.holiday_days}</td>
           <td>${p.salary_part}</td>
@@ -463,7 +556,6 @@
       });
     }
 
-    // ==================== تخصيص السائق ====================
     function openCustomizeModal(driverId) {
       const driver = allDrivers.find(d => d.id === driverId);
       document.getElementById('customizeDriverId').value = driverId;
@@ -508,11 +600,12 @@
           showToast(data.message);
           setTimeout(closeModal, 700);
           loadDriversAndPayroll();
+        } else {
+          showToast(data.error, true);
         }
       });
     }
 
-    // ==================== صيانة التوكتوكات ====================
     function loadTuktuksDropdown() {
       fetch('/tuktuks').then(res => res.json()).then(data => {
         const select = document.getElementById('maintTuktuk');
@@ -624,7 +717,7 @@
 
     loadSettings();
     loadLeaveConfig();
-    loadHolidayDriverDropdown();
+    loadHolidayDriversList();
     loadDriversAndPayroll();
     loadTuktuksDropdown();
     loadDriversDropdown();
