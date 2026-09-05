@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>قسم المالية - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--nile); }
+    .topbar img { height: 38px; }
+    .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; }
+    .logout-link { margin-inline-start: auto; color: var(--sand); opacity: 0.75; font-size: 13px; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); padding: 6px 12px; border-radius: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .section-head h2 { font-size: 18px; margin: 0; }
+    input, select { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
+    input:focus, select:focus { outline: 2px solid var(--nile); outline-offset: 1px; }
+    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 30px; }
+    form.panel { padding: 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    button.submit-btn { padding: 10px 20px; background: var(--nile); color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
+    th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; }
+    tbody tr:nth-child(even) { background: #FAF7F0; }
+    tbody tr:hover { background: #F3E9DA; }
+    td { border-bottom: 1px solid var(--line); }
+    .table-scroll { overflow-x: auto; }
+    .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; }
+    .btn-edit { background: var(--amber); }
+    .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
+    .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+    .form-msg-inline { font-size: 13px; font-weight: 600; color: var(--nile); }
+
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 30px; }
+    .stat-card { background: var(--paper); border-radius: 12px; padding: 20px; text-align: center; border-top: 4px solid var(--line); }
+    .stat-card.rev { border-top-color: var(--nile); }
+    .stat-card.exp { border-top-color: var(--rust); }
+    .stat-card.net { border-top-color: var(--orange); }
+    .stat-card .num { font-size: 24px; font-weight: 800; }
+    .stat-card .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+    .modal-backdrop.open { display: flex; }
+    .modal-box { background: var(--paper); border-radius: 16px; padding: 26px; width: 100%; max-width: 400px; border-top: 5px solid var(--amber); }
+    .modal-box h3 { margin: 0 0 4px; font-size: 18px; }
+    .modal-box .modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 18px; }
+    .modal-box input, .modal-box select { width: 100%; margin-bottom: 10px; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .checkbox-row input { width: auto; margin: 0; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
+    .modal-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
+    .btn-modal-save { background: var(--nile); color: white; }
+    .btn-modal-cancel { background: var(--line); color: var(--ink); }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transition: opacity 0.25s; pointer-events: none; max-width: 90%; text-align: center; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/index.html" class="back-link">→ الرئيسية</a>
+    <img src="/logo.png" alt="Ginger">
+    <h1>قسم المالية والرواتب</h1>
+    <a href="/api/finance-logout" class="logout-link">خروج</a>
+  </div>
+
+  <div class="container">
+
+    <div class="section-head"><h2>ملخص الشهر الحالي</h2></div>
+    <div class="stats-row">
+      <div class="stat-card rev"><div class="num" id="statRevenue">-</div><div class="lbl">إجمالي الإيرادات</div></div>
+      <div class="stat-card exp"><div class="num" id="statExpenses">-</div><div class="lbl">إجمالي المصروفات</div></div>
+      <div class="stat-card net"><div class="num" id="statNet">-</div><div class="lbl">صافي الربح</div></div>
+    </div>
+
+    <div class="section-head"><h2>الإعدادات العامة للرواتب</h2></div>
+    <form id="settingsForm" class="panel">
+      <select id="incomeType">
+        <option value="commission">عمولة فقط</option>
+        <option value="salary">مرتب فقط</option>
+        <option value="both">مرتب + عمولة</option>
+      </select>
+      <input type="number" id="monthlySalary" placeholder="المرتب الشهري">
+      <input type="number" id="commissionPct" placeholder="نسبة العمولة %">
+      <input type="number" id="leaveBalance" placeholder="رصيد الإجازات الشهري">
+      <button type="submit" class="submit-btn">حفظ الإعدادات العامة</button>
+    </form>
+    <div id="settingsMsg" class="form-msg"></div>
+
+    <div class="section-head"><h2>كشف مرتبات السواقين (الشهر الحالي)</h2></div>
+    <div class="panel table-scroll">
+      <table id="payrollTable">
+        <thead><tr><th>السائق</th><th>نوع الدخل</th><th>أيام الحضور</th><th>المرتب</th><th>العمولة</th><th>الإجمالي</th><th>خصومات وسلف</th><th>الصافي</th><th>تخصيص</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-head"><h2>صيانة التوكتوكات</h2></div>
+    <form id="maintenanceForm" class="panel">
+      <select id="maintTuktuk"></select>
+      <select id="maintDriver"><option value="">بدون سائق محدد</option></select>
+      <select id="maintType">
+        <option value="scheduled">صيانة دورية</option>
+        <option value="repair">إصلاح عطل</option>
+      </select>
+      <input type="text" id="maintDesc" placeholder="وصف المصروف">
+      <input type="number" id="maintCost" placeholder="التكلفة">
+      <input type="date" id="maintDate">
+      <button type="submit" class="submit-btn">تسجيل مصروف الصيانة</button>
+    </form>
+    <div id="maintMsg" class="form-msg"></div>
+    <div class="panel table-scroll">
+      <table id="maintenanceTable">
+        <thead><tr><th>التاريخ</th><th>التوكتوك</th><th>السائق وقتها</th><th>النوع</th><th>الوصف</th><th>التكلفة</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- مودال تخصيص سائق -->
+  <div class="modal-backdrop" id="customizeModal">
+    <div class="modal-box">
+      <h3>تخصيص إعدادات السائق</h3>
+      <div class="modal-sub" id="customizeDriverName"></div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="isCustomized">
+        <label for="isCustomized">مخصص (لو مش متفعّل، هياخد الإعدادات العامة)</label>
+      </div>
+      <select id="customIncomeType">
+        <option value="commission">عمولة فقط</option>
+        <option value="salary">مرتب فقط</option>
+        <option value="both">مرتب + عمولة</option>
+      </select>
+      <input type="number" id="customSalary" placeholder="المرتب الشهري المخصص">
+      <input type="number" id="customCommission" placeholder="نسبة العمولة المخصصة %">
+      <input type="number" id="customLeave" placeholder="رصيد الإجازات المخصص">
+      <input type="hidden" id="customizeDriverId">
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancel" onclick="closeModal()">إلغاء</button>
+        <button type="button" class="btn-modal-save" onclick="saveCustomization()">حفظ</button>
+      </div>
+      <div id="customizeMsg" class="form-msg-inline" style="margin-top:10px;"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let allDrivers = [];
+    let allTuktuks = [];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    fetch('/api/finance-session').then(res => res.json()).then(data => {
+      if (!data.loggedIn) window.location.href = '/finance-login.html';
+    });
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function openModal() { document.getElementById('customizeModal').classList.add('open'); }
+    function closeModal() { document.getElementById('customizeModal').classList.remove('open'); }
+
+    // الإعدادات العامة
+    function loadSettings() {
+      fetch('/payroll-settings').then(res => res.json()).then(data => {
+        document.getElementById('incomeType').value = data.income_type || 'commission';
+        document.getElementById('monthlySalary').value = data.monthly_salary || 0;
+        document.getElementById('commissionPct').value = data.commission_pct || 0;
+        document.getElementById('leaveBalance').value = data.monthly_leave_balance || 2;
+      });
+    }
+
+    document.getElementById('settingsForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      fetch('/payroll-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          income_type: document.getElementById('incomeType').value,
+          monthly_salary: document.getElementById('monthlySalary').value,
+          commission_pct: document.getElementById('commissionPct').value,
+          monthly_leave_balance: document.getElementById('leaveBalance').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('settingsMsg').textContent = data.message || data.error;
+        loadPayroll();
+      });
+    });
+
+    // كشف المرتبات
+    function loadDriversAndPayroll() {
+      fetch('/drivers').then(res => res.json()).then(data => {
+        allDrivers = data;
+        loadPayroll();
+      });
+    }
+
+    function loadPayroll() {
+      const tbody = document.querySelector('#payrollTable tbody');
+      if (allDrivers.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="9">مفيش سواقين لسه</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = '';
+      let totalNet = 0;
+      let totalRevenue = 0;
+      let promises = allDrivers.map(d =>
+        fetch(`/payroll/calculate/${d.id}/${currentYear}/${currentMonth}`).then(res => res.json())
+      );
+
+      Promise.all(promises).then(results => {
+        results.forEach(p => {
+          totalNet += parseFloat(p.net_pay);
+          totalRevenue += parseFloat(p.total_revenue);
+          const incomeLabel = { salary: 'مرتب', commission: 'عمولة', both: 'مرتب+عمولة' };
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${p.driver_name}</td>
+            <td>${incomeLabel[p.income_type]}</td>
+            <td>${p.days_present} / ${p.days_in_month}</td>
+            <td>${p.salary_part}</td>
+            <td>${p.commission_part}</td>
+            <td>${p.gross_pay}</td>
+            <td>${(parseFloat(p.total_deductions) + parseFloat(p.total_advances)).toFixed(2)}</td>
+            <td><strong>${p.net_pay}</strong></td>
+            <td><button class="row-btn btn-edit" onclick='openCustomizeModal(${p.driver_id})'>تخصيص</button></td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        document.getElementById('statRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
+        document.getElementById('statExpenses').textContent = '-';
+        document.getElementById('statNet').textContent = '-';
+        loadFinancialSummary(totalRevenue, totalNet);
+      });
+    }
+
+    function loadFinancialSummary(totalRevenue, totalPayroll) {
+      fetch('/tuktuk-maintenance').then(res => res.json()).then(maintData => {
+        const currentMonthMaint = maintData.filter(m => {
+          const d = new Date(m.maintenance_date);
+          return d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth;
+        });
+        const totalMaintenance = currentMonthMaint.reduce((sum, m) => sum + parseFloat(m.cost), 0);
+        const totalExpenses = totalPayroll + totalMaintenance;
+        const netProfit = totalRevenue - totalExpenses;
+
+        document.getElementById('statExpenses').textContent = totalExpenses.toFixed(2) + ' ج';
+        document.getElementById('statNet').textContent = netProfit.toFixed(2) + ' ج';
+      });
+    }
+
+    function openCustomizeModal(driverId) {
+      const driver = allDrivers.find(d => d.id === driverId);
+      document.getElementById('customizeDriverId').value = driverId;
+      document.getElementById('customizeDriverName').textContent = driver.name;
+      document.getElementById('isCustomized').checked = !!driver.is_customized;
+      document.getElementById('customIncomeType').value = driver.custom_income_type || 'commission';
+      document.getElementById('customSalary').value = driver.custom_monthly_salary || 0;
+      document.getElementById('customCommission').value = driver.custom_commission_pct || 0;
+      document.getElementById('customLeave').value = driver.custom_leave_balance || 2;
+      document.getElementById('customizeMsg').textContent = '';
+      openModal();
+    }
+
+    function saveCustomization() {
+      const id = document.getElementById('customizeDriverId').value;
+      fetch(`/drivers/${id}/customize`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          is_customized: document.getElementById('isCustomized').checked,
+          custom_income_type: document.getElementById('customIncomeType').value,
+          custom_monthly_salary: document.getElementById('customSalary').value,
+          custom_commission_pct: document.getElementById('customCommission').value,
+          custom_leave_balance: document.getElementById('customLeave').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('customizeMsg').textContent = data.message || data.error;
+        if (data.message) {
+          showToast(data.message);
+          setTimeout(closeModal, 700);
+          loadDriversAndPayroll();
+        }
+      });
+    }
+
+    // صيانة التوكتوكات
+    function loadTuktuksDropdown() {
+      fetch('/tuktuks').then(res => res.json()).then(data => {
+        allTuktuks = data;
+        const select = document.getElementById('maintTuktuk');
+        select.innerHTML = data.map(t => `<option value="${t.id}">${t.tuktuk_number}</option>`).join('');
+      });
+    }
+
+    function loadDriversDropdown() {
+      fetch('/drivers').then(res => res.json()).then(data => {
+        const select = document.getElementById('maintDriver');
+        select.innerHTML = '<option value="">بدون سائق محدد</option>' + data.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+      });
+    }
+
+    function loadMaintenance() {
+      fetch('/tuktuk-maintenance').then(res => res.json()).then(data => {
+        const tbody = document.querySelector('#maintenanceTable tbody');
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش سجل صيانة لسه</td></tr>`;
+          return;
+        }
+        const typeLabel = { scheduled: 'دورية', repair: 'إصلاح عطل' };
+        tbody.innerHTML = data.map(m => `
+          <tr>
+            <td>${m.maintenance_date}</td>
+            <td>${m.tuktuk_number}</td>
+            <td>${m.driver_name || '-'}</td>
+            <td>${typeLabel[m.maintenance_type]}</td>
+            <td>${m.description}</td>
+            <td>${m.cost}</td>
+          </tr>
+        `).join('');
+      });
+    }
+
+    document.getElementById('maintenanceForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      fetch('/tuktuk-maintenance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tuktuk_id: document.getElementById('maintTuktuk').value,
+          driver_id: document.getElementById('maintDriver').value || null,
+          maintenance_type: document.getElementById('maintType').value,
+          description: document.getElementById('maintDesc').value,
+          cost: document.getElementById('maintCost').value,
+          maintenance_date: document.getElementById('maintDate').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('maintMsg').textContent = data.message || data.error;
+        if (data.message) {
+          document.getElementById('maintenanceForm').reset();
+          loadMaintenance();
+          loadDriversAndPayroll();
+          showToast(data.message);
+        }
+      });
+    });
+
+    loadSettings();
+    loadDriversAndPayroll();
+    loadTuktuksDropdown();
+    loadDriversDropdown();
+    loadMaintenance();
+  </script>
+</body>
+</html>
