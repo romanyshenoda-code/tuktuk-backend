@@ -10,6 +10,7 @@
     :root {
       --ink: #1E1B16;
       --asphalt: #16305C;
+      --asphalt-light: #204480;
       --sand: #F3EEE3;
       --paper: #FFFFFF;
       --orange: #EA4F1E;
@@ -39,93 +40,168 @@
       border-bottom: 4px solid var(--orange);
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 20;
     }
     .topbar img { height: 40px; }
     .topbar h1 { margin: 0; font-size: 17px; font-weight: 700; }
     .topbar .sub { font-size: 11px; opacity: 0.7; letter-spacing: 0.3px; }
 
-    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
 
-    .section-title {
+    /* ===== كروت الوحدات (الملخص العلوي) ===== */
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 36px;
+    }
+    .module-card {
+      background: var(--paper);
+      border-radius: 14px;
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      border: 1px solid var(--line);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      animation: riseIn 0.4s ease backwards;
+    }
+    .module-card:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(22,48,92,0.14); }
+    .module-card .icon { font-size: 26px; margin-bottom: 8px; }
+    .module-card .count { font-size: 24px; font-weight: 800; }
+    .module-card .label { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+    .module-card:nth-child(1) { border-top: 4px solid var(--orange); animation-delay: 0.02s; }
+    .module-card:nth-child(2) { border-top: 4px solid var(--asphalt); animation-delay: 0.08s; }
+    .module-card:nth-child(3) { border-top: 4px solid var(--nile); animation-delay: 0.14s; }
+    .module-card:nth-child(4) { border-top: 4px solid var(--amber); animation-delay: 0.20s; }
+    .module-card:nth-child(5) { border-top: 4px solid var(--rust); animation-delay: 0.26s; }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== أقسام الصفحة ===== */
+    .section {
+      scroll-margin-top: 90px;
+      margin-bottom: 44px;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .section-head h2 {
+      font-size: 17px;
+      margin: 0;
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin: 34px 0 12px;
-      font-size: 15px;
-      font-weight: 700;
+      gap: 9px;
     }
-    .section-title .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-    .section-title:first-child { margin-top: 0; }
+    .section-head .dot { width: 9px; height: 9px; border-radius: 50%; }
+
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+    input, select, textarea {
+      padding: 10px 13px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--paper);
+      color: var(--ink);
+    }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
+
+    .search-input { width: 220px; }
+
+    .add-square {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: var(--orange);
+      color: white;
+      border: none;
+      font-size: 22px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s, filter 0.15s;
+      line-height: 1;
+      padding: 0;
+    }
+    .add-square:hover { transform: scale(1.06); filter: brightness(0.95); }
 
     .panel {
       background: var(--paper);
       border-radius: 12px;
-      border-inline-start: 5px solid var(--line);
-      box-shadow: 0 1px 3px rgba(30,27,22,0.06);
-      overflow: hidden;
-      margin-bottom: 4px;
-    }
-    .panel.accent-orange { border-inline-start-color: var(--orange); }
-    .panel.accent-nile { border-inline-start-color: var(--nile); }
-    .panel.accent-ink { border-inline-start-color: var(--asphalt); }
-
-    form.panel {
-      padding: 16px 18px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    input, select {
-      padding: 10px 12px;
       border: 1px solid var(--line);
-      border-radius: 7px;
-      font-size: 14px;
-      font-family: inherit;
-      background: var(--sand);
-      color: var(--ink);
+      overflow: hidden;
     }
-    input:focus, select:focus { outline: 2px solid var(--orange); outline-offset: 1px; background: var(--paper); }
-
-    button {
-      padding: 10px 20px;
-      background: var(--orange);
-      color: white;
-      border: none;
-      border-radius: 7px;
-      font-family: inherit;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    button:hover { filter: brightness(0.94); }
-    .btn-approve { background: var(--nile); padding: 7px 14px; font-size: 13px; margin-inline-end: 6px; }
-    .btn-reject { background: var(--rust); padding: 7px 14px; font-size: 13px; }
-
-    .form-msg { padding: 0 18px 14px; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
 
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
-    th {
-      background: var(--asphalt);
-      color: var(--sand);
-      font-weight: 600;
-      font-size: 12.5px;
-    }
+    th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; position: sticky; top: 0; }
     tbody tr:nth-child(even) { background: #FAF7F0; }
     tbody tr:hover { background: #F3E9DA; }
     td { border-bottom: 1px solid var(--line); }
+    .table-scroll { overflow-x: auto; max-height: 420px; overflow-y: auto; }
 
-    .table-scroll { overflow-x: auto; }
+    .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; color: white; }
+    .badge-active, .badge-open, .badge-approved { background: var(--nile); }
+    .badge-maintenance, .badge-cancelled, .badge-rejected { background: var(--rust); }
+    .badge-closed { background: var(--muted); }
+    .badge-pending { background: var(--amber); }
 
-    .status-open, .status-approved { color: var(--nile); font-weight: 700; }
-    .status-closed { color: var(--muted); }
-    .status-pending { color: var(--amber); font-weight: 700; }
-    .status-rejected { color: var(--rust); font-weight: 700; }
+    .row-btn {
+      padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px;
+      color: white; cursor: pointer; font-weight: 700; font-family: inherit;
+    }
+    .btn-fix { background: var(--amber); }
+    .btn-active { background: var(--nile); }
+    .btn-cancel { background: var(--rust); }
+    .btn-approve { background: var(--nile); margin-inline-end: 5px; }
+    .btn-reject { background: var(--rust); }
 
-    .empty-row td { text-align: center; color: var(--muted); padding: 22px; }
+    .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
+
+    form.panel { padding: 16px 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    button.submit-btn {
+      padding: 10px 20px; background: var(--orange); color: white; border: none;
+      border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer;
+    }
+    .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+
+    /* ===== المودال (البوب أب) ===== */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(22,19,15,0.55);
+      display: none; align-items: center; justify-content: center;
+      z-index: 100; padding: 20px;
+      animation: fadeIn 0.18s ease;
+    }
+    .modal-backdrop.open { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal-box {
+      background: var(--paper);
+      border-radius: 16px;
+      padding: 26px;
+      width: 100%;
+      max-width: 400px;
+      border-top: 5px solid var(--orange);
+      animation: popIn 0.22s cubic-bezier(.2,.9,.3,1.2);
+    }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.92) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+    .modal-box h3 { margin: 0 0 4px; font-size: 18px; }
+    .modal-box .modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 18px; }
+    .modal-box input { width: 100%; margin-bottom: 10px; }
+    .modal-box .hint { font-size: 11.5px; color: var(--muted); margin: -4px 0 12px; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
+    .modal-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
+    .btn-modal-save { background: var(--orange); color: white; }
+    .btn-modal-cancel { background: var(--line); color: var(--ink); }
   </style>
 </head>
 <body>
@@ -140,180 +216,371 @@
 
   <div class="container">
 
-    <div class="section-title"><span class="dot" style="background:var(--orange)"></span>السواقين</div>
-    <form id="addDriverForm" class="panel accent-orange">
-      <input type="text" id="newName" placeholder="الاسم" required>
-      <input type="text" id="newPhone" placeholder="رقم التليفون" required>
-      <input type="text" id="newNationalId" placeholder="الرقم القومي">
-      <input type="password" id="newPassword" placeholder="كلمة مرور السائق" required>
-      <button type="submit">إضافة السائق</button>
-    </form>
-    <div id="addDriverMsg" class="form-msg"></div>
-
-    <div class="panel accent-orange table-scroll">
-      <table id="driversTable">
-        <thead><tr><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الحالة</th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <!-- كروت الوحدات -->
+    <div class="modules-grid">
+      <div class="module-card" onclick="scrollToSection('driversSection')">
+        <div class="icon">🧑‍✈️</div>
+        <div class="count" id="countDrivers">-</div>
+        <div class="label">السواقين</div>
+      </div>
+      <div class="module-card" onclick="scrollToSection('tuktuksSection')">
+        <div class="icon">🛺</div>
+        <div class="count" id="countTuktuks">-</div>
+        <div class="label">التوكتوكات</div>
+      </div>
+      <div class="module-card" onclick="scrollToSection('shiftsSection')">
+        <div class="icon">🕐</div>
+        <div class="count" id="countShiftsOpen">-</div>
+        <div class="label">ورديات شغالة</div>
+      </div>
+      <div class="module-card" onclick="scrollToSection('ordersSection')">
+        <div class="icon">📦</div>
+        <div class="count" id="countOrdersOpen">-</div>
+        <div class="label">أوردرات شغالة</div>
+      </div>
+      <div class="module-card" onclick="scrollToSection('hrSection')">
+        <div class="icon">📋</div>
+        <div class="count" id="countPendingRequests">-</div>
+        <div class="label">طلبات معلّقة</div>
+      </div>
     </div>
 
-    <div class="section-title"><span class="dot" style="background:var(--asphalt)"></span>التوكتوكات</div>
-    <form id="addTuktukForm" class="panel accent-ink">
-      <input type="text" id="newTuktukNumber" placeholder="رقم التوكتوك" required>
-      <input type="text" id="newQrCode" placeholder="كود QR" required>
-      <button type="submit">إضافة التوكتوك</button>
-    </form>
-    <div id="addTuktukMsg" class="form-msg"></div>
-
-    <div class="panel accent-ink table-scroll">
-      <table id="tuktuksTable">
-        <thead><tr><th>الرقم</th><th>رقم التوكتوك</th><th>QR Code</th><th>الحالة</th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <!-- قسم السواقين -->
+    <div class="section" id="driversSection">
+      <div class="section-head">
+        <h2><span class="dot" style="background:var(--orange)"></span>السواقين</h2>
+        <div class="toolbar">
+          <input type="text" id="driverSearch" class="search-input" placeholder="بحث بالاسم أو التليفون..." oninput="filterDrivers()">
+          <button class="add-square" onclick="openModal('driverModal')" title="إضافة سائق">+</button>
+        </div>
+      </div>
+      <div class="panel table-scroll">
+        <table id="driversTable">
+          <thead><tr><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الرقم القومي</th><th>تاريخ التعيين</th><th>الحالة</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="section-title"><span class="dot" style="background:var(--nile)"></span>الورديات</div>
-    <div class="panel accent-nile table-scroll">
-      <table id="shiftsTable">
-        <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th><th>وقت الانصراف</th><th>الحالة</th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <!-- قسم التوكتوكات -->
+    <div class="section" id="tuktuksSection">
+      <div class="section-head">
+        <h2><span class="dot" style="background:var(--asphalt)"></span>التوكتوكات</h2>
+        <div class="toolbar">
+          <input type="text" id="tuktukSearch" class="search-input" placeholder="بحث برقم التوكتوك..." oninput="filterTuktuks()">
+          <button class="add-square" onclick="openModal('tuktukModal')" title="إضافة توكتوك">+</button>
+        </div>
+      </div>
+      <div class="panel table-scroll">
+        <table id="tuktuksTable">
+          <thead><tr><th>الرقم</th><th>رقم التوكتوك</th><th>QR Code</th><th>الحالة</th><th>إجراء</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="section-title"><span class="dot" style="background:var(--nile)"></span>الأوردرات</div>
-    <div class="panel accent-nile table-scroll">
-      <table id="ordersTable">
-        <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>المسافة (كم)</th><th>السعر</th><th>مستحقات السائق</th><th>الحالة</th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <!-- قسم الورديات -->
+    <div class="section" id="shiftsSection">
+      <div class="section-head"><h2><span class="dot" style="background:var(--nile)"></span>الورديات</h2></div>
+      <div class="panel table-scroll">
+        <table id="shiftsTable">
+          <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th><th>وقت الانصراف</th><th>الحالة</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="section-title"><span class="dot" style="background:var(--nile)"></span>ملخصات الورديات</div>
-    <div class="panel accent-nile table-scroll">
-      <table id="summariesTable">
-        <thead><tr><th>الرقم</th><th>السائق</th><th>عدد الأوردرات</th><th>رحلات كاملة</th><th>توصيلات</th><th>إجمالي السعر</th><th>مستحقات السائق</th><th>معدّل يدوي؟</th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <!-- قسم الأوردرات -->
+    <div class="section" id="ordersSection">
+      <div class="section-head"><h2><span class="dot" style="background:var(--nile)"></span>الأوردرات الشغالة الآن</h2></div>
+      <div class="panel table-scroll">
+        <table id="activeOrdersTable">
+          <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>وقت الفتح</th><th>إجراء</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="section-head" style="margin-top:26px;"><h2><span class="dot" style="background:var(--nile)"></span>سجل الأوردرات</h2></div>
+      <div class="panel table-scroll">
+        <table id="ordersTable">
+          <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>المسافة (كم)</th><th>السعر</th><th>مستحقات السائق</th><th>الحالة</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="section-head" style="margin-top:26px;"><h2><span class="dot" style="background:var(--nile)"></span>ملخصات الورديات</h2></div>
+      <div class="panel table-scroll">
+        <table id="summariesTable">
+          <thead><tr><th>الرقم</th><th>السائق</th><th>عدد الأوردرات</th><th>رحلات كاملة</th><th>توصيلات</th><th>إجمالي السعر</th><th>مستحقات السائق</th><th>معدّل يدوي؟</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="section-title"><span class="dot" style="background:var(--amber)"></span>طلبات الإجازة</div>
-    <div class="panel accent-orange table-scroll">
-      <table id="leaveTable">
-        <thead><tr><th>الرقم</th><th>السائق</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    <!-- قسم الموارد البشرية -->
+    <div class="section" id="hrSection">
+      <div class="section-head"><h2><span class="dot" style="background:var(--amber)"></span>طلبات الإجازة</h2></div>
+      <div class="panel table-scroll">
+        <table id="leaveTable">
+          <thead><tr><th>الرقم</th><th>السائق</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
 
-    <div class="section-title"><span class="dot" style="background:var(--amber)"></span>طلبات السلف</div>
-    <div class="panel accent-orange table-scroll">
-      <table id="advancesTable">
-        <thead><tr><th>الرقم</th><th>السائق</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+      <div class="section-head" style="margin-top:26px;"><h2><span class="dot" style="background:var(--amber)"></span>طلبات السلف</h2></div>
+      <div class="panel table-scroll">
+        <table id="advancesTable">
+          <thead><tr><th>الرقم</th><th>السائق</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
 
-    <div class="section-title"><span class="dot" style="background:var(--rust)"></span>تسجيل خصم على سائق</div>
-    <form id="addDeductionForm" class="panel accent-orange">
-      <input type="number" id="deductionDriverId" placeholder="رقم السائق" required>
-      <input type="number" id="deductionAmount" placeholder="المبلغ" required>
-      <input type="text" id="deductionReason" placeholder="السبب" required>
-      <button type="submit">تسجيل الخصم</button>
-    </form>
-    <div id="addDeductionMsg" class="form-msg"></div>
+      <div class="section-head" style="margin-top:26px;"><h2><span class="dot" style="background:var(--rust)"></span>تسجيل خصم على سائق</h2></div>
+      <form id="addDeductionForm" class="panel">
+        <input type="number" id="deductionDriverId" placeholder="رقم السائق" required>
+        <input type="number" id="deductionAmount" placeholder="المبلغ" required>
+        <input type="text" id="deductionReason" placeholder="السبب" required>
+        <button type="submit" class="submit-btn">تسجيل الخصم</button>
+      </form>
+      <div id="addDeductionMsg" class="form-msg"></div>
+    </div>
 
   </div>
 
+  <!-- مودال إضافة سائق -->
+  <div class="modal-backdrop" id="driverModal">
+    <div class="modal-box">
+      <h3>إضافة سائق جديد</h3>
+      <div class="modal-sub">هيتسجل تاريخ التعيين تلقائي بتاريخ النهاردة</div>
+      <form id="addDriverForm">
+        <input type="text" id="newName" placeholder="الاسم" required>
+        <input type="text" id="newPhone" placeholder="رقم التليفون" required>
+        <input type="text" id="newNationalId" placeholder="الرقم القومي">
+        <input type="password" id="newPassword" placeholder="كلمة مرور دخول السائق" required>
+        <div class="hint">السائق هيستخدم رقمه والباسورد ده لدخول صفحته الشخصية</div>
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" onclick="closeModal('driverModal')">إلغاء</button>
+          <button type="submit" class="btn-modal-save">حفظ السائق</button>
+        </div>
+      </form>
+      <div id="addDriverMsg" class="form-msg"></div>
+    </div>
+  </div>
+
+  <!-- مودال إضافة توكتوك -->
+  <div class="modal-backdrop" id="tuktukModal">
+    <div class="modal-box">
+      <h3>إضافة توكتوك جديد</h3>
+      <div class="modal-sub">رقم التوكتوك وكود الـ QR الخاص بيه</div>
+      <form id="addTuktukForm">
+        <input type="text" id="newTuktukNumber" placeholder="رقم التوكتوك" required>
+        <input type="text" id="newQrCode" placeholder="كود QR" required>
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" onclick="closeModal('tuktukModal')">إلغاء</button>
+          <button type="submit" class="btn-modal-save">حفظ التوكتوك</button>
+        </div>
+      </form>
+      <div id="addTuktukMsg" class="form-msg"></div>
+    </div>
+  </div>
+
   <script>
-    function loadTable(url, tableId, rowBuilder) {
-      const tbody = document.querySelector(`#${tableId} tbody`);
-      tbody.innerHTML = '';
-      fetch(url)
+    let allDrivers = [];
+    let allTuktuks = [];
+
+    function scrollToSection(id) {
+      document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.addEventListener('click', e => {
+        if (e.target === backdrop) backdrop.classList.remove('open');
+      });
+    });
+
+    function loadTable(url, tableId, rowBuilder, colspan) {
+      return fetch(url)
         .then(res => res.json())
         .then(data => {
+          const tbody = document.querySelector(`#${tableId} tbody`);
           if (data.length === 0) {
-            tbody.innerHTML = `<tr class="empty-row"><td colspan="10">مفيش بيانات لسه</td></tr>`;
-            return;
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="${colspan}">مفيش بيانات لسه</td></tr>`;
+          } else {
+            tbody.innerHTML = data.map(rowBuilder).join('');
           }
-          data.forEach(item => {
-            const row = document.createElement('tr');
-            row.innerHTML = rowBuilder(item);
-            tbody.appendChild(row);
-          });
+          return data;
         });
     }
 
-    function loadAllTables() {
-      loadTable('/drivers', 'driversTable', d => `
-        <td>${d.id}</td><td>${d.name}</td><td>${d.phone}</td><td>${d.status}</td>
-      `);
+    function formatDate(d) {
+      if (!d) return '-';
+      return new Date(d).toLocaleDateString('ar-EG');
+    }
+    function formatDateTime(d) {
+      if (!d) return '-';
+      return new Date(d).toLocaleString('ar-EG');
+    }
 
-      loadTable('/tuktuks', 'tuktuksTable', t => `
-        <td>${t.id}</td><td>${t.tuktuk_number}</td><td>${t.qr_code}</td><td>${t.status}</td>
-      `);
+    function loadDrivers() {
+      fetch('/drivers').then(res => res.json()).then(data => {
+        allDrivers = data;
+        document.getElementById('countDrivers').textContent = data.length;
+        renderDrivers(data);
+      });
+    }
 
+    function renderDrivers(data) {
+      const tbody = document.querySelector('#driversTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش سواقين لسه</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(d => `
+        <tr>
+          <td>${d.id}</td>
+          <td>${d.name}</td>
+          <td>${d.phone}</td>
+          <td>${d.national_id || '-'}</td>
+          <td>${formatDate(d.created_at)}</td>
+          <td><span class="badge badge-active">${d.status === 'active' ? 'نشط' : 'غير نشط'}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function filterDrivers() {
+      const q = document.getElementById('driverSearch').value.trim();
+      if (!q) { renderDrivers(allDrivers); return; }
+      const filtered = allDrivers.filter(d => d.name.includes(q) || d.phone.includes(q));
+      renderDrivers(filtered);
+    }
+
+    function loadTuktuks() {
+      fetch('/tuktuks').then(res => res.json()).then(data => {
+        allTuktuks = data;
+        document.getElementById('countTuktuks').textContent = data.length;
+        renderTuktuks(data);
+      });
+    }
+
+    function renderTuktuks(data) {
+      const tbody = document.querySelector('#tuktuksTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش توكتوكات لسه</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(t => `
+        <tr>
+          <td>${t.id}</td>
+          <td>${t.tuktuk_number}</td>
+          <td>${t.qr_code}</td>
+          <td><span class="badge badge-${t.status}">${t.status === 'active' ? 'نشط' : 'فيه عطل'}</span></td>
+          <td>
+            ${t.status === 'active'
+              ? `<button class="row-btn btn-fix" onclick="toggleTuktukStatus(${t.id}, 'maintenance')">تسجيل عطل</button>`
+              : `<button class="row-btn btn-active" onclick="toggleTuktukStatus(${t.id}, 'active')">إعادة تفعيل</button>`}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterTuktuks() {
+      const q = document.getElementById('tuktukSearch').value.trim();
+      if (!q) { renderTuktuks(allTuktuks); return; }
+      const filtered = allTuktuks.filter(t => t.tuktuk_number.includes(q));
+      renderTuktuks(filtered);
+    }
+
+    function toggleTuktukStatus(id, status) {
+      fetch(`/tuktuks/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      })
+      .then(res => res.json())
+      .then(() => loadTuktuks());
+    }
+
+    function loadShifts() {
       loadTable('/shifts', 'shiftsTable', s => `
-        <td>${s.id}</td>
-        <td>${s.driver_name}</td>
-        <td>${s.tuktuk_number}</td>
-        <td>${s.check_in_time ? new Date(s.check_in_time).toLocaleString('ar-EG') : '-'}</td>
-        <td>${s.check_out_time ? new Date(s.check_out_time).toLocaleString('ar-EG') : '-'}</td>
-        <td class="status-${s.status}">${s.status === 'open' ? 'مفتوحة' : 'مقفولة'}</td>
-      `);
+        <tr>
+          <td>${s.id}</td>
+          <td>${s.driver_name}</td>
+          <td>${s.tuktuk_number}</td>
+          <td>${formatDateTime(s.check_in_time)}</td>
+          <td>${formatDateTime(s.check_out_time)}</td>
+          <td><span class="badge badge-${s.status}">${s.status === 'open' ? 'مفتوحة' : 'مقفولة'}</span></td>
+        </tr>
+      `, 6).then(data => {
+        document.getElementById('countShiftsOpen').textContent = data.filter(s => s.status === 'open').length;
+      });
+    }
+
+    function loadOrders() {
+      loadTable('/orders/active', 'activeOrdersTable', o => `
+        <tr>
+          <td>${o.id}</td>
+          <td>${o.driver_name}</td>
+          <td>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'}</td>
+          <td>${formatDateTime(o.start_time)}</td>
+          <td><button class="row-btn btn-cancel" onclick="cancelOrder(${o.id})">إلغاء الأوردر</button></td>
+        </tr>
+      `, 5).then(data => {
+        document.getElementById('countOrdersOpen').textContent = data.length;
+      });
 
       loadTable('/orders', 'ordersTable', o => `
-        <td>${o.id}</td>
-        <td>${o.driver_name}</td>
-        <td>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'}</td>
-        <td>${o.distance_km || '-'}</td>
-        <td>${o.price || '-'}</td>
-        <td>${o.driver_earning || '-'}</td>
-        <td class="status-${o.status}">${o.status === 'open' ? 'مفتوح' : 'مقفول'}</td>
-      `);
+        <tr>
+          <td>${o.id}</td>
+          <td>${o.driver_name}</td>
+          <td>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'}</td>
+          <td>${o.distance_km || '-'}</td>
+          <td>${o.price || '-'}</td>
+          <td>${o.driver_earning || '-'}</td>
+          <td><span class="badge badge-${o.status}">${o.status === 'open' ? 'مفتوح' : (o.status === 'cancelled' ? 'ملغي' : 'مقفول')}</span></td>
+        </tr>
+      `, 7);
 
       loadTable('/shift-summaries', 'summariesTable', sm => `
-        <td>${sm.id}</td>
-        <td>${sm.driver_name}</td>
-        <td>${sm.total_orders}</td>
-        <td>${sm.full_trip_count}</td>
-        <td>${sm.delivery_count}</td>
-        <td>${sm.total_price}</td>
-        <td>${sm.total_driver_earning}</td>
-        <td>${sm.is_manually_edited ? 'نعم' : 'لا'}</td>
-      `);
-
-      loadLeaveRequests();
-      loadAdvances();
+        <tr>
+          <td>${sm.id}</td>
+          <td>${sm.driver_name}</td>
+          <td>${sm.total_orders}</td>
+          <td>${sm.full_trip_count}</td>
+          <td>${sm.delivery_count}</td>
+          <td>${sm.total_price}</td>
+          <td>${sm.total_driver_earning}</td>
+          <td>${sm.is_manually_edited ? 'نعم' : 'لا'}</td>
+        </tr>
+      `, 8);
     }
 
-    function loadLeaveRequests() {
-      const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
-      fetch('/leave-requests')
+    function cancelOrder(id) {
+      if (!confirm('متأكد إنك عايز تلغي الأوردر ده؟')) return;
+      fetch(`/orders/${id}/cancel`, { method: 'POST' })
         .then(res => res.json())
-        .then(data => {
-          const tbody = document.querySelector('#leaveTable tbody');
-          if (data.length === 0) {
-            tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش طلبات إجازة</td></tr>`;
-            return;
-          }
-          tbody.innerHTML = '';
-          data.forEach(r => {
-            const row = document.createElement('tr');
-            const actionHtml = r.status === 'pending'
-              ? `<button class="btn-approve" onclick="reviewLeave(${r.id}, 'approved')">موافقة</button>
-                 <button class="btn-reject" onclick="reviewLeave(${r.id}, 'rejected')">رفض</button>`
-              : (r.admin_note || '-');
-            row.innerHTML = `
-              <td>${r.id}</td>
-              <td>${r.driver_name}</td>
-              <td>${r.start_date}</td>
-              <td>${r.end_date}</td>
-              <td>${r.reason || '-'}</td>
-              <td class="status-${r.status}">${statusText[r.status]}</td>
-              <td>${actionHtml}</td>
-            `;
-            tbody.appendChild(row);
-          });
-        });
+        .then(() => loadOrders());
+    }
+
+    const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+
+    function loadLeaveRequests() {
+      loadTable('/leave-requests', 'leaveTable', r => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${r.driver_name}</td>
+          <td>${r.start_date}</td>
+          <td>${r.end_date}</td>
+          <td>${r.reason || '-'}</td>
+          <td><span class="badge badge-${r.status}">${statusText[r.status]}</span></td>
+          <td>${r.status === 'pending'
+            ? `<button class="row-btn btn-approve" onclick="reviewLeave(${r.id}, 'approved')">موافقة</button>
+               <button class="row-btn btn-reject" onclick="reviewLeave(${r.id}, 'rejected')">رفض</button>`
+            : (r.admin_note || '-')}</td>
+        </tr>
+      `, 7).then(updatePendingCount);
     }
 
     function reviewLeave(id, status) {
@@ -322,39 +589,23 @@
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, admin_note: admin_note || '' })
-      })
-      .then(res => res.json())
-      .then(() => loadLeaveRequests());
+      }).then(res => res.json()).then(() => loadLeaveRequests());
     }
 
     function loadAdvances() {
-      const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
-      fetch('/advances')
-        .then(res => res.json())
-        .then(data => {
-          const tbody = document.querySelector('#advancesTable tbody');
-          if (data.length === 0) {
-            tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش طلبات سلف</td></tr>`;
-            return;
-          }
-          tbody.innerHTML = '';
-          data.forEach(r => {
-            const row = document.createElement('tr');
-            const actionHtml = r.status === 'pending'
-              ? `<button class="btn-approve" onclick="reviewAdvance(${r.id}, 'approved')">موافقة</button>
-                 <button class="btn-reject" onclick="reviewAdvance(${r.id}, 'rejected')">رفض</button>`
-              : (r.admin_note || '-');
-            row.innerHTML = `
-              <td>${r.id}</td>
-              <td>${r.driver_name}</td>
-              <td>${r.amount}</td>
-              <td>${r.reason || '-'}</td>
-              <td class="status-${r.status}">${statusText[r.status]}</td>
-              <td>${actionHtml}</td>
-            `;
-            tbody.appendChild(row);
-          });
-        });
+      loadTable('/advances', 'advancesTable', r => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${r.driver_name}</td>
+          <td>${r.amount}</td>
+          <td>${r.reason || '-'}</td>
+          <td><span class="badge badge-${r.status}">${statusText[r.status]}</span></td>
+          <td>${r.status === 'pending'
+            ? `<button class="row-btn btn-approve" onclick="reviewAdvance(${r.id}, 'approved')">موافقة</button>
+               <button class="row-btn btn-reject" onclick="reviewAdvance(${r.id}, 'rejected')">رفض</button>`
+            : (r.admin_note || '-')}</td>
+        </tr>
+      `, 6).then(updatePendingCount);
     }
 
     function reviewAdvance(id, status) {
@@ -363,14 +614,21 @@
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, admin_note: admin_note || '' })
-      })
-      .then(res => res.json())
-      .then(() => loadAdvances());
+      }).then(res => res.json()).then(() => loadAdvances());
+    }
+
+    function updatePendingCount() {
+      Promise.all([
+        fetch('/leave-requests').then(r => r.json()),
+        fetch('/advances').then(r => r.json())
+      ]).then(([leaves, advances]) => {
+        const pending = leaves.filter(l => l.status === 'pending').length + advances.filter(a => a.status === 'pending').length;
+        document.getElementById('countPendingRequests').textContent = pending;
+      });
     }
 
     document.getElementById('addDriverForm').addEventListener('submit', function(e) {
       e.preventDefault();
-
       const name = document.getElementById('newName').value;
       const phone = document.getElementById('newPhone').value;
       const national_id = document.getElementById('newNationalId').value;
@@ -384,14 +642,16 @@
       .then(res => res.json())
       .then(data => {
         document.getElementById('addDriverMsg').textContent = data.message || data.error;
-        document.getElementById('addDriverForm').reset();
-        loadAllTables();
+        if (data.message) {
+          document.getElementById('addDriverForm').reset();
+          loadDrivers();
+          setTimeout(() => closeModal('driverModal'), 700);
+        }
       });
     });
 
     document.getElementById('addTuktukForm').addEventListener('submit', function(e) {
       e.preventDefault();
-
       const tuktuk_number = document.getElementById('newTuktukNumber').value;
       const qr_code = document.getElementById('newQrCode').value;
 
@@ -403,14 +663,16 @@
       .then(res => res.json())
       .then(data => {
         document.getElementById('addTuktukMsg').textContent = data.message || data.error;
-        document.getElementById('addTuktukForm').reset();
-        loadAllTables();
+        if (data.message) {
+          document.getElementById('addTuktukForm').reset();
+          loadTuktuks();
+          setTimeout(() => closeModal('tuktukModal'), 700);
+        }
       });
     });
 
     document.getElementById('addDeductionForm').addEventListener('submit', function(e) {
       e.preventDefault();
-
       const driver_id = document.getElementById('deductionDriverId').value;
       const amount = document.getElementById('deductionAmount').value;
       const reason = document.getElementById('deductionReason').value;
@@ -427,7 +689,12 @@
       });
     });
 
-    loadAllTables();
+    loadDrivers();
+    loadTuktuks();
+    loadShifts();
+    loadOrders();
+    loadLeaveRequests();
+    loadAdvances();
   </script>
 </body>
 </html>
