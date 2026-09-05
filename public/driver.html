@@ -4,293 +4,138 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>صفحة السائق - Ginger</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --ink: #1E1B16;
-      --asphalt: #16305C;
-      --sand: #F3EEE3;
-      --paper: #FFFFFF;
-      --orange: #EA4F1E;
-      --orange-dark: #C63E12;
-      --nile: #1F6F63;
-      --rust: #B23A1E;
-      --amber: #C97A1A;
-      --line: #E4DCCB;
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
     }
-
     * { box-sizing: border-box; }
-
-    body {
-      font-family: 'Cairo', sans-serif;
-      background: var(--sand);
-      margin: 0;
-      color: var(--ink);
-      padding-bottom: 30px;
-    }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
 
     .topbar {
-      background: var(--asphalt);
-      color: var(--sand);
-      padding: 16px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 4px solid var(--orange);
+      background: var(--asphalt); color: var(--sand); padding: 16px 20px;
+      display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange);
+      position: sticky; top: 0; z-index: 50;
     }
-
-    .topbar .brand { display: flex; align-items: center; gap: 12px; }
-    .brand-logo { height: 42px; width: auto; }
-    .topbar h2 { margin: 0; font-size: 17px; font-weight: 700; }
-    .topbar .sub { font-size: 11px; opacity: 0.75; margin-top: 2px; letter-spacing: 0.3px; }
-    .logout-link {
-      color: var(--sand); opacity: 0.75; font-size: 13px;
-      text-decoration: none; border: 1px solid rgba(255,255,255,0.25);
-      padding: 6px 12px; border-radius: 20px;
+    .topbar img { height: 38px; }
+    .topbar h2 { margin: 0; font-size: 16px; font-weight: 700; }
+    .topbar .sub { font-size: 10.5px; opacity: 0.7; }
+    .bell-wrap { margin-inline-start: auto; position: relative; cursor: pointer; }
+    .bell-btn { background: rgba(255,255,255,0.12); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+    .bell-badge {
+      position: absolute; top: -4px; left: -4px; background: var(--orange); color: white;
+      font-size: 10.5px; font-weight: 800; min-width: 18px; height: 18px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; padding: 0 3px;
     }
+    .logout-link { color: rgba(255,255,255,0.75); font-size: 12px; text-decoration: none; }
 
-    .wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
+    .wrap { max-width: 480px; margin: 0 auto; padding: 20px 16px; }
+    .greeting { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .greeting-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
 
-    .section-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--ink);
-      margin: 26px 4px 10px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .modules-grid { display: grid; gap: 14px; }
+    .module-card {
+      background: var(--paper); border-radius: 16px; padding: 22px 18px;
+      display: flex; align-items: center; gap: 16px;
+      text-decoration: none; color: var(--ink); border: 1px solid var(--line);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      animation: riseIn 0.4s ease backwards; cursor: pointer;
     }
-    .section-title .dot { width: 8px; height: 8px; border-radius: 50%; }
-
-    .card {
-      background: var(--paper);
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 6px;
-      border-inline-start: 5px solid var(--line);
-      box-shadow: 0 1px 2px rgba(30,27,22,0.05);
+    .module-card:active { transform: scale(0.98); }
+    .module-card:hover { box-shadow: 0 10px 24px rgba(22,48,92,0.12); }
+    .module-card .icon-box {
+      width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+      font-size: 24px; flex-shrink: 0;
     }
-    .card.accent-orange { border-inline-start-color: var(--orange); }
-    .card.accent-nile { border-inline-start-color: var(--nile); }
-    .card.accent-rust { border-inline-start-color: var(--rust); }
-    .card.accent-ink { border-inline-start-color: var(--asphalt); }
+    .module-card .txt h3 { margin: 0 0 3px; font-size: 16px; }
+    .module-card .txt p { margin: 0; font-size: 12px; color: var(--muted); }
+    .module-card:nth-child(1) .icon-box { background: #FDEBE3; color: var(--orange); }
+    .module-card:nth-child(1) { animation-delay: 0.03s; }
+    .module-card:nth-child(2) .icon-box { background: #E3EEEC; color: var(--nile); }
+    .module-card:nth-child(2) { animation-delay: 0.09s; }
+    .module-card:nth-child(3) .icon-box { background: #FBF0DF; color: var(--amber); }
+    .module-card:nth-child(3) { animation-delay: 0.15s; }
 
-    .card h3 { margin: 0 0 12px; font-size: 16px; font-weight: 700; }
+    @keyframes riseIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    input, select, textarea {
-      width: 100%;
-      padding: 12px 14px;
-      margin: 6px 0;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-sizing: border-box;
-      font-size: 15px;
-      font-family: inherit;
-      background: var(--sand);
-      color: var(--ink);
+    /* لوحة الإشعارات */
+    .notif-backdrop {
+      position: fixed; inset: 0; background: rgba(22,19,15,0.5); display: none;
+      z-index: 100; justify-content: flex-end;
     }
-    input:focus, select:focus, textarea:focus {
-      outline: 2px solid var(--orange);
-      outline-offset: 1px;
-      background: var(--paper);
+    .notif-backdrop.open { display: flex; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .notif-panel {
+      background: var(--paper); width: 100%; max-width: 340px; height: 100%;
+      padding: 20px; overflow-y: auto; animation: slideIn 0.25s ease;
     }
-
-    button {
-      width: 100%;
-      padding: 13px;
-      border: none;
-      border-radius: 9px;
-      font-size: 15px;
-      font-weight: 700;
-      font-family: inherit;
-      cursor: pointer;
-      margin-top: 10px;
-      color: var(--paper);
-      transition: filter 0.15s;
-    }
-    button:active { filter: brightness(0.92); }
-    button:disabled { background: #C9C2B2 !important; cursor: not-allowed; }
-
-    .btn-primary { background: var(--nile); }
-    .btn-danger { background: var(--rust); }
-    .btn-warning { background: var(--amber); }
-    .btn-photo {
-      background: var(--asphalt);
-      color: white;
-      font-size: 14px;
-      padding: 11px;
-    }
-    .btn-secondary { background: var(--orange); }
-
-    .result {
-      margin-top: 10px;
-      font-size: 13.5px;
-      background: var(--sand);
-      padding: 10px 12px;
-      border-radius: 8px;
-      min-height: 14px;
-      color: #6B6455;
-    }
-
-    #reader { width: 100%; margin: 12px auto; border-radius: 10px; overflow: hidden; }
-
-    .photo-preview { max-width: 140px; margin: 10px auto; display: block; border-radius: 10px; }
-
-    .required-label { color: var(--rust); font-weight: 700; font-size: 12px; margin-top: 4px; }
-    .optional-label { color: #8A8272; font-size: 12px; margin-top: 4px; }
-
-    .notification-item {
-      padding: 11px 0;
-      border-bottom: 1px solid var(--line);
-      font-size: 13.5px;
-      line-height: 1.5;
-    }
+    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    .notif-panel h3 { margin: 0 0 16px; font-size: 17px; }
+    .notif-close { float: left; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); }
+    .notification-item { padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; line-height: 1.6; }
     .notification-item:last-child { border-bottom: none; }
-    .notification-unread { position: relative; padding-inline-start: 14px; font-weight: 600; }
-    .notification-unread::before {
-      content: ''; position: absolute; right: 0; top: 16px;
-      width: 6px; height: 6px; border-radius: 50%; background: var(--amber);
-    }
-    .empty-note { color: #A39C8C; font-size: 13.5px; padding: 4px 0; }
-
-    .hidden { display: none; }
-
-    .status-badge {
-      display: inline-block;
-      padding: 3px 11px;
-      border-radius: 20px;
-      font-size: 11.5px;
-      font-weight: 700;
-      color: white;
-    }
-    .status-pending { background: var(--amber); }
-    .status-approved { background: var(--nile); }
-    .status-rejected { background: var(--rust); }
-
-    .history-item {
-      padding: 9px 0;
-      border-bottom: 1px solid var(--line);
-      font-size: 13px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-    .history-item:last-child { border-bottom: none; }
-    .history-earning { font-weight: 700; color: var(--nile); white-space: nowrap; }
-
-    hr { border: none; border-top: 1px dashed var(--line); margin: 18px 0; }
+    .notification-unread { font-weight: 700; }
+    .notif-date { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 400; }
+    .empty-note { color: var(--muted); font-size: 13.5px; text-align: center; padding: 30px 0; }
   </style>
 </head>
 <body>
 
   <div class="topbar">
-    <div class="brand">
-      <img src="/logo.png" alt="Ginger" class="brand-logo">
-      <div>
-        <h2 id="driverNameDisplay">جاري التحميل...</h2>
-        <div class="sub">GINGER — SPICE UP THE ORDINARY</div>
-      </div>
+    <img src="/logo.png" alt="Ginger">
+    <div>
+      <h2 id="driverNameDisplay">جاري التحميل...</h2>
+      <div class="sub">GINGER — SPICE UP THE ORDINARY</div>
     </div>
-    <a href="/api/driver-logout" class="logout-link">خروج</a>
+    <div class="bell-wrap" onclick="openNotifications()">
+      <button class="bell-btn">🔔</button>
+      <span class="bell-badge" id="notifBadge" style="display:none;">0</span>
+    </div>
   </div>
 
   <div class="wrap">
+    <div class="greeting" id="greetingText">أهلاً بيك</div>
+    <div class="greeting-sub">اختار اللي عايز تعمله دلوقتي</div>
 
-    <div class="section-title"><span class="dot" style="background:var(--amber)"></span>الإشعارات</div>
-    <div class="card accent-ink">
-      <div id="notificationsList" class="empty-note">مفيش إشعارات جديدة</div>
+    <div class="modules-grid">
+      <a href="/driver-attendance.html" class="module-card">
+        <div class="icon-box">🕐</div>
+        <div class="txt">
+          <h3>الحضور والانصراف</h3>
+          <p id="shiftStatusText">سجل حضورك وابدأ يومك</p>
+        </div>
+      </a>
+
+      <a href="/driver-orders.html" class="module-card">
+        <div class="icon-box">📦</div>
+        <div class="txt">
+          <h3>الأوردرات</h3>
+          <p>فتح وقفل رحلاتك اليومية</p>
+        </div>
+      </a>
+
+      <a href="/driver-requests.html" class="module-card">
+        <div class="icon-box">📋</div>
+        <div class="txt">
+          <h3>الطلبات</h3>
+          <p>إجازة أو سلفة</p>
+        </div>
+      </a>
     </div>
+  </div>
 
-    <div class="section-title"><span class="dot" style="background:var(--orange)"></span>الوردية</div>
-
-    <div class="card accent-orange" id="checkinCard">
-      <h3>بدء الوردية</h3>
-      <div id="qrStatus" class="result" style="margin-top:0; margin-bottom:10px;">امسح كود QR بتاع التوكتوك</div>
-      <div id="reader"></div>
-
-      <button class="btn-photo" onclick="capturePhoto('photoInputCheckIn')">📷 صورة التوكتوك</button>
-      <input type="file" id="photoInputCheckIn" accept="image/*" capture="environment" class="hidden">
-      <img id="photoPreviewCheckIn" class="photo-preview hidden">
-      <div id="checkinPhotoLabel" class="required-label">الصورة إجبارية لاستلام التوكتوك</div>
-
-      <button id="checkInBtn" class="btn-primary" onclick="checkIn()" disabled>تسجيل الحضور وبدء الوردية</button>
-      <div id="result" class="result">جاهز</div>
+  <div class="notif-backdrop" id="notifBackdrop" onclick="if(event.target===this) closeNotifications()">
+    <div class="notif-panel">
+      <button class="notif-close" onclick="closeNotifications()">×</button>
+      <h3>🔔 الإشعارات</h3>
+      <div id="notificationsList"><div class="empty-note">مفيش إشعارات جديدة</div></div>
     </div>
-
-    <div class="card accent-orange hidden" id="orderCard">
-      <h3>فتح أوردر</h3>
-      <select id="orderType">
-        <option value="delivery">توصيل عميل</option>
-        <option value="full_trip">رحلة كاملة</option>
-      </select>
-      <button class="btn-primary" onclick="openOrder()">فتح الأوردر</button>
-      <div id="resultOrderOpen" class="result">جاهز</div>
-
-      <hr>
-
-      <h3>قفل أوردر</h3>
-      <input type="number" id="orderIdClose" placeholder="رقم الأوردر">
-      <button class="btn-photo" onclick="capturePhoto('photoInputOrderClose')">📷 صورة توثيق الوصول</button>
-      <input type="file" id="photoInputOrderClose" accept="image/*" capture="environment" class="hidden">
-      <img id="photoPreviewOrderClose" class="photo-preview hidden">
-      <div id="orderClosePhotoLabel" class="optional-label">صورة اختيارية لتوثيق وصول الأوردر</div>
-      <button class="btn-warning" onclick="closeOrder()">قفل الأوردر</button>
-      <div id="resultOrderClose" class="result">جاهز</div>
-    </div>
-
-    <div class="card accent-rust hidden" id="checkoutCard">
-      <h3>إنهاء الوردية</h3>
-      <button class="btn-photo" onclick="capturePhoto('photoInputCheckOut')">📷 صورة تسليم التوكتوك</button>
-      <input type="file" id="photoInputCheckOut" accept="image/*" capture="environment" class="hidden">
-      <img id="photoPreviewCheckOut" class="photo-preview hidden">
-      <div id="checkoutPhotoLabel" class="required-label">الصورة إجبارية لتسليم التوكتوك</div>
-      <button class="btn-danger" onclick="checkOut()">تسجيل الانصراف وإنهاء الوردية</button>
-      <div id="resultOut" class="result">جاهز</div>
-    </div>
-
-    <div class="section-title"><span class="dot" style="background:var(--nile)"></span>الطلبات</div>
-
-    <div class="card accent-nile">
-      <h3>طلب إجازة</h3>
-      <input type="date" id="leaveStart">
-      <input type="date" id="leaveEnd">
-      <textarea id="leaveReason" placeholder="سبب الإجازة (اختياري)" rows="2"></textarea>
-      <button class="btn-secondary" onclick="requestLeave()">إرسال طلب الإجازة</button>
-      <div id="resultLeave" class="result">جاهز</div>
-      <div id="leaveHistory"></div>
-    </div>
-
-    <div class="card accent-nile">
-      <h3>طلب سلفة</h3>
-      <input type="number" id="advanceAmount" placeholder="المبلغ المطلوب">
-      <textarea id="advanceReason" placeholder="سبب طلب السلفة (اختياري)" rows="2"></textarea>
-      <button class="btn-secondary" onclick="requestAdvance()">إرسال طلب السلفة</button>
-      <div id="resultAdvance" class="result">جاهز</div>
-      <div id="advanceHistory"></div>
-    </div>
-
-    <div class="section-title"><span class="dot" style="background:var(--asphalt)"></span>السجل</div>
-
-    <div class="card accent-ink">
-      <h3>سجل الورديات</h3>
-      <div id="shiftsHistoryList" class="empty-note">جاري التحميل...</div>
-    </div>
-
-    <div class="card accent-ink">
-      <h3>سجل الأوردرات</h3>
-      <div id="ordersHistoryList" class="empty-note">جاري التحميل...</div>
-    </div>
-
   </div>
 
   <script>
-    let scannedQrCode = null;
-    let settings = {};
     let currentDriverId = null;
-    let currentShiftId = null;
 
     fetch('/api/driver-session')
       .then(res => res.json())
@@ -301,433 +146,58 @@
         }
         currentDriverId = data.driverId;
         document.getElementById('driverNameDisplay').textContent = data.driverName;
+        document.getElementById('greetingText').textContent = 'أهلاً بيك يا ' + data.driverName;
         loadNotifications();
-        loadLeaveHistory();
-        loadAdvanceHistory();
-        loadShiftsHistory();
-        loadOrdersHistory();
-        checkCurrentShift();
+        checkShiftStatus();
       });
 
-    fetch('/settings')
-      .then(res => res.json())
-      .then(data => {
-        data.forEach(s => settings[s.setting_key] = s.setting_value);
-
-        if (settings.photo_required_checkin !== 'true') {
-          document.getElementById('checkinPhotoLabel').textContent = 'صورة اختيارية';
-          document.getElementById('checkinPhotoLabel').className = 'optional-label';
-        }
-        if (settings.photo_required_checkout !== 'true') {
-          document.getElementById('checkoutPhotoLabel').textContent = 'صورة اختيارية';
-          document.getElementById('checkoutPhotoLabel').className = 'optional-label';
-        }
-        if (settings.photo_required_order_close === 'true') {
-          document.getElementById('orderClosePhotoLabel').textContent = 'الصورة إجبارية لتوثيق الوصول';
-          document.getElementById('orderClosePhotoLabel').className = 'required-label';
-        }
-      });
-
-    function checkCurrentShift() {
+    function checkShiftStatus() {
       fetch('/shifts/open/' + currentDriverId)
         .then(res => res.json())
         .then(data => {
           if (data.id) {
-            currentShiftId = data.id;
-            document.getElementById('checkinCard').classList.add('hidden');
-            document.getElementById('orderCard').classList.remove('hidden');
-            document.getElementById('checkoutCard').classList.remove('hidden');
+            document.getElementById('shiftStatusText').textContent = 'وردية شغالة دلوقتي ✓';
           }
         });
     }
 
     function loadNotifications() {
-  fetch('/notifications/driver/' + currentDriverId)
-    .then(res => res.json())
-    .then(data => {
-      const list = document.getElementById('notificationsList');
-      if (data.length === 0) {
-        list.innerHTML = '<div class="empty-note">مفيش إشعارات جديدة</div>';
-        return;
-      }
-      list.innerHTML = data.map(n => `
-        <div class="notification-item ${n.is_read ? '' : 'notification-unread'}" onclick="markNotificationRead(${n.id}, this)">
-          <div>${n.message}</div>
-          <div style="font-size:11px; color:#A39C8C; margin-top:4px;">${new Date(n.created_at).toLocaleString('ar-EG')}</div>
-        </div>
-      `).join('');
-    });
-}
-
-function markNotificationRead(id, el) {
-  el.classList.remove('notification-unread');
-  fetch(`/notifications/${id}/read`, { method: 'PUT' });
-}
-
-    function loadLeaveHistory() {
-      fetch('/leave-requests/driver/' + currentDriverId)
+      fetch('/notifications/driver/' + currentDriverId)
         .then(res => res.json())
         .then(data => {
-          const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
-          const el = document.getElementById('leaveHistory');
-          if (data.length === 0) { el.innerHTML = ''; return; }
-          el.innerHTML = data.map(r => `
-            <div class="history-item">
-              <span>${r.start_date} إلى ${r.end_date}</span>
-              <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
-            </div>
-          `).join('');
-        });
-    }
+          const list = document.getElementById('notificationsList');
+          const unreadCount = data.filter(n => !n.is_read).length;
+          const badge = document.getElementById('notifBadge');
+          if (unreadCount > 0) {
+            badge.style.display = 'flex';
+            badge.textContent = unreadCount;
+          } else {
+            badge.style.display = 'none';
+          }
 
-    function loadAdvanceHistory() {
-      fetch('/advances/driver/' + currentDriverId)
-        .then(res => res.json())
-        .then(data => {
-          const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
-          const el = document.getElementById('advanceHistory');
-          if (data.length === 0) { el.innerHTML = ''; return; }
-          el.innerHTML = data.map(r => `
-            <div class="history-item">
-              <span>${r.amount} جنيه</span>
-              <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
-            </div>
-          `).join('');
-        });
-    }
-
-    function loadShiftsHistory() {
-      fetch('/shifts/history/' + currentDriverId)
-        .then(res => res.json())
-        .then(data => {
-          const list = document.getElementById('shiftsHistoryList');
           if (data.length === 0) {
-            list.innerHTML = '<div class="empty-note">مفيش ورديات مسجلة</div>';
+            list.innerHTML = '<div class="empty-note">مفيش إشعارات جديدة</div>';
             return;
           }
-          list.innerHTML = data.map(s => `
-            <div class="history-item">
-              <span>توكتوك ${s.tuktuk_number}</span>
-              <span style="color:#8A8272; font-size:12px;">${s.check_in_time ? new Date(s.check_in_time).toLocaleDateString('ar-EG') : '-'}</span>
+          list.innerHTML = data.map(n => `
+            <div class="notification-item ${n.is_read ? '' : 'notification-unread'}" onclick="markRead(${n.id}, this)">
+              <div>${n.message}</div>
+              <div class="notif-date">${new Date(n.created_at).toLocaleString('ar-EG')}</div>
             </div>
           `).join('');
         });
     }
 
-    function loadOrdersHistory() {
-      fetch('/orders/history/' + currentDriverId)
-        .then(res => res.json())
-        .then(data => {
-          const list = document.getElementById('ordersHistoryList');
-          if (data.length === 0) {
-            list.innerHTML = '<div class="empty-note">مفيش أوردرات مسجلة</div>';
-            return;
-          }
-          list.innerHTML = data.map(o => `
-            <div class="history-item">
-              <span>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'} — ${o.distance_km || '-'} كم</span>
-              <span class="history-earning">${o.driver_earning || '-'} ج</span>
-            </div>
-          `).join('');
-        });
+    function markRead(id, el) {
+      el.classList.remove('notification-unread');
+      fetch(`/notifications/${id}/read`, { method: 'PUT' }).then(() => loadNotifications());
     }
 
-    function requestLeave() {
-      const start_date = document.getElementById('leaveStart').value;
-      const end_date = document.getElementById('leaveEnd').value;
-      const reason = document.getElementById('leaveReason').value;
-      const resultDiv = document.getElementById('resultLeave');
-
-      if (!start_date || !end_date) {
-        resultDiv.textContent = 'من فضلك اختر تاريخ البداية والنهاية';
-        return;
-      }
-
-      fetch('/leave-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ driver_id: currentDriverId, start_date, end_date, reason })
-      })
-      .then(res => res.json())
-      .then(data => {
-        resultDiv.textContent = data.message || data.error;
-        loadLeaveHistory();
-      });
+    function openNotifications() {
+      document.getElementById('notifBackdrop').classList.add('open');
     }
-
-    function requestAdvance() {
-      const amount = document.getElementById('advanceAmount').value;
-      const reason = document.getElementById('advanceReason').value;
-      const resultDiv = document.getElementById('resultAdvance');
-
-      if (!amount) {
-        resultDiv.textContent = 'من فضلك اكتب المبلغ المطلوب';
-        return;
-      }
-
-      fetch('/advances', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ driver_id: currentDriverId, amount, reason })
-      })
-      .then(res => res.json())
-      .then(data => {
-        resultDiv.textContent = data.message || data.error;
-        loadAdvanceHistory();
-      });
-    }
-
-    function onScanSuccess(decodedText) {
-      scannedQrCode = decodedText;
-      document.getElementById('qrStatus').textContent = 'تم مسح الكود: ' + decodedText;
-      document.getElementById('checkInBtn').disabled = false;
-      html5QrCode.stop();
-    }
-
-    const html5QrCode = new Html5Qrcode("reader");
-    html5QrCode.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 200 },
-      onScanSuccess
-    ).catch(err => {
-      document.getElementById('qrStatus').textContent = 'مش قادر أوصل للكاميرا: ' + err;
-    });
-
-    function capturePhoto(inputId) {
-      document.getElementById(inputId).click();
-    }
-
-    document.getElementById('photoInputCheckIn').addEventListener('change', function(e) {
-      previewPhoto(e.target.files[0], 'photoPreviewCheckIn');
-    });
-    document.getElementById('photoInputOrderClose').addEventListener('change', function(e) {
-      previewPhoto(e.target.files[0], 'photoPreviewOrderClose');
-    });
-    document.getElementById('photoInputCheckOut').addEventListener('change', function(e) {
-      previewPhoto(e.target.files[0], 'photoPreviewCheckOut');
-    });
-
-    function previewPhoto(file, previewId) {
-      if (!file) return;
-      const preview = document.getElementById(previewId);
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        preview.src = e.target.result;
-        preview.classList.remove('hidden');
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function checkIn() {
-      const resultDiv = document.getElementById('result');
-      const btn = document.getElementById('checkInBtn');
-      const photoFile = document.getElementById('photoInputCheckIn').files[0];
-
-      if (!scannedQrCode) {
-        resultDiv.textContent = 'من فضلك امسح كود QR الأول';
-        return;
-      }
-
-      if (settings.photo_required_checkin === 'true' && !photoFile) {
-        resultDiv.textContent = 'من فضلك التقط صورة التوكتوك، الصورة إجبارية';
-        return;
-      }
-
-      if (!navigator.geolocation) {
-        resultDiv.textContent = 'المتصفح ده مش بيدعم تحديد الموقع';
-        return;
-      }
-
-      btn.disabled = true;
-      resultDiv.textContent = 'جاري تحديد موقعك...';
-
-      navigator.geolocation.getCurrentPosition(
-        function(position) {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-
-          resultDiv.textContent = 'جاري تسجيل الحضور...';
-
-          const formData = new FormData();
-          formData.append('driver_id', currentDriverId);
-          formData.append('tuktuk_qr_code', scannedQrCode);
-          formData.append('lat', lat);
-          formData.append('lng', lng);
-          if (photoFile) formData.append('photo', photoFile);
-
-          fetch('/shifts/check-in', {
-            method: 'POST',
-            body: formData
-          })
-          .then(res => res.json())
-          .then(data => {
-            btn.disabled = false;
-            if (data.error) {
-              resultDiv.textContent = 'خطأ: ' + data.error;
-            } else {
-              resultDiv.textContent = data.message;
-              currentShiftId = data.shift_id;
-              document.getElementById('checkinCard').classList.add('hidden');
-              document.getElementById('orderCard').classList.remove('hidden');
-              document.getElementById('checkoutCard').classList.remove('hidden');
-            }
-          })
-          .catch(err => {
-            btn.disabled = false;
-            resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر';
-          });
-        },
-        function(error) {
-          btn.disabled = false;
-          resultDiv.textContent = 'حصل خطأ في تحديد الموقع: ' + error.message;
-        }
-      );
-    }
-
-    function openOrder() {
-      const resultDiv = document.getElementById('resultOrderOpen');
-      const order_type = document.getElementById('orderType').value;
-
-      if (!navigator.geolocation) {
-        resultDiv.textContent = 'المتصفح ده مش بيدعم تحديد الموقع';
-        return;
-      }
-
-      resultDiv.textContent = 'جاري تحديد موقعك...';
-
-      navigator.geolocation.getCurrentPosition(
-        function(position) {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-
-          resultDiv.textContent = 'جاري فتح الأوردر...';
-
-          fetch('/orders/open', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              shift_id: currentShiftId,
-              driver_id: currentDriverId,
-              order_type: order_type,
-              start_lat: lat,
-              start_lng: lng
-            })
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (data.error) {
-              resultDiv.textContent = 'خطأ: ' + data.error;
-            } else {
-              resultDiv.textContent = data.message + ' - رقم الأوردر: ' + data.order_id;
-              document.getElementById('orderIdClose').value = data.order_id;
-            }
-          })
-          .catch(err => {
-            resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر';
-          });
-        },
-        function(error) {
-          resultDiv.textContent = 'حصل خطأ في تحديد الموقع: ' + error.message;
-        }
-      );
-    }
-
-    function closeOrder() {
-      const resultDiv = document.getElementById('resultOrderClose');
-      const order_id = document.getElementById('orderIdClose').value;
-      const photoFile = document.getElementById('photoInputOrderClose').files[0];
-
-      if (!order_id) {
-        resultDiv.textContent = 'من فضلك اكتب رقم الأوردر';
-        return;
-      }
-
-      if (settings.photo_required_order_close === 'true' && !photoFile) {
-        resultDiv.textContent = 'من فضلك التقط صورة توثيق الوصول، الصورة إجبارية';
-        return;
-      }
-
-      if (!navigator.geolocation) {
-        resultDiv.textContent = 'المتصفح ده مش بيدعم تحديد الموقع';
-        return;
-      }
-
-      resultDiv.textContent = 'جاري تحديد موقعك...';
-
-      navigator.geolocation.getCurrentPosition(
-        function(position) {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-
-          resultDiv.textContent = 'جاري قفل الأوردر...';
-
-          const formData = new FormData();
-          formData.append('order_id', order_id);
-          formData.append('end_lat', lat);
-          formData.append('end_lng', lng);
-          if (photoFile) formData.append('photo', photoFile);
-
-          fetch('/orders/close', {
-            method: 'POST',
-            body: formData
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (data.error) {
-              resultDiv.textContent = 'خطأ: ' + data.error;
-            } else {
-              resultDiv.textContent =
-                data.message +
-                ' | المسافة: ' + data.distance_km + ' كم' +
-                ' | السعر: ' + data.price + ' جنيه' +
-                ' | مستحقاتك: ' + data.driver_earning + ' جنيه';
-              loadOrdersHistory();
-            }
-          })
-          .catch(err => {
-            resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر';
-          });
-        },
-        function(error) {
-          resultDiv.textContent = 'حصل خطأ في تحديد الموقع: ' + error.message;
-        }
-      );
-    }
-
-    function checkOut() {
-      const resultDiv = document.getElementById('resultOut');
-      const photoFile = document.getElementById('photoInputCheckOut').files[0];
-
-      if (settings.photo_required_checkout === 'true' && !photoFile) {
-        resultDiv.textContent = 'من فضلك التقط صورة تسليم التوكتوك، الصورة إجبارية';
-        return;
-      }
-
-      resultDiv.textContent = 'جاري تسجيل الانصراف...';
-
-      const formData = new FormData();
-      formData.append('shift_id', currentShiftId);
-      if (photoFile) formData.append('photo', photoFile);
-
-      fetch('/shifts/check-out', {
-        method: 'POST',
-        body: formData
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) {
-          resultDiv.textContent = 'خطأ: ' + data.error;
-        } else {
-          resultDiv.textContent = data.message;
-          document.getElementById('orderCard').classList.add('hidden');
-          document.getElementById('checkoutCard').classList.add('hidden');
-          document.getElementById('checkinCard').classList.remove('hidden');
-          loadShiftsHistory();
-        }
-      })
-      .catch(err => {
-        resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر';
-      });
+    function closeNotifications() {
+      document.getElementById('notifBackdrop').classList.remove('open');
     }
   </script>
 </body>
