@@ -10,6 +10,7 @@
     :root {
       --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
       --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+      --purple: #5B4B8A;
     }
     * { box-sizing: border-box; }
     body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
@@ -19,16 +20,45 @@
     .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; }
     .logout-link { margin-inline-start: auto; color: var(--sand); opacity: 0.75; font-size: 13px; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); padding: 6px 12px; border-radius: 20px; }
     .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 26px; }
+    .stat-card { background: var(--paper); border-radius: 14px; padding: 20px; text-align: center; border-top: 4px solid var(--line); box-shadow: 0 1px 3px rgba(30,27,22,0.06); }
+    .stat-card.rev { border-top-color: var(--nile); }
+    .stat-card.exp { border-top-color: var(--rust); }
+    .stat-card.net { border-top-color: var(--orange); }
+    .stat-card .num { font-size: 26px; font-weight: 800; }
+    .stat-card .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    .tabs-bar { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 22px; border-bottom: 2px solid var(--line); padding-bottom: 0; }
+    .tab-btn {
+      background: none; border: none; padding: 12px 18px; font-family: inherit; font-size: 14px; font-weight: 700;
+      color: var(--muted); cursor: pointer; white-space: nowrap; position: relative; top: 2px;
+      border-bottom: 3px solid transparent; transition: color 0.2s, border-color 0.2s;
+    }
+    .tab-btn:hover { color: var(--ink); }
+    .tab-btn.active { color: var(--tab-color, var(--nile)); border-bottom-color: var(--tab-color, var(--nile)); }
+    .tab-btn[data-tab="payroll"] { --tab-color: var(--nile); }
+    .tab-btn[data-tab="settings"] { --tab-color: var(--asphalt); }
+    .tab-btn[data-tab="holidays"] { --tab-color: var(--amber); }
+    .tab-btn[data-tab="maintenance"] { --tab-color: var(--rust); }
+    .tab-btn[data-tab="reports"] { --tab-color: var(--orange); }
+
+    .tab-panel { display: none; animation: fadeSlide 0.28s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeSlide { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
     .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
-    .section-head h2 { font-size: 18px; margin: 0; }
+    .section-head h2 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 8px; }
+    .section-head h2 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tab-color, var(--nile)); }
+
     input, select, textarea { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); width: 100%; }
     input:focus, select:focus, textarea:focus { outline: 2px solid var(--nile); outline-offset: 1px; }
     .search-input { width: 220px !important; }
-    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 30px; padding: 18px; }
+    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 24px; padding: 18px; }
     .field-group { display: flex; flex-direction: column; min-width: 150px; }
     .field-group label { font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
     .fields-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
-    button.submit-btn { padding: 10px 20px; background: var(--nile); color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; height: 41px; }
+    button.submit-btn { padding: 10px 20px; color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; height: 41px; background: var(--tab-color, var(--nile)); }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
     th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; }
@@ -45,17 +75,9 @@
     .form-msg-inline { font-size: 13px; font-weight: 600; color: var(--nile); }
     .hidden { display: none !important; }
 
-    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 30px; }
-    .stat-card { background: var(--paper); border-radius: 12px; padding: 20px; text-align: center; border-top: 4px solid var(--line); }
-    .stat-card.rev { border-top-color: var(--nile); }
-    .stat-card.exp { border-top-color: var(--rust); }
-    .stat-card.net { border-top-color: var(--orange); }
-    .stat-card .num { font-size: 24px; font-weight: 800; }
-    .stat-card .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
-
     .days-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
     .day-chip { padding: 7px 14px; border: 1px solid var(--line); border-radius: 20px; font-size: 13px; cursor: pointer; background: var(--sand); user-select: none; }
-    .day-chip.active { background: var(--nile); color: white; border-color: var(--nile); }
+    .day-chip.active { background: var(--asphalt); color: white; border-color: var(--asphalt); }
 
     .drivers-checklist { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
     .driver-check-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
@@ -79,6 +101,15 @@
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transition: opacity 0.25s; pointer-events: none; max-width: 90%; text-align: center; }
     .toast.show { opacity: 1; }
     .toast.error { background: var(--rust); }
+
+    .net-hero { background: var(--paper); border-radius: 16px; padding: 28px; text-align: center; margin-bottom: 20px; border: 1px solid var(--line); }
+    .net-hero .big-num { font-size: 42px; font-weight: 800; color: var(--orange); }
+    .net-hero .sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .breakdown-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 22px; }
+    .breakdown-card { background: var(--paper); border-radius: 12px; padding: 18px; border: 1px solid var(--line); }
+    .breakdown-card h4 { margin: 0 0 10px; font-size: 14px; }
+    .breakdown-item { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+    .breakdown-item:last-child { border-bottom: none; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -92,170 +123,241 @@
 
   <div class="container">
 
-    <div class="section-head"><h2>ملخص الشهر الحالي</h2></div>
     <div class="stats-row">
       <div class="stat-card rev"><div class="num" id="statRevenue">-</div><div class="lbl">إجمالي الإيرادات</div></div>
       <div class="stat-card exp"><div class="num" id="statExpenses">-</div><div class="lbl">إجمالي المصروفات</div></div>
       <div class="stat-card net"><div class="num" id="statNet">-</div><div class="lbl">صافي الربح</div></div>
     </div>
 
-    <div class="section-head"><h2>إعدادات الدخل العامة</h2></div>
-    <form id="settingsForm" class="panel">
-      <div class="fields-row">
-        <div class="field-group">
-          <label>نوع الدخل</label>
-          <select id="incomeType">
-            <option value="commission">عمولة فقط</option>
-            <option value="salary">مرتب فقط</option>
-            <option value="both">مرتب + عمولة</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>المرتب الشهري (جنيه)</label>
-          <input type="number" id="monthlySalary" placeholder="مثال: 2000">
-        </div>
-        <div class="field-group">
-          <label>نسبة العمولة %</label>
-          <input type="number" id="commissionPct" placeholder="مثال: 70">
-        </div>
-        <div class="field-group">
-          <label>سعر أوردر التوصيل الثابت</label>
-          <input type="number" id="deliveryBasePrice" placeholder="مثال: 30">
-        </div>
-        <div class="field-group">
-          <label>سعر الرحلة الكاملة الثابت</label>
-          <input type="number" id="fullTripBasePrice" placeholder="مثال: 300">
-        </div>
-        <button type="submit" class="submit-btn">حفظ إعدادات الدخل</button>
-      </div>
-    </form>
-    <div id="settingsMsg" class="form-msg"></div>
+    <div class="tabs-bar">
+      <button class="tab-btn active" data-tab="payroll">كشف المرتبات</button>
+      <button class="tab-btn" data-tab="settings">الإعدادات</button>
+      <button class="tab-btn" data-tab="holidays">المناسبات والأعياد</button>
+      <button class="tab-btn" data-tab="maintenance">الصيانة والمصروفات الأخرى</button>
+      <button class="tab-btn" data-tab="reports">صافي الربح والفوترة</button>
+    </div>
 
-    <div class="section-head"><h2>إعدادات الإجازات العامة</h2></div>
-    <form id="leaveConfigForm" class="panel">
-      <div class="fields-row">
-        <div class="field-group">
-          <label>أيام العمل الفعلية بالشهر</label>
-          <input type="number" id="workingDaysPerMonth" placeholder="مثال: 26">
-        </div>
-        <div class="field-group">
-          <label>رصيد إجازة "بسبب" شهرياً</label>
-          <input type="number" id="personalLeaveBalance" placeholder="مثال: 2">
-        </div>
-        <button type="submit" class="submit-btn">حفظ إعدادات الإجازات</button>
-      </div>
-      <div class="field-group">
-        <label>أيام الراحة الأسبوعية (اختار من أيام الأسبوع)</label>
-        <div class="days-picker" id="restDaysPicker">
-          <span class="day-chip" data-day="saturday">السبت</span>
-          <span class="day-chip" data-day="sunday">الأحد</span>
-          <span class="day-chip" data-day="monday">الاثنين</span>
-          <span class="day-chip" data-day="tuesday">الثلاثاء</span>
-          <span class="day-chip" data-day="wednesday">الأربعاء</span>
-          <span class="day-chip" data-day="thursday">الخميس</span>
-          <span class="day-chip" data-day="friday">الجمعة</span>
+    <!-- ==================== تبويب 1: كشف المرتبات ==================== -->
+    <div class="tab-panel active" id="tab-payroll" style="--tab-color: var(--nile);">
+      <div class="section-head">
+        <h2><span class="dot"></span>كشف مرتبات السواقين (الشهر الحالي)</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="payrollSearch" class="search-input" placeholder="بحث باسم السائق..." oninput="filterPayroll()">
+          <button class="row-btn btn-edit" onclick="loadDriversAndPayroll()">تحديث الجدول</button>
         </div>
       </div>
-    </form>
-    <div id="leaveConfigMsg" class="form-msg"></div>
+      <div class="panel table-scroll" style="padding:0;">
+        <table id="payrollTable">
+          <thead><tr><th>السائق</th><th>نوع الدخل</th><th>أيام العمل المطلوبة</th><th>حضور فعلي</th><th>أيام أعياد</th><th>المرتب</th><th>العمولة</th><th>الإجمالي</th><th>خصومات وسلف</th><th>الصافي</th><th>تخصيص</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="11">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
 
-    <div class="section-head"><h2>إضافة مناسبة / عيد (مرتب كامل، بدون خصم رصيد)</h2></div>
-    <form id="holidayForm" class="panel">
-      <div class="fields-row">
-        <div class="field-group">
-          <label>اسم المناسبة</label>
-          <input type="text" id="holidayName" placeholder="مثال: عيد الفطر">
-        </div>
-        <div class="field-group">
-          <label>من تاريخ</label>
-          <input type="date" id="holidayStart">
-        </div>
-        <div class="field-group">
-          <label>إلى تاريخ</label>
-          <input type="date" id="holidayEnd">
-        </div>
-        <button type="submit" class="submit-btn">حفظ المناسبة</button>
-      </div>
-      <div class="field-group">
-        <label>السواقين المشمولين بالإجازة</label>
-        <div class="drivers-checklist">
-          <div class="select-all-row">
-            <input type="checkbox" id="selectAllDrivers" checked>
-            <label for="selectAllDrivers">تحديد الكل</label>
+    <!-- ==================== تبويب 2: الإعدادات ==================== -->
+    <div class="tab-panel" id="tab-settings" style="--tab-color: var(--asphalt);">
+      <div class="section-head"><h2><span class="dot"></span>إعدادات الدخل العامة</h2></div>
+      <form id="settingsForm" class="panel">
+        <div class="fields-row">
+          <div class="field-group">
+            <label>نوع الدخل</label>
+            <select id="incomeType">
+              <option value="commission">عمولة فقط</option>
+              <option value="salary">مرتب فقط</option>
+              <option value="both">مرتب + عمولة</option>
+            </select>
           </div>
-          <div id="holidayDriversList"></div>
+          <div class="field-group">
+            <label>المرتب الشهري (جنيه)</label>
+            <input type="number" id="monthlySalary" placeholder="مثال: 2000">
+          </div>
+          <div class="field-group">
+            <label>نسبة العمولة %</label>
+            <input type="number" id="commissionPct" placeholder="مثال: 70">
+          </div>
+          <div class="field-group">
+            <label>سعر أوردر التوصيل الثابت</label>
+            <input type="number" id="deliveryBasePrice" placeholder="مثال: 30">
+          </div>
+          <div class="field-group">
+            <label>سعر الرحلة الكاملة الثابت</label>
+            <input type="number" id="fullTripBasePrice" placeholder="مثال: 300">
+          </div>
+          <button type="submit" class="submit-btn">حفظ إعدادات الدخل</button>
+        </div>
+      </form>
+      <div id="settingsMsg" class="form-msg"></div>
+
+      <div class="section-head"><h2><span class="dot"></span>إعدادات الراحة وعدد أيام العمل</h2></div>
+      <form id="leaveConfigForm" class="panel">
+        <div class="fields-row">
+          <div class="field-group">
+            <label>أيام العمل الفعلية بالشهر</label>
+            <input type="number" id="workingDaysPerMonth" placeholder="مثال: 26">
+          </div>
+          <div class="field-group">
+            <label>رصيد إجازة "بسبب" شهرياً</label>
+            <input type="number" id="personalLeaveBalance" placeholder="مثال: 2">
+          </div>
+          <button type="submit" class="submit-btn">حفظ إعدادات الراحة</button>
+        </div>
+        <div class="field-group">
+          <label>أيام الراحة الأسبوعية (اختار من أيام الأسبوع)</label>
+          <div class="days-picker" id="restDaysPicker">
+            <span class="day-chip" data-day="saturday">السبت</span>
+            <span class="day-chip" data-day="sunday">الأحد</span>
+            <span class="day-chip" data-day="monday">الاثنين</span>
+            <span class="day-chip" data-day="tuesday">الثلاثاء</span>
+            <span class="day-chip" data-day="wednesday">الأربعاء</span>
+            <span class="day-chip" data-day="thursday">الخميس</span>
+            <span class="day-chip" data-day="friday">الجمعة</span>
+          </div>
+        </div>
+      </form>
+      <div id="leaveConfigMsg" class="form-msg"></div>
+    </div>
+
+    <!-- ==================== تبويب 3: المناسبات والأعياد ==================== -->
+    <div class="tab-panel" id="tab-holidays" style="--tab-color: var(--amber);">
+      <div class="section-head"><h2><span class="dot"></span>إضافة مناسبة / عيد (مرتب كامل، بدون خصم رصيد)</h2></div>
+      <form id="holidayForm" class="panel">
+        <div class="fields-row">
+          <div class="field-group">
+            <label>اسم المناسبة</label>
+            <input type="text" id="holidayName" placeholder="مثال: عيد الفطر">
+          </div>
+          <div class="field-group">
+            <label>من تاريخ</label>
+            <input type="date" id="holidayStart">
+          </div>
+          <div class="field-group">
+            <label>إلى تاريخ</label>
+            <input type="date" id="holidayEnd">
+          </div>
+          <button type="submit" class="submit-btn">حفظ المناسبة</button>
+        </div>
+        <div class="field-group">
+          <label>السواقين المشمولين بالإجازة</label>
+          <div class="drivers-checklist">
+            <div class="select-all-row">
+              <input type="checkbox" id="selectAllDrivers" checked>
+              <label for="selectAllDrivers">تحديد الكل</label>
+            </div>
+            <div id="holidayDriversList"></div>
+          </div>
+        </div>
+      </form>
+      <div id="holidayMsg" class="form-msg"></div>
+
+      <div class="section-head"><h2><span class="dot"></span>سجل المناسبات المسجلة</h2></div>
+      <div class="panel table-scroll" style="padding:0;">
+        <table id="holidayEventsTable">
+          <thead><tr><th>اسم المناسبة</th><th>من</th><th>إلى</th><th>عدد السواقين المشمولين</th><th>إجراء</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================== تبويب 4: الصيانة والمصروفات الأخرى ==================== -->
+    <div class="tab-panel" id="tab-maintenance" style="--tab-color: var(--rust);">
+      <div class="section-head"><h2><span class="dot"></span>صيانة التوكتوكات</h2></div>
+      <form id="maintenanceForm" class="panel">
+        <input type="hidden" id="maintEditId">
+        <div class="fields-row">
+          <div class="field-group">
+            <label>التوكتوك</label>
+            <select id="maintTuktuk"></select>
+          </div>
+          <div class="field-group">
+            <label>السائق وقت المصروف</label>
+            <select id="maintDriver"><option value="">بدون سائق محدد</option></select>
+          </div>
+          <div class="field-group">
+            <label>نوع المصروف</label>
+            <select id="maintType">
+              <option value="scheduled">صيانة دورية</option>
+              <option value="repair">إصلاح عطل</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>وصف المصروف</label>
+            <input type="text" id="maintDesc" placeholder="مثال: تغيير زيت">
+          </div>
+          <div class="field-group">
+            <label>التكلفة (جنيه)</label>
+            <input type="number" id="maintCost" placeholder="مثال: 250">
+          </div>
+          <div class="field-group">
+            <label>تاريخ المصروف</label>
+            <input type="date" id="maintDate">
+          </div>
+          <button type="submit" class="submit-btn" id="maintSubmitBtn">تسجيل مصروف الصيانة</button>
+        </div>
+      </form>
+      <div id="maintMsg" class="form-msg"></div>
+
+      <div class="section-head">
+        <h2><span class="dot"></span>سجل الصيانة</h2>
+        <input type="text" id="maintSearch" class="search-input" placeholder="بحث برقم التوكتوك أو السائق..." oninput="filterMaintenance()">
+      </div>
+      <div class="panel table-scroll" style="padding:0;">
+        <table id="maintenanceTable">
+          <thead><tr><th>التاريخ</th><th>التوكتوك</th><th>السائق وقتها</th><th>النوع</th><th>الوصف</th><th>التكلفة</th><th>إجراء</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="section-head"><h2><span class="dot"></span>مصروفات أخرى (إيجار، كافتيريا، إلخ)</h2></div>
+      <form id="generalExpenseForm" class="panel">
+        <input type="hidden" id="genExpEditId">
+        <div class="fields-row">
+          <div class="field-group">
+            <label>اسم المصروف</label>
+            <input type="text" id="genExpName" placeholder="مثال: إيجار المحل">
+          </div>
+          <div class="field-group">
+            <label>المبلغ (جنيه)</label>
+            <input type="number" id="genExpAmount" placeholder="مثال: 3000">
+          </div>
+          <div class="field-group">
+            <label>تاريخ المصروف</label>
+            <input type="date" id="genExpDate">
+          </div>
+          <div class="field-group">
+            <label>ملاحظات (اختياري)</label>
+            <input type="text" id="genExpNotes" placeholder="أي تفاصيل إضافية">
+          </div>
+          <button type="submit" class="submit-btn" id="genExpSubmitBtn">تسجيل المصروف</button>
+        </div>
+      </form>
+      <div id="genExpMsg" class="form-msg"></div>
+      <div class="panel table-scroll" style="padding:0;">
+        <table id="generalExpensesTable">
+          <thead><tr><th>التاريخ</th><th>اسم المصروف</th><th>المبلغ</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================== تبويب 5: صافي الربح والفوترة ==================== -->
+    <div class="tab-panel" id="tab-reports" style="--tab-color: var(--orange);">
+      <div class="net-hero">
+        <div class="big-num" id="reportNetProfit">-</div>
+        <div class="sub">صافي الربح الفعلي للشهر الحالي (بعد كل المصروفات)</div>
+      </div>
+      <div class="breakdown-row">
+        <div class="breakdown-card">
+          <h4>الإيرادات</h4>
+          <div class="breakdown-item"><span>إجمالي إيرادات الأوردرات</span><span id="repRevenue">-</span></div>
+        </div>
+        <div class="breakdown-card">
+          <h4>المصروفات</h4>
+          <div class="breakdown-item"><span>مرتبات وعمولات السواقين</span><span id="repPayroll">-</span></div>
+          <div class="breakdown-item"><span>صيانة التوكتوكات</span><span id="repMaintenance">-</span></div>
+          <div class="breakdown-item"><span>مصروفات أخرى</span><span id="repGeneral">-</span></div>
+          <div class="breakdown-item"><span>الإجمالي</span><span id="repTotalExpenses">-</span></div>
         </div>
       </div>
-    </form>
-    <div id="holidayMsg" class="form-msg"></div>
-
-    <div class="section-head"><h2>سجل المناسبات المسجلة</h2></div>
-    <div class="panel table-scroll" style="padding:0;">
-      <table id="holidayEventsTable">
-        <thead><tr><th>اسم المناسبة</th><th>من</th><th>إلى</th><th>عدد السواقين المشمولين</th><th>إجراء</th></tr></thead>
-        <tbody><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
-      </table>
-    </div>
-
-    <div class="section-head">
-      <h2>كشف مرتبات السواقين (الشهر الحالي)</h2>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input type="text" id="payrollSearch" class="search-input" placeholder="بحث باسم السائق..." oninput="filterPayroll()">
-        <button class="row-btn btn-edit" onclick="loadDriversAndPayroll()">تحديث الجدول</button>
-      </div>
-    </div>
-    <div class="panel table-scroll" style="padding:0;">
-      <table id="payrollTable">
-        <thead><tr><th>السائق</th><th>نوع الدخل</th><th>أيام العمل المطلوبة</th><th>حضور فعلي</th><th>أيام أعياد</th><th>المرتب</th><th>العمولة</th><th>الإجمالي</th><th>خصومات وسلف</th><th>الصافي</th><th>تخصيص</th></tr></thead>
-        <tbody><tr class="empty-row"><td colspan="11">جاري التحميل...</td></tr></tbody>
-      </table>
-    </div>
-
-    <div class="section-head"><h2>صيانة التوكتوكات</h2></div>
-    <form id="maintenanceForm" class="panel">
-      <input type="hidden" id="maintEditId">
-      <div class="fields-row">
-        <div class="field-group">
-          <label>التوكتوك</label>
-          <select id="maintTuktuk"></select>
-        </div>
-        <div class="field-group">
-          <label>السائق وقت المصروف</label>
-          <select id="maintDriver"><option value="">بدون سائق محدد</option></select>
-        </div>
-        <div class="field-group">
-          <label>نوع المصروف</label>
-          <select id="maintType">
-            <option value="scheduled">صيانة دورية</option>
-            <option value="repair">إصلاح عطل</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <label>وصف المصروف</label>
-          <input type="text" id="maintDesc" placeholder="مثال: تغيير زيت">
-        </div>
-        <div class="field-group">
-          <label>التكلفة (جنيه)</label>
-          <input type="number" id="maintCost" placeholder="مثال: 250">
-        </div>
-        <div class="field-group">
-          <label>تاريخ المصروف</label>
-          <input type="date" id="maintDate">
-        </div>
-        <button type="submit" class="submit-btn" id="maintSubmitBtn">تسجيل مصروف الصيانة</button>
-      </div>
-    </form>
-    <div id="maintMsg" class="form-msg"></div>
-
-    <div class="section-head">
-      <h2>سجل الصيانة</h2>
-      <input type="text" id="maintSearch" class="search-input" placeholder="بحث برقم التوكتوك أو السائق..." oninput="filterMaintenance()">
-    </div>
-    <div class="panel table-scroll" style="padding:0;">
-      <table id="maintenanceTable">
-        <thead><tr><th>التاريخ</th><th>التوكتوك</th><th>السائق وقتها</th><th>النوع</th><th>الوصف</th><th>التكلفة</th><th>إجراء</th></tr></thead>
-        <tbody></tbody>
-      </table>
     </div>
 
   </div>
@@ -319,6 +421,7 @@
     let allDrivers = [];
     let allPayrollRows = [];
     let allMaintenance = [];
+    let allGeneralExpenses = [];
     let selectedRestDays = [];
     let selectedCustomRestDays = [];
     const now = new Date();
@@ -327,6 +430,16 @@
 
     fetch('/api/finance-session').then(res => res.json()).then(data => {
       if (!data.loggedIn) window.location.href = '/finance-login.html';
+    });
+
+    // ==================== نظام التبويبات ====================
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
     });
 
     function showToast(msg, isError) {
@@ -372,6 +485,7 @@
       });
     }
 
+    // ==================== إعدادات الدخل ====================
     function loadSettings() {
       fetch('/payroll-settings').then(res => res.json()).then(data => {
         document.getElementById('incomeType').value = data.income_type || 'commission';
@@ -404,6 +518,7 @@
       });
     });
 
+    // ==================== إعدادات الإجازات ====================
     function loadLeaveConfig() {
       fetch('/leave-config').then(res => res.json()).then(data => {
         document.getElementById('workingDaysPerMonth').value = data.working_days_per_month || 26;
@@ -437,6 +552,7 @@
       });
     });
 
+    // ==================== المناسبات ====================
     function loadHolidayDriversList() {
       fetch('/drivers').then(res => res.json()).then(data => {
         allDrivers = data;
@@ -523,6 +639,7 @@
         });
     }
 
+    // ==================== كشف المرتبات ====================
     function loadDriversAndPayroll() {
       fetch('/drivers').then(res => res.json()).then(data => {
         allDrivers = data;
@@ -550,6 +667,8 @@
           totalRevenue += parseFloat(p.total_revenue || 0);
         });
         document.getElementById('statRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
+        document.getElementById('repRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
+        document.getElementById('repPayroll').textContent = totalNet.toFixed(2) + ' ج';
         loadFinancialSummary(totalRevenue, totalNet);
         renderPayrollTable(allPayrollRows);
       });
@@ -592,14 +711,29 @@
           return d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth;
         });
         const totalMaintenance = currentMonthMaint.reduce((sum, m) => sum + parseFloat(m.cost), 0);
-        const totalExpenses = totalPayroll + totalMaintenance;
-        const netProfit = totalRevenue - totalExpenses;
 
-        document.getElementById('statExpenses').textContent = totalExpenses.toFixed(2) + ' ج';
-        document.getElementById('statNet').textContent = netProfit.toFixed(2) + ' ج';
+        fetch('/general-expenses').then(res => res.json()).then(genData => {
+          const currentMonthGen = genData.filter(g => {
+            const d = new Date(g.expense_date);
+            return d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth;
+          });
+          const totalGeneral = currentMonthGen.reduce((sum, g) => sum + parseFloat(g.amount), 0);
+
+          const totalExpenses = totalPayroll + totalMaintenance + totalGeneral;
+          const netProfit = totalRevenue - totalExpenses;
+
+          document.getElementById('statExpenses').textContent = totalExpenses.toFixed(2) + ' ج';
+          document.getElementById('statNet').textContent = netProfit.toFixed(2) + ' ج';
+
+          document.getElementById('repMaintenance').textContent = totalMaintenance.toFixed(2) + ' ج';
+          document.getElementById('repGeneral').textContent = totalGeneral.toFixed(2) + ' ج';
+          document.getElementById('repTotalExpenses').textContent = totalExpenses.toFixed(2) + ' ج';
+          document.getElementById('reportNetProfit').textContent = netProfit.toFixed(2) + ' جنيه';
+        });
       });
     }
 
+    // ==================== تخصيص السائق ====================
     function openCustomizeModal(driverId) {
       const driver = allDrivers.find(d => d.id === driverId);
       document.getElementById('customizeDriverId').value = driverId;
@@ -650,6 +784,7 @@
       });
     }
 
+    // ==================== صيانة التوكتوكات ====================
     function loadTuktuksDropdown() {
       fetch('/tuktuks').then(res => res.json()).then(data => {
         const select = document.getElementById('maintTuktuk');
@@ -711,7 +846,6 @@
       document.getElementById('maintCost').value = m.cost;
       document.getElementById('maintDate').value = m.maintenance_date.split('T')[0];
       document.getElementById('maintSubmitBtn').textContent = 'حفظ التعديل';
-      window.scrollTo({ top: document.getElementById('maintenanceForm').offsetTop - 100, behavior: 'smooth' });
     }
 
     function deleteMaintenance(id) {
@@ -759,6 +893,86 @@
       });
     });
 
+    // ==================== المصروفات العامة ====================
+    function loadGeneralExpenses() {
+      fetch('/general-expenses').then(res => res.json()).then(data => {
+        allGeneralExpenses = data;
+        renderGeneralExpensesTable(data);
+      });
+    }
+
+    function renderGeneralExpensesTable(data) {
+      const tbody = document.querySelector('#generalExpensesTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش مصروفات مسجلة لسه</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(g => `
+        <tr>
+          <td>${g.expense_date}</td>
+          <td>${g.expense_name}</td>
+          <td>${g.amount}</td>
+          <td>${g.notes || '-'}</td>
+          <td>
+            <button class="row-btn btn-edit" onclick='editGeneralExpense(${JSON.stringify(g)})'>تعديل</button>
+            <button class="row-btn btn-delete" onclick="deleteGeneralExpense(${g.id})">حذف</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function editGeneralExpense(g) {
+      document.getElementById('genExpEditId').value = g.id;
+      document.getElementById('genExpName').value = g.expense_name;
+      document.getElementById('genExpAmount').value = g.amount;
+      document.getElementById('genExpDate').value = g.expense_date.split('T')[0];
+      document.getElementById('genExpNotes').value = g.notes || '';
+      document.getElementById('genExpSubmitBtn').textContent = 'حفظ التعديل';
+    }
+
+    function deleteGeneralExpense(id) {
+      if (!confirm('متأكد إنك عايز تمسح المصروف ده؟')) return;
+      fetch(`/general-expenses/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          showToast(data.message || data.error);
+          loadGeneralExpenses();
+          loadDriversAndPayroll();
+        });
+    }
+
+    document.getElementById('generalExpenseForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const editId = document.getElementById('genExpEditId').value;
+      const payload = {
+        expense_name: document.getElementById('genExpName').value,
+        amount: document.getElementById('genExpAmount').value,
+        expense_date: document.getElementById('genExpDate').value,
+        notes: document.getElementById('genExpNotes').value
+      };
+
+      const url = editId ? `/general-expenses/${editId}` : '/general-expenses';
+      const method = editId ? 'PUT' : 'POST';
+
+      fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('genExpMsg').textContent = data.message || data.error;
+        if (data.message) {
+          document.getElementById('generalExpenseForm').reset();
+          document.getElementById('genExpEditId').value = '';
+          document.getElementById('genExpSubmitBtn').textContent = 'تسجيل المصروف';
+          loadGeneralExpenses();
+          loadDriversAndPayroll();
+          showToast(data.message);
+        }
+      });
+    });
+
     loadSettings();
     loadLeaveConfig();
     loadHolidayDriversList();
@@ -767,6 +981,7 @@
     loadTuktuksDropdown();
     loadDriversDropdown();
     loadMaintenance();
+    loadGeneralExpenses();
   </script>
 </body>
 </html>
