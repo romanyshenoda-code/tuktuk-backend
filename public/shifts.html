@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الورديات - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
+    .topbar img { height: 36px; }
+    .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; margin-inline-end: auto; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .section-head h2 { font-size: 18px; margin: 0; }
+    input { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
+    input:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
+    .search-input { width: 240px; }
+    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
+    th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; }
+    tbody tr:nth-child(even) { background: #FAF7F0; }
+    tbody tr:hover { background: #F3E9DA; }
+    td { border-bottom: 1px solid var(--line); }
+    .table-scroll { overflow-x: auto; }
+    .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; color: white; }
+    .badge-open { background: var(--nile); }
+    .badge-closed { background: var(--muted); }
+    .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/index.html" class="back-link">→ الرئيسية</a>
+    <img src="/logo.png" alt="Ginger">
+    <h1>الورديات</h1>
+  </div>
+
+  <div class="container">
+    <div class="section-head">
+      <h2>الورديات المفتوحة حالياً</h2>
+    </div>
+    <div class="panel table-scroll">
+      <table id="openShiftsTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-head">
+      <h2>سجل كل الورديات</h2>
+      <input type="text" id="shiftSearch" class="search-input" placeholder="بحث باسم السائق..." oninput="filterShifts()">
+    </div>
+    <div class="panel table-scroll">
+      <table id="shiftsTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th><th>وقت الانصراف</th><th>الحالة</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let allShifts = [];
+
+    function formatDateTime(d) { return d ? new Date(d).toLocaleString('ar-EG') : '-'; }
+
+    function loadShifts() {
+      fetch('/shifts').then(res => res.json()).then(data => {
+        allShifts = data;
+        renderShifts(data);
+        renderOpenShifts(data.filter(s => s.status === 'open'));
+      });
+    }
+
+    function renderOpenShifts(data) {
+      const tbody = document.querySelector('#openShiftsTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="4">مفيش ورديات مفتوحة دلوقتي</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(s => `
+        <tr>
+          <td>${s.id}</td>
+          <td>${s.driver_name}</td>
+          <td>${s.tuktuk_number}</td>
+          <td>${formatDateTime(s.check_in_time)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderShifts(data) {
+      const tbody = document.querySelector('#shiftsTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش ورديات مسجلة</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(s => `
+        <tr>
+          <td>${s.id}</td>
+          <td>${s.driver_name}</td>
+          <td>${s.tuktuk_number}</td>
+          <td>${formatDateTime(s.check_in_time)}</td>
+          <td>${formatDateTime(s.check_out_time)}</td>
+          <td><span class="badge badge-${s.status}">${s.status === 'open' ? 'مفتوحة' : 'مقفولة'}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function filterShifts() {
+      const q = document.getElementById('shiftSearch').value.trim();
+      if (!q) { renderShifts(allShifts); return; }
+      renderShifts(allShifts.filter(s => s.driver_name.includes(q)));
+    }
+
+    loadShifts();
+  </script>
+</body>
+</html>

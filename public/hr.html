@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الموارد البشرية - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
+    .topbar img { height: 36px; }
+    .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; margin-inline-end: auto; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .section-head h2 { font-size: 18px; margin: 0; }
+    input { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
+    input:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
+    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 30px; }
+    form.panel { padding: 16px 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    button.submit-btn { padding: 10px 20px; background: var(--orange); color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
+    th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; }
+    tbody tr:nth-child(even) { background: #FAF7F0; }
+    tbody tr:hover { background: #F3E9DA; }
+    td { border-bottom: 1px solid var(--line); }
+    .table-scroll { overflow-x: auto; }
+    .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; color: white; }
+    .badge-pending { background: var(--amber); }
+    .badge-approved { background: var(--nile); }
+    .badge-rejected { background: var(--rust); }
+    .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
+    .btn-approve { background: var(--nile); }
+    .btn-reject { background: var(--rust); }
+    .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
+    .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/index.html" class="back-link">→ الرئيسية</a>
+    <img src="/logo.png" alt="Ginger">
+    <h1>الموارد البشرية</h1>
+  </div>
+
+  <div class="container">
+    <div class="section-head"><h2>طلبات الإجازة</h2></div>
+    <div class="panel table-scroll">
+      <table id="leaveTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-head"><h2>طلبات السلف</h2></div>
+    <div class="panel table-scroll">
+      <table id="advancesTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-head"><h2>تسجيل خصم على سائق</h2></div>
+    <form id="addDeductionForm" class="panel">
+      <input type="number" id="deductionDriverId" placeholder="رقم السائق" required>
+      <input type="number" id="deductionAmount" placeholder="المبلغ" required>
+      <input type="text" id="deductionReason" placeholder="السبب" required>
+      <button type="submit" class="submit-btn">تسجيل الخصم</button>
+    </form>
+    <div id="addDeductionMsg" class="form-msg"></div>
+  </div>
+
+  <script>
+    const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+
+    function loadLeaveRequests() {
+      fetch('/leave-requests').then(res => res.json()).then(data => {
+        const tbody = document.querySelector('#leaveTable tbody');
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش طلبات إجازة</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = data.map(r => `
+          <tr>
+            <td>${r.id}</td>
+            <td>${r.driver_name}</td>
+            <td>${r.start_date}</td>
+            <td>${r.end_date}</td>
+            <td>${r.reason || '-'}</td>
+            <td><span class="badge badge-${r.status}">${statusText[r.status]}</span></td>
+            <td>${r.status === 'pending'
+              ? `<button class="row-btn btn-approve" onclick="reviewLeave(${r.id}, 'approved')">موافقة</button>
+                 <button class="row-btn btn-reject" onclick="reviewLeave(${r.id}, 'rejected')">رفض</button>`
+              : (r.admin_note || '-')}</td>
+          </tr>
+        `).join('');
+      });
+    }
+
+    function reviewLeave(id, status) {
+      const admin_note = status === 'rejected' ? prompt('سبب الرفض (اختياري):') : prompt('ملاحظة (اختياري):');
+      fetch(`/leave-requests/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, admin_note: admin_note || '' })
+      }).then(res => res.json()).then(() => loadLeaveRequests());
+    }
+
+    function loadAdvances() {
+      fetch('/advances').then(res => res.json()).then(data => {
+        const tbody = document.querySelector('#advancesTable tbody');
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش طلبات سلف</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = data.map(r => `
+          <tr>
+            <td>${r.id}</td>
+            <td>${r.driver_name}</td>
+            <td>${r.amount}</td>
+            <td>${r.reason || '-'}</td>
+            <td><span class="badge badge-${r.status}">${statusText[r.status]}</span></td>
+            <td>${r.status === 'pending'
+              ? `<button class="row-btn btn-approve" onclick="reviewAdvance(${r.id}, 'approved')">موافقة</button>
+                 <button class="row-btn btn-reject" onclick="reviewAdvance(${r.id}, 'rejected')">رفض</button>`
+              : (r.admin_note || '-')}</td>
+          </tr>
+        `).join('');
+      });
+    }
+
+    function reviewAdvance(id, status) {
+      const admin_note = status === 'rejected' ? prompt('سبب الرفض (اختياري):') : prompt('ملاحظة (اختياري):');
+      fetch(`/advances/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, admin_note: admin_note || '' })
+      }).then(res => res.json()).then(() => loadAdvances());
+    }
+
+    document.getElementById('addDeductionForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const driver_id = document.getElementById('deductionDriverId').value;
+      const amount = document.getElementById('deductionAmount').value;
+      const reason = document.getElementById('deductionReason').value;
+
+      fetch('/deductions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_id, amount, reason })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('addDeductionMsg').textContent = data.message || data.error;
+        document.getElementById('addDeductionForm').reset();
+      });
+    });
+
+    loadLeaveRequests();
+    loadAdvances();
+  </script>
+</body>
+</html>

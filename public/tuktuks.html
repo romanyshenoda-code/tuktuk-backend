@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>التوكتوكات - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
+    .topbar img { height: 36px; }
+    .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; margin-inline-end: auto; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+    .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .section-head h2 { font-size: 18px; margin: 0; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+    input { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
+    input:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
+    .search-input { width: 240px; }
+
+    .add-square { width: 40px; height: 40px; border-radius: 10px; background: var(--orange); color: white; border: none; font-size: 22px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; padding: 0; }
+    .add-square:hover { transform: scale(1.06); }
+
+    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
+    th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; }
+    tbody tr:nth-child(even) { background: #FAF7F0; }
+    tbody tr:hover { background: #F3E9DA; }
+    td { border-bottom: 1px solid var(--line); }
+    .table-scroll { overflow-x: auto; }
+
+    .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; color: white; }
+    .badge-active { background: var(--nile); }
+    .badge-maintenance { background: var(--rust); }
+
+    .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
+    .btn-fix { background: var(--amber); }
+    .btn-active { background: var(--nile); }
+    .btn-delete { background: var(--rust); }
+
+    .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; animation: fadeIn 0.18s ease; }
+    .modal-backdrop.open { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal-box { background: var(--paper); border-radius: 16px; padding: 26px; width: 100%; max-width: 400px; border-top: 5px solid var(--orange); animation: popIn 0.22s cubic-bezier(.2,.9,.3,1.2); }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.92) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .modal-box h3 { margin: 0 0 4px; font-size: 18px; }
+    .modal-box .modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 18px; }
+    .modal-box input { width: 100%; margin-bottom: 10px; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
+    .modal-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
+    .btn-modal-save { background: var(--orange); color: white; }
+    .btn-modal-cancel { background: var(--line); color: var(--ink); }
+    .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/index.html" class="back-link">→ الرئيسية</a>
+    <img src="/logo.png" alt="Ginger">
+    <h1>التوكتوكات</h1>
+  </div>
+
+  <div class="container">
+    <div class="section-head">
+      <h2>قائمة التوكتوكات</h2>
+      <div class="toolbar">
+        <input type="text" id="tuktukSearch" class="search-input" placeholder="بحث برقم التوكتوك..." oninput="filterTuktuks()">
+        <button class="add-square" onclick="openModal('tuktukModal')" title="إضافة توكتوك">+</button>
+      </div>
+    </div>
+    <div class="panel table-scroll">
+      <table id="tuktuksTable">
+        <thead><tr><th>الرقم</th><th>رقم التوكتوك</th><th>QR Code</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="tuktukModal">
+    <div class="modal-box">
+      <h3>إضافة توكتوك جديد</h3>
+      <div class="modal-sub">رقم التوكتوك وكود الـ QR الخاص بيه</div>
+      <form id="addTuktukForm">
+        <input type="text" id="newTuktukNumber" placeholder="رقم التوكتوك" required>
+        <input type="text" id="newQrCode" placeholder="كود QR" required>
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" onclick="closeModal('tuktukModal')">إلغاء</button>
+          <button type="submit" class="btn-modal-save">حفظ التوكتوك</button>
+        </div>
+      </form>
+      <div id="addTuktukMsg" class="form-msg"></div>
+    </div>
+  </div>
+
+  <script>
+    let allTuktuks = [];
+
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    document.querySelectorAll('.modal-backdrop').forEach(b => b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); }));
+
+    function loadTuktuks() {
+      fetch('/tuktuks').then(res => res.json()).then(data => {
+        allTuktuks = data;
+        renderTuktuks(data);
+      });
+    }
+
+    function renderTuktuks(data) {
+      const tbody = document.querySelector('#tuktuksTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش توكتوكات لسه</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(t => `
+        <tr>
+          <td>${t.id}</td>
+          <td>${t.tuktuk_number}</td>
+          <td>${t.qr_code}</td>
+          <td><span class="badge badge-${t.status}">${t.status === 'active' ? 'نشط' : 'فيه عطل'}</span></td>
+          <td>
+            ${t.status === 'active'
+              ? `<button class="row-btn btn-fix" onclick="toggleTuktukStatus(${t.id}, 'maintenance')">تسجيل عطل</button>`
+              : `<button class="row-btn btn-active" onclick="toggleTuktukStatus(${t.id}, 'active')">إعادة تفعيل</button>`}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterTuktuks() {
+      const q = document.getElementById('tuktukSearch').value.trim();
+      if (!q) { renderTuktuks(allTuktuks); return; }
+      renderTuktuks(allTuktuks.filter(t => t.tuktuk_number.includes(q)));
+    }
+
+    function toggleTuktukStatus(id, status) {
+      fetch(`/tuktuks/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      })
+      .then(res => res.json())
+      .then(() => loadTuktuks());
+    }
+
+    document.getElementById('addTuktukForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const tuktuk_number = document.getElementById('newTuktukNumber').value;
+      const qr_code = document.getElementById('newQrCode').value;
+
+      fetch('/tuktuks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tuktuk_number, qr_code })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('addTuktukMsg').textContent = data.message || data.error;
+        if (data.message) {
+          document.getElementById('addTuktukForm').reset();
+          loadTuktuks();
+          setTimeout(() => closeModal('tuktukModal'), 700);
+        }
+      });
+    });
+
+    loadTuktuks();
+  </script>
+</body>
+</html>

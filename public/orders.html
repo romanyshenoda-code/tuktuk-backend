@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الأوردرات - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
+    .topbar img { height: 36px; }
+    .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; margin-inline-end: auto; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .section-head h2 { font-size: 18px; margin: 0; }
+    input { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
+    input:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
+    .search-input { width: 240px; }
+    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
+    th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; }
+    tbody tr:nth-child(even) { background: #FAF7F0; }
+    tbody tr:hover { background: #F3E9DA; }
+    td { border-bottom: 1px solid var(--line); }
+    .table-scroll { overflow-x: auto; }
+    .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; color: white; }
+    .badge-open { background: var(--nile); }
+    .badge-closed { background: var(--muted); }
+    .badge-cancelled { background: var(--rust); }
+    .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
+    .btn-cancel { background: var(--rust); }
+    .btn-delete { background: var(--ink); }
+    .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/index.html" class="back-link">→ الرئيسية</a>
+    <img src="/logo.png" alt="Ginger">
+    <h1>الأوردرات</h1>
+  </div>
+
+  <div class="container">
+    <div class="section-head"><h2>الأوردرات الشغالة الآن</h2></div>
+    <div class="panel table-scroll">
+      <table id="activeOrdersTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>وقت الفتح</th><th>إجراء</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-head">
+      <h2>سجل كل الأوردرات</h2>
+      <input type="text" id="orderSearch" class="search-input" placeholder="بحث باسم السائق..." oninput="filterOrders()">
+    </div>
+    <div class="panel table-scroll">
+      <table id="ordersTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>المسافة (كم)</th><th>السعر</th><th>مستحقات السائق</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-head"><h2>ملخصات الورديات</h2></div>
+    <div class="panel table-scroll">
+      <table id="summariesTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>عدد الأوردرات</th><th>رحلات كاملة</th><th>توصيلات</th><th>إجمالي السعر</th><th>مستحقات السائق</th><th>معدّل يدوي؟</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let allOrders = [];
+
+    function formatDateTime(d) { return d ? new Date(d).toLocaleString('ar-EG') : '-'; }
+
+    function loadActiveOrders() {
+      fetch('/orders/active').then(res => res.json()).then(data => {
+        const tbody = document.querySelector('#activeOrdersTable tbody');
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش أوردرات شغالة دلوقتي</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = data.map(o => `
+          <tr>
+            <td>${o.id}</td>
+            <td>${o.driver_name}</td>
+            <td>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'}</td>
+            <td>${formatDateTime(o.start_time)}</td>
+            <td><button class="row-btn btn-cancel" onclick="cancelOrder(${o.id})">إلغاء الأوردر</button></td>
+          </tr>
+        `).join('');
+      });
+    }
+
+    function loadOrders() {
+      fetch('/orders').then(res => res.json()).then(data => {
+        allOrders = data;
+        renderOrders(data);
+      });
+    }
+
+    function renderOrders(data) {
+      const tbody = document.querySelector('#ordersTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">مفيش أوردرات مسجلة</td></tr>`;
+        return;
+      }
+      const statusLabel = { open: 'مفتوح', closed: 'مقفول', cancelled: 'ملغي' };
+      tbody.innerHTML = data.map(o => `
+        <tr>
+          <td>${o.id}</td>
+          <td>${o.driver_name}</td>
+          <td>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'}</td>
+          <td>${o.distance_km || '-'}</td>
+          <td>${o.price || '-'}</td>
+          <td>${o.driver_earning || '-'}</td>
+          <td><span class="badge badge-${o.status}">${statusLabel[o.status]}</span></td>
+          <td><button class="row-btn btn-delete" onclick="deleteOrder(${o.id})">حذف نهائي</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function filterOrders() {
+      const q = document.getElementById('orderSearch').value.trim();
+      if (!q) { renderOrders(allOrders); return; }
+      renderOrders(allOrders.filter(o => o.driver_name.includes(q)));
+    }
+
+    function cancelOrder(id) {
+      if (!confirm('متأكد إنك عايز تلغي الأوردر ده؟')) return;
+      fetch(`/orders/${id}/cancel`, { method: 'POST' })
+        .then(res => res.json())
+        .then(() => { loadActiveOrders(); loadOrders(); });
+    }
+
+    function deleteOrder(id) {
+      if (!confirm('متأكد إنك عايز تمسح الأوردر ده نهائياً؟ الإجراء ده مينفعش يترجع فيه.')) return;
+      fetch(`/orders/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          alert(data.message || data.error);
+          loadOrders();
+        });
+    }
+
+    function loadSummaries() {
+      fetch('/shift-summaries').then(res => res.json()).then(data => {
+        const tbody = document.querySelector('#summariesTable tbody');
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="8">مفيش ملخصات لسه</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = data.map(sm => `
+          <tr>
+            <td>${sm.id}</td>
+            <td>${sm.driver_name}</td>
+            <td>${sm.total_orders}</td>
+            <td>${sm.full_trip_count}</td>
+            <td>${sm.delivery_count}</td>
+            <td>${sm.total_price}</td>
+            <td>${sm.total_driver_earning}</td>
+            <td>${sm.is_manually_edited ? 'نعم' : 'لا'}</td>
+          </tr>
+        `).join('');
+      });
+    }
+
+    loadActiveOrders();
+    loadOrders();
+    loadSummaries();
+  </script>
+</body>
+</html>
