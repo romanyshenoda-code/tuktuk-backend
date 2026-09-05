@@ -321,6 +321,20 @@ app.put('/drivers/:id/customize', (req, res) => {
     custom_working_days, custom_weekly_rest_days, custom_personal_leave_balance
   } = req.body;
 
+  if (is_customized && custom_working_days && custom_weekly_rest_days) {
+    const restDaysArray = custom_weekly_rest_days.split(',').map(d => d.trim()).filter(Boolean);
+    const restDaysPerWeek = restDaysArray.length;
+    const expectedRestDays = Math.round(restDaysPerWeek * (30 / 7));
+    const computedWorkingDays = 30 - expectedRestDays;
+    const enteredWorkingDays = parseInt(custom_working_days);
+
+    if (Math.abs(computedWorkingDays - enteredWorkingDays) > 1) {
+      return res.status(400).json({
+        error: `عدد أيام الراحة المخصصة (${restDaysPerWeek} أيام أسبوعياً) بيدّي تقريباً ${computedWorkingDays} يوم عمل، مش ${enteredWorkingDays}. عدّل العدد أو الأيام.`
+      });
+    }
+  }
+
   db.query(
     `UPDATE drivers SET
       is_customized = ?, custom_income_type = ?, custom_monthly_salary = ?, custom_commission_pct = ?,
@@ -341,23 +355,6 @@ app.put('/drivers/:id/customize', (req, res) => {
       res.json({ message: 'تم تحديث تخصيص السائق بنجاح' });
     }
   );
-});
-
-app.delete('/drivers/:id', (req, res) => {
-  const { id } = req.params;
-  db.query('DELETE FROM drivers WHERE id = ?', [id], (err, result) => {
-    if (err) {
-      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
-        return res.status(400).json({ error: 'مينفعش تمسح السائق ده لأن عنده ورديات أو أوردرات أو طلبات مسجلة' });
-      }
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في حذف السائق' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'السائق غير موجود' });
-    }
-    res.json({ message: 'تم حذف السائق نهائياً' });
-  });
 });
 
 // ==================== التوكتوكات ====================
@@ -1145,20 +1142,7 @@ app.get('/leave-config', (req, res) => {
   });
 });
 
-app.put('/leave-config', (req, res) => {
-  const { working_days_per_month, weekly_rest_days, personal_leave_balance } = req.body;
-  db.query(
-    'UPDATE leave_config SET working_days_per_month = ?, weekly_rest_days = ?, personal_leave_balance = ? WHERE id = 1',
-    [working_days_per_month, weekly_rest_days, personal_leave_balance],
-    (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تحديث إعدادات الإجازات' });
-      }
-      res.json({ message: 'تم تحديث إعدادات الإجازات بنجاح' });
-    }
-  );
-});
+
 
 // إضافة إجازة عيد يدوياً (بموافقة تلقائية، بدون خصم رصيد)
 app.post('/leave-requests/holiday', (req, res) => {
@@ -1219,66 +1203,35 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
         }
         const leaveConfig = leaveConfigResults[0];
 
-        // تحديد القيم الفعلية (مخصصة أو عامة)
         const income_type = driver.is_customized ? driver.custom_income_type : settings.income_type;
         const monthly_salary = driver.is_customized ? driver.custom_monthly_salary : settings.monthly_salary;
         const commission_pct = driver.is_customized ? driver.custom_commission_pct : settings.commission_pct;
         const delivery_base_price = driver.is_customized ? driver.custom_delivery_base_price : settings.delivery_base_price;
         const full_trip_base_price = driver.is_customized ? driver.custom_full_trip_base_price : settings.full_trip_base_price;
+        const baseWorkingDays = driver.is_customized ? driver.custom_working_days : leaveConfig.working_days_per_month;
 
-        const weekly_rest_days_str = driver.is_customized ? driver.custom_weekly_rest_days : leaveConfig.weekly_rest_days;
-        const weekly_rest_days = (weekly_rest_days_str || '').split(',').map(d => d.trim()).filter(Boolean);
-
-        const daysInMonth = new Date(year, month, 0).getDate();
-
-        // عدد أيام الراحة الأسبوعية الفعلية في الشهر ده (بناءً على الأيام المختارة)
-        let weeklyRestCount = 0;
-        weekly_rest_days.forEach(day => {
-          weeklyRestCount += countWeekdayInMonth(year, month, day);
-        });
-
-        const expectedWorkingDays = daysInMonth - weeklyRestCount;
-
-        // نجيب أيام الحضور الفعلية
-        const attendanceQuery = `
-          SELECT COUNT(DISTINCT DATE(check_in_time)) AS days_present
-          FROM shifts
-          WHERE driver_id = ? AND YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
-        `;
-        db.query(attendanceQuery, [driver_id, year, month], (err, attendanceResults) => {
+        // نجيب أيام العيد المعتمدة للسائق ده في الشهر ده
+        getHolidayDaysForDriver(driver_id, year, month, (err, holidayDaysCount) => {
           if (err) {
             console.error(err);
-            return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' });
+            return res.status(500).json({ error: 'حصل خطأ في حساب أيام الأعياد' });
           }
-          const days_present = attendanceResults[0].days_present || 0;
 
-          // نجيب أيام إجازة الأعياد المعتمدة في الشهر ده (بتتحسب كأنها حضور كامل)
-          const holidayQuery = `
-            SELECT start_date, end_date FROM leave_requests
-            WHERE driver_id = ? AND leave_type = 'holiday' AND status = 'approved'
-            AND (
-              (YEAR(start_date) = ? AND MONTH(start_date) = ?)
-              OR (YEAR(end_date) = ? AND MONTH(end_date) = ?)
-            )
+          // أيام العمل المطلوبة الفعلية = أيام العمل الأساسية - أيام الأعياد المعتمدة
+          const requiredWorkingDays = Math.max(baseWorkingDays - holidayDaysCount, 0);
+
+          const attendanceQuery = `
+            SELECT COUNT(DISTINCT DATE(check_in_time)) AS days_present
+            FROM shifts
+            WHERE driver_id = ? AND YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
           `;
-          db.query(holidayQuery, [driver_id, year, month, year, month], (err, holidayResults) => {
+          db.query(attendanceQuery, [driver_id, year, month], (err, attendanceResults) => {
             if (err) {
               console.error(err);
-              return res.status(500).json({ error: 'حصل خطأ في حساب إجازات الأعياد' });
+              return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' });
             }
+            const days_present = attendanceResults[0].days_present || 0;
 
-            let holidayDaysCount = 0;
-            holidayResults.forEach(h => {
-              const start = new Date(h.start_date);
-              const end = new Date(h.end_date);
-              const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
-              holidayDaysCount += diffDays;
-            });
-
-            // إجمالي الأيام المحسوبة كـ"حضور فعلي" لأغراض المرتب = الحضور الحقيقي + أيام الأعياد
-            const effectivePresentDays = days_present + holidayDaysCount;
-
-            // نجيب عدد الأوردرات المقفولة حسب النوع (للعمولة الجديدة المبنية على سعر ثابت × عدد)
             const ordersCountQuery = `
               SELECT order_type, COUNT(*) AS count
               FROM orders
@@ -1298,7 +1251,6 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
                 if (r.order_type === 'full_trip') fullTripCount = r.count;
               });
 
-              // إجمالي الإيراد الفعلي (لسه بنعرضه للمعلومية، من السعر الحقيقي المسجل وقت القفل)
               const earningsQuery = `
                 SELECT COALESCE(SUM(price), 0) AS total_revenue
                 FROM orders
@@ -1335,13 +1287,14 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
                     }
                     const total_advances = parseFloat(advancesResults[0].total_advances);
 
-                    // ==================== الحساب النهائي ====================
                     let salaryPart = 0;
                     let commissionPart = 0;
 
                     if (income_type === 'salary' || income_type === 'both') {
-                      const dailyRate = expectedWorkingDays > 0 ? monthly_salary / expectedWorkingDays : 0;
-                      salaryPart = dailyRate * effectivePresentDays;
+                      const dailyRate = requiredWorkingDays > 0 ? monthly_salary / requiredWorkingDays : 0;
+                      // مايتجاوزش المرتب الكامل حتى لو حضر أيام زيادة
+                      const cappedPresentDays = Math.min(days_present, requiredWorkingDays);
+                      salaryPart = dailyRate * cappedPresentDays;
                     }
 
                     if (income_type === 'commission' || income_type === 'both') {
@@ -1359,10 +1312,9 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
                       income_type,
                       days_present,
                       holiday_days: holidayDaysCount,
-                      effective_present_days: effectivePresentDays,
-                      expected_working_days: expectedWorkingDays,
-                      weekly_rest_count: weeklyRestCount,
-                      days_in_month: daysInMonth,
+                      base_working_days: baseWorkingDays,
+                      required_working_days: requiredWorkingDays,
+                      expected_working_days: requiredWorkingDays,
                       delivery_count: deliveryCount,
                       full_trip_count: fullTripCount,
                       total_revenue: total_revenue.toFixed(2),
@@ -1449,6 +1401,88 @@ app.delete('/tuktuk-maintenance/:id', (req, res) => {
     res.json({ message: 'تم حذف مصروف الصيانة نهائياً' });
   });
 });
+// ==================== المناسبات الجماعية (إجازات الأعياد) ====================
+app.post('/holiday-events', (req, res) => {
+  const { event_name, start_date, end_date, driver_ids } = req.body;
+
+  db.query(
+    'INSERT INTO holiday_events (event_name, start_date, end_date) VALUES (?, ?, ?)',
+    [event_name, start_date, end_date],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في تسجيل المناسبة' });
+      }
+
+      const event_id = result.insertId;
+
+      if (!driver_ids || driver_ids.length === 0) {
+        return res.status(201).json({ message: 'تم تسجيل المناسبة بنجاح بدون سواقين' });
+      }
+
+      const values = driver_ids.map(driver_id => [event_id, driver_id]);
+      db.query('INSERT INTO holiday_event_drivers (holiday_event_id, driver_id) VALUES ?', [values], (err) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: 'حصل خطأ في ربط السواقين بالمناسبة' });
+        }
+
+        driver_ids.forEach(driver_id => {
+          const message = `تم تسجيل إجازة "${event_name}" لك من ${start_date} إلى ${end_date} بمرتب كامل`;
+          db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [driver_id, message]);
+        });
+
+        res.status(201).json({ message: 'تم تسجيل المناسبة بنجاح لكل السواقين المحددين', event_id });
+      });
+    }
+  );
+});
+
+app.get('/holiday-events', (req, res) => {
+  db.query('SELECT * FROM holiday_events ORDER BY start_date DESC', (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب المناسبات' });
+    }
+    res.json(results);
+  });
+});
+
+app.delete('/holiday-events/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM holiday_events WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في حذف المناسبة' });
+    }
+    res.json({ message: 'تم حذف المناسبة نهائياً' });
+  });
+});
+
+// دالة تحسب عدد أيام إجازة العيد للسائق ده في شهر معين
+function getHolidayDaysForDriver(driver_id, year, month, callback) {
+  const query = `
+    SELECT he.start_date, he.end_date
+    FROM holiday_events he
+    JOIN holiday_event_drivers hed ON he.id = hed.holiday_event_id
+    WHERE hed.driver_id = ?
+    AND (
+      (YEAR(he.start_date) = ? AND MONTH(he.start_date) = ?)
+      OR (YEAR(he.end_date) = ? AND MONTH(he.end_date) = ?)
+    )
+  `;
+  db.query(query, [driver_id, year, month, year, month], (err, results) => {
+    if (err) return callback(err, 0);
+    let totalDays = 0;
+    results.forEach(h => {
+      const start = new Date(h.start_date);
+      const end = new Date(h.end_date);
+      const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      totalDays += diffDays;
+    });
+    callback(null, totalDays);
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
