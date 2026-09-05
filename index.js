@@ -999,7 +999,7 @@ app.delete('/shifts/:id', (req, res) => {
 app.post('/shifts/change-tuktuk', (req, res) => {
   const { driver_id, new_tuktuk_qr_code } = req.body;
 
-  const findOpenShift = 'SELECT id FROM shifts WHERE driver_id = ? AND status = "open"';
+  const findOpenShift = 'SELECT id, tuktuk_id FROM shifts WHERE driver_id = ? AND status = "open"';
   db.query(findOpenShift, [driver_id], (err, shiftResults) => {
     if (err) {
       console.error(err);
@@ -1010,6 +1010,7 @@ app.post('/shifts/change-tuktuk', (req, res) => {
     }
 
     const shift_id = shiftResults[0].id;
+    const current_tuktuk_id = shiftResults[0].tuktuk_id;
 
     const findTuktuk = 'SELECT id FROM tuktuks WHERE qr_code = ?';
     db.query(findTuktuk, [new_tuktuk_qr_code], (err, tuktukResults) => {
@@ -1022,6 +1023,10 @@ app.post('/shifts/change-tuktuk', (req, res) => {
       }
 
       const new_tuktuk_id = tuktukResults[0].id;
+
+      if (new_tuktuk_id === current_tuktuk_id) {
+        return res.status(400).json({ error: 'ده نفس التوكتوك المسجل عليك بالفعل، مفيش داعي تغيّره' });
+      }
 
       db.query('UPDATE shifts SET tuktuk_id = ? WHERE id = ?', [new_tuktuk_id, shift_id], (err) => {
         if (err) {
