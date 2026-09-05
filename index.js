@@ -225,10 +225,12 @@ app.put('/drivers/:id/password', (req, res) => {
   });
 });
 
+// ==================== تخصيص سائق (الإصدار الجديد بنسبتي عمولة منفصلتين) ====================
 app.put('/drivers/:id/customize', (req, res) => {
   const { id } = req.params;
   const {
-    is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct,
+    is_customized, custom_income_type, custom_monthly_salary,
+    custom_delivery_commission_pct, custom_full_trip_commission_pct,
     custom_delivery_base_price, custom_full_trip_base_price,
     custom_working_days, custom_weekly_rest_days, custom_personal_leave_balance
   } = req.body;
@@ -249,12 +251,14 @@ app.put('/drivers/:id/customize', (req, res) => {
 
   db.query(
     `UPDATE drivers SET
-      is_customized = ?, custom_income_type = ?, custom_monthly_salary = ?, custom_commission_pct = ?,
+      is_customized = ?, custom_income_type = ?, custom_monthly_salary = ?,
+      custom_delivery_commission_pct = ?, custom_full_trip_commission_pct = ?,
       custom_delivery_base_price = ?, custom_full_trip_base_price = ?,
       custom_working_days = ?, custom_weekly_rest_days = ?, custom_personal_leave_balance = ?
      WHERE id = ?`,
     [
-      is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct,
+      is_customized, custom_income_type, custom_monthly_salary,
+      custom_delivery_commission_pct, custom_full_trip_commission_pct,
       custom_delivery_base_price, custom_full_trip_base_price,
       custom_working_days, custom_weekly_rest_days, custom_personal_leave_balance,
       id
@@ -754,7 +758,7 @@ app.put('/notifications/:id/read', (req, res) => {
   });
 });
 
-// ==================== إعدادات الرواتب العامة ====================
+// ==================== إعدادات الرواتب العامة (بنسبتي عمولة منفصلتين) ====================
 app.get('/payroll-settings', (req, res) => {
   db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, results) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
@@ -763,10 +767,10 @@ app.get('/payroll-settings', (req, res) => {
 });
 
 app.put('/payroll-settings', (req, res) => {
-  const { income_type, monthly_salary, commission_pct, delivery_base_price, full_trip_base_price } = req.body;
+  const { income_type, monthly_salary, delivery_commission_pct, full_trip_commission_pct, delivery_base_price, full_trip_base_price } = req.body;
   db.query(
-    'UPDATE payroll_settings SET income_type = ?, monthly_salary = ?, commission_pct = ?, delivery_base_price = ?, full_trip_base_price = ? WHERE id = 1',
-    [income_type, monthly_salary, commission_pct, delivery_base_price, full_trip_base_price],
+    'UPDATE payroll_settings SET income_type = ?, monthly_salary = ?, delivery_commission_pct = ?, full_trip_commission_pct = ?, delivery_base_price = ?, full_trip_base_price = ? WHERE id = 1',
+    [income_type, monthly_salary, delivery_commission_pct, full_trip_commission_pct, delivery_base_price, full_trip_base_price],
     (err, result) => {
       if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الإعدادات' }); }
       res.json({ message: 'تم تحديث الإعدادات العامة بنجاح' });
@@ -881,7 +885,7 @@ function getHolidayDaysForDriver(driver_id, year, month, callback) {
   });
 }
 
-// ==================== حساب راتب سائق لشهر معين ====================
+// ==================== حساب راتب سائق لشهر معين (بنسبتي عمولة منفصلتين) ====================
 app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
   const { driver_id, year, month } = req.params;
 
@@ -899,7 +903,8 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
 
         const income_type = driver.is_customized ? driver.custom_income_type : settings.income_type;
         const monthly_salary = driver.is_customized ? driver.custom_monthly_salary : settings.monthly_salary;
-        const commission_pct = driver.is_customized ? driver.custom_commission_pct : settings.commission_pct;
+        const delivery_commission_pct = driver.is_customized ? driver.custom_delivery_commission_pct : settings.delivery_commission_pct;
+        const full_trip_commission_pct = driver.is_customized ? driver.custom_full_trip_commission_pct : settings.full_trip_commission_pct;
         const delivery_base_price = driver.is_customized ? driver.custom_delivery_base_price : settings.delivery_base_price;
         const full_trip_base_price = driver.is_customized ? driver.custom_full_trip_base_price : settings.full_trip_base_price;
         const baseWorkingDays = driver.is_customized ? driver.custom_working_days : leaveConfig.working_days_per_month;
@@ -950,6 +955,7 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
                               const total_advances = parseFloat(advancesResults[0].total_advances);
 
                               let salaryPart = 0, commissionPart = 0;
+                              let deliveryCommission = 0, fullTripCommission = 0;
 
                               if (income_type === 'salary' || income_type === 'both') {
                                 const dailyRate = requiredWorkingDays > 0 ? monthly_salary / requiredWorkingDays : 0;
@@ -958,8 +964,8 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
                               }
 
                               if (income_type === 'commission' || income_type === 'both') {
-                                const deliveryCommission = deliveryCount * parseFloat(delivery_base_price || 0) * (commission_pct / 100);
-                                const fullTripCommission = fullTripCount * parseFloat(full_trip_base_price || 0) * (commission_pct / 100);
+                                deliveryCommission = deliveryCount * parseFloat(delivery_base_price || 0) * (delivery_commission_pct / 100);
+                                fullTripCommission = fullTripCount * parseFloat(full_trip_base_price || 0) * (full_trip_commission_pct / 100);
                                 commissionPart = deliveryCommission + fullTripCommission;
                               }
 
@@ -969,6 +975,7 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
                               res.json({
                                 driver_id: parseInt(driver_id),
                                 driver_name: driver.name,
+                                driver_phone: driver.phone,
                                 income_type,
                                 days_present,
                                 holiday_days: holidayDaysCount,
@@ -976,6 +983,8 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
                                 required_working_days: requiredWorkingDays,
                                 delivery_count: deliveryCount,
                                 full_trip_count: fullTripCount,
+                                delivery_commission: deliveryCommission.toFixed(2),
+                                full_trip_commission: fullTripCommission.toFixed(2),
                                 total_revenue: total_revenue.toFixed(2),
                                 salary_part: salaryPart.toFixed(2),
                                 commission_part: commissionPart.toFixed(2),
@@ -1045,7 +1054,8 @@ app.delete('/tuktuk-maintenance/:id', (req, res) => {
     res.json({ message: 'تم حذف مصروف الصيانة نهائياً' });
   });
 });
-// ==================== المصروفات العامة (إيجار، كافتيريا، إلخ) ====================
+
+// ==================== المصروفات العامة ====================
 app.post('/general-expenses', (req, res) => {
   const { expense_name, amount, expense_date, notes } = req.body;
   db.query(
