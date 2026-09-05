@@ -995,6 +995,44 @@ app.delete('/shifts/:id', (req, res) => {
     res.json({ message: 'تم حذف الوردية نهائياً' });
   });
 });
+// تغيير التوكتوك للوردية المفتوحة (بدون فتح وردية جديدة)
+app.post('/shifts/change-tuktuk', (req, res) => {
+  const { driver_id, new_tuktuk_qr_code } = req.body;
+
+  const findOpenShift = 'SELECT id FROM shifts WHERE driver_id = ? AND status = "open"';
+  db.query(findOpenShift, [driver_id], (err, shiftResults) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في البحث عن الوردية' });
+    }
+    if (shiftResults.length === 0) {
+      return res.status(404).json({ error: 'مفيش وردية مفتوحة أصلاً عشان تغيّر توكتوكها' });
+    }
+
+    const shift_id = shiftResults[0].id;
+
+    const findTuktuk = 'SELECT id FROM tuktuks WHERE qr_code = ?';
+    db.query(findTuktuk, [new_tuktuk_qr_code], (err, tuktukResults) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في البحث عن التوكتوك' });
+      }
+      if (tuktukResults.length === 0) {
+        return res.status(404).json({ error: 'كود QR غير معروف' });
+      }
+
+      const new_tuktuk_id = tuktukResults[0].id;
+
+      db.query('UPDATE shifts SET tuktuk_id = ? WHERE id = ?', [new_tuktuk_id, shift_id], (err) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: 'حصل خطأ في تحديث التوكتوك' });
+        }
+        res.json({ message: 'تم تغيير التوكتوك بنجاح', shift_id, new_tuktuk_id });
+      });
+    });
+  });
+});
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
