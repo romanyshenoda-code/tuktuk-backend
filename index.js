@@ -765,6 +765,58 @@ app.get('/orders/history/:driver_id', (req, res) => {
     res.json(results);
   });
 });
+// إلغاء أوردر مفتوح
+app.post('/orders/:id/cancel', (req, res) => {
+  const { id } = req.params;
+
+  db.query('UPDATE orders SET status = "cancelled" WHERE id = ? AND status = "open"', [id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في إلغاء الأوردر' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'الأوردر غير موجود أو مقفول بالفعل' });
+    }
+    res.json({ message: 'تم إلغاء الأوردر بنجاح' });
+  });
+});
+
+// جلب الأوردرات المفتوحة فقط (شغالة فعلياً دلوقتي)
+app.get('/orders/active', (req, res) => {
+  const query = `
+    SELECT orders.*, drivers.name AS driver_name
+    FROM orders
+    JOIN drivers ON orders.driver_id = drivers.id
+    WHERE orders.status = 'open'
+    ORDER BY orders.start_time DESC
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب الأوردرات الشغالة' });
+    }
+    res.json(results);
+  });
+});
+
+// تغيير حالة التوكتوك (نشط / عطل)
+app.put('/tuktuks/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const allowed = ['active', 'maintenance'];
+  if (!allowed.includes(status)) {
+    return res.status(400).json({ error: 'حالة غير صحيحة' });
+  }
+
+  db.query('UPDATE tuktuks SET status = ? WHERE id = ?', [status, id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تحديث حالة التوكتوك' });
+    }
+    res.json({ message: 'تم تحديث حالة التوكتوك بنجاح' });
+  });
+});
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
