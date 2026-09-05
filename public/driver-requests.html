@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الطلبات - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
+    .topbar img { height: 34px; }
+    .topbar h1 { margin: 0; font-size: 15.5px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.85; font-size: 13px; text-decoration: none; margin-inline-end: auto; }
+    .wrap { max-width: 480px; margin: 0 auto; padding: 18px 16px; }
+    .card { background: var(--paper); border-radius: 14px; padding: 20px; margin-bottom: 16px; border-inline-start: 5px solid var(--line); }
+    .card.accent-nile { border-inline-start-color: var(--nile); }
+    .card.accent-amber { border-inline-start-color: var(--amber); }
+    .card h3 { margin: 0 0 14px; font-size: 16px; }
+    input, textarea { width: 100%; padding: 12px 14px; margin: 6px 0; border: 1px solid var(--line); border-radius: 8px; font-size: 15px; font-family: inherit; background: var(--sand); box-sizing: border-box; }
+    input:focus, textarea:focus { outline: 2px solid var(--orange); background: var(--paper); }
+    button.action-btn { width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 10px; color: white; }
+    .btn-nile { background: var(--nile); }
+    .btn-amber { background: var(--amber); }
+    .result { margin-top: 12px; font-size: 13.5px; background: var(--sand); padding: 10px 12px; border-radius: 8px; min-height: 14px; color: #6B6455; }
+
+    .status-badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11px; font-weight: 700; color: white; }
+    .status-pending { background: var(--amber); }
+    .status-approved { background: var(--nile); }
+    .status-rejected { background: var(--rust); }
+    .history-item { padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .history-item:last-child { border-bottom: none; }
+    .empty-note { color: var(--muted); font-size: 13px; text-align: center; padding: 10px 0; }
+    .section-label { font-size: 13px; font-weight: 700; margin: 18px 0 8px; color: var(--ink); }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/driver.html" class="back-link">→ الرئيسية</a>
+    <img src="/logo.png" alt="Ginger">
+    <h1>الطلبات</h1>
+  </div>
+
+  <div class="wrap">
+
+    <div class="card accent-nile">
+      <h3>📅 طلب إجازة</h3>
+      <input type="date" id="leaveStart">
+      <input type="date" id="leaveEnd">
+      <textarea id="leaveReason" placeholder="سبب الإجازة (اختياري)" rows="2"></textarea>
+      <button class="action-btn btn-nile" onclick="requestLeave()">إرسال طلب الإجازة</button>
+      <div class="result" id="resultLeave">جاهز</div>
+
+      <div class="section-label">سجل طلباتك</div>
+      <div id="leaveHistory"><div class="empty-note">مفيش طلبات سابقة</div></div>
+    </div>
+
+    <div class="card accent-amber">
+      <h3>💰 طلب سلفة</h3>
+      <input type="number" id="advanceAmount" placeholder="المبلغ المطلوب">
+      <textarea id="advanceReason" placeholder="سبب طلب السلفة (اختياري)" rows="2"></textarea>
+      <button class="action-btn btn-amber" onclick="requestAdvance()">إرسال طلب السلفة</button>
+      <div class="result" id="resultAdvance">جاهز</div>
+
+      <div class="section-label">سجل طلباتك</div>
+      <div id="advanceHistory"><div class="empty-note">مفيش طلبات سابقة</div></div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentDriverId = null;
+    const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+
+    fetch('/api/driver-session').then(res => res.json()).then(data => {
+      if (!data.loggedIn) { window.location.href = '/driver-login.html'; return; }
+      currentDriverId = data.driverId;
+      loadLeaveHistory();
+      loadAdvanceHistory();
+    });
+
+    function loadLeaveHistory() {
+      fetch('/leave-requests/driver/' + currentDriverId)
+        .then(res => res.json())
+        .then(data => {
+          const el = document.getElementById('leaveHistory');
+          if (data.length === 0) { el.innerHTML = '<div class="empty-note">مفيش طلبات سابقة</div>'; return; }
+          el.innerHTML = data.map(r => `
+            <div class="history-item">
+              <span>${r.start_date} إلى ${r.end_date}</span>
+              <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
+            </div>
+          `).join('');
+        });
+    }
+
+    function loadAdvanceHistory() {
+      fetch('/advances/driver/' + currentDriverId)
+        .then(res => res.json())
+        .then(data => {
+          const el = document.getElementById('advanceHistory');
+          if (data.length === 0) { el.innerHTML = '<div class="empty-note">مفيش طلبات سابقة</div>'; return; }
+          el.innerHTML = data.map(r => `
+            <div class="history-item">
+              <span>${r.amount} جنيه</span>
+              <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
+            </div>
+          `).join('');
+        });
+    }
+
+    function requestLeave() {
+      const start_date = document.getElementById('leaveStart').value;
+      const end_date = document.getElementById('leaveEnd').value;
+      const reason = document.getElementById('leaveReason').value;
+      const resultDiv = document.getElementById('resultLeave');
+
+      if (!start_date || !end_date) { resultDiv.textContent = 'من فضلك اختر تاريخ البداية والنهاية'; return; }
+
+      fetch('/leave-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_id: currentDriverId, start_date, end_date, reason })
+      })
+      .then(res => res.json())
+      .then(data => {
+        resultDiv.textContent = data.message || data.error;
+        if (data.message) {
+          document.getElementById('leaveStart').value = '';
+          document.getElementById('leaveEnd').value = '';
+          document.getElementById('leaveReason').value = '';
+          loadLeaveHistory();
+        }
+      });
+    }
+
+    function requestAdvance() {
+      const amount = document.getElementById('advanceAmount').value;
+      const reason = document.getElementById('advanceReason').value;
+      const resultDiv = document.getElementById('resultAdvance');
+
+      if (!amount) { resultDiv.textContent = 'من فضلك اكتب المبلغ المطلوب'; return; }
+
+      fetch('/advances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_id: currentDriverId, amount, reason })
+      })
+      .then(res => res.json())
+      .then(data => {
+        resultDiv.textContent = data.message || data.error;
+        if (data.message) {
+          document.getElementById('advanceAmount').value = '';
+          document.getElementById('advanceReason').value = '';
+          loadAdvanceHistory();
+        }
+      });
+    }
+  </script>
+</body>
+</html>
