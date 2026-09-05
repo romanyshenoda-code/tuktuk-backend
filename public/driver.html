@@ -3,123 +3,287 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>صفحة السائق</title>
+  <title>صفحة السائق - Ginger</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 15px; margin: 0; }
-    .header { background: #2c3e50; color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px; }
-    .header h2 { margin: 0; }
-    .logout-link { color: #ecf0f1; font-size: 13px; text-decoration: underline; }
-    .card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-    .card h3 { margin-top: 0; color: #2c3e50; }
-    input, select, textarea { width: 100%; padding: 10px; margin: 6px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 15px; font-family: inherit; }
-    button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 8px; color: white; }
-    .btn-primary { background: #27ae60; }
-    .btn-danger { background: #c0392b; }
-    .btn-warning { background: #e67e22; }
-    .btn-info { background: #8e44ad; }
-    .btn-secondary { background: #7f8c8d; }
-    .result { margin-top: 10px; font-size: 14px; background: #f9f9f9; padding: 10px; border-radius: 6px; min-height: 15px; }
-    #reader { width: 100%; margin: 10px auto; }
-    .photo-preview { max-width: 150px; margin: 10px auto; display: block; border-radius: 8px; }
-    .required-label { color: #c0392b; font-weight: bold; font-size: 12px; }
-    .optional-label { color: #777; font-size: 12px; }
-    .notification-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+    :root {
+      --ink: #1E1B16;
+      --asphalt: #16305C;
+      --sand: #F3EEE3;
+      --paper: #FFFFFF;
+      --orange: #EA4F1E;
+      --orange-dark: #C63E12;
+      --nile: #1F6F63;
+      --rust: #B23A1E;
+      --amber: #C97A1A;
+      --line: #E4DCCB;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: var(--sand);
+      margin: 0;
+      color: var(--ink);
+      padding-bottom: 30px;
+    }
+
+    .topbar {
+      background: var(--asphalt);
+      color: var(--sand);
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 4px solid var(--orange);
+    }
+
+    .topbar .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo { height: 42px; width: auto; }
+    .topbar h2 { margin: 0; font-size: 17px; font-weight: 700; }
+    .topbar .sub { font-size: 11px; opacity: 0.75; margin-top: 2px; letter-spacing: 0.3px; }
+    .logout-link {
+      color: var(--sand); opacity: 0.75; font-size: 13px;
+      text-decoration: none; border: 1px solid rgba(255,255,255,0.25);
+      padding: 6px 12px; border-radius: 20px;
+    }
+
+    .wrap { max-width: 480px; margin: 0 auto; padding: 16px; }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 26px 4px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    .card {
+      background: var(--paper);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 6px;
+      border-inline-start: 5px solid var(--line);
+      box-shadow: 0 1px 2px rgba(30,27,22,0.05);
+    }
+    .card.accent-orange { border-inline-start-color: var(--orange); }
+    .card.accent-nile { border-inline-start-color: var(--nile); }
+    .card.accent-rust { border-inline-start-color: var(--rust); }
+    .card.accent-ink { border-inline-start-color: var(--asphalt); }
+
+    .card h3 { margin: 0 0 12px; font-size: 16px; font-weight: 700; }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      margin: 6px 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-size: 15px;
+      font-family: inherit;
+      background: var(--sand);
+      color: var(--ink);
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid var(--orange);
+      outline-offset: 1px;
+      background: var(--paper);
+    }
+
+    button {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 9px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 10px;
+      color: var(--paper);
+      transition: filter 0.15s;
+    }
+    button:active { filter: brightness(0.92); }
+    button:disabled { background: #C9C2B2 !important; cursor: not-allowed; }
+
+    .btn-primary { background: var(--nile); }
+    .btn-danger { background: var(--rust); }
+    .btn-warning { background: var(--amber); }
+    .btn-photo {
+      background: var(--asphalt);
+      color: white;
+      font-size: 14px;
+      padding: 11px;
+    }
+    .btn-secondary { background: var(--orange); }
+
+    .result {
+      margin-top: 10px;
+      font-size: 13.5px;
+      background: var(--sand);
+      padding: 10px 12px;
+      border-radius: 8px;
+      min-height: 14px;
+      color: #6B6455;
+    }
+
+    #reader { width: 100%; margin: 12px auto; border-radius: 10px; overflow: hidden; }
+
+    .photo-preview { max-width: 140px; margin: 10px auto; display: block; border-radius: 10px; }
+
+    .required-label { color: var(--rust); font-weight: 700; font-size: 12px; margin-top: 4px; }
+    .optional-label { color: #8A8272; font-size: 12px; margin-top: 4px; }
+
+    .notification-item {
+      padding: 11px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
     .notification-item:last-child { border-bottom: none; }
-    .notification-unread { background: #fff9e6; }
+    .notification-unread { position: relative; padding-inline-start: 14px; font-weight: 600; }
+    .notification-unread::before {
+      content: ''; position: absolute; right: 0; top: 16px;
+      width: 6px; height: 6px; border-radius: 50%; background: var(--amber);
+    }
+    .empty-note { color: #A39C8C; font-size: 13.5px; padding: 4px 0; }
+
     .hidden { display: none; }
-    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; color: white; }
-    .status-pending { background: #f39c12; }
-    .status-approved { background: #27ae60; }
-    .status-rejected { background: #c0392b; }
-    .history-item { padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 11px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: white;
+    }
+    .status-pending { background: var(--amber); }
+    .status-approved { background: var(--nile); }
+    .status-rejected { background: var(--rust); }
+
+    .history-item {
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
     .history-item:last-child { border-bottom: none; }
+    .history-earning { font-weight: 700; color: var(--nile); white-space: nowrap; }
+
+    hr { border: none; border-top: 1px dashed var(--line); margin: 18px 0; }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <h2 id="driverNameDisplay">جاري التحميل...</h2>
-    <a href="/api/driver-logout" class="logout-link">تسجيل خروج</a>
+  <div class="topbar">
+    <div class="brand">
+      <img src="/logo.png" alt="Ginger" class="brand-logo">
+      <div>
+        <h2 id="driverNameDisplay">جاري التحميل...</h2>
+        <div class="sub">GINGER — SPICE UP THE ORDINARY</div>
+      </div>
+    </div>
+    <a href="/api/driver-logout" class="logout-link">خروج</a>
   </div>
 
-  <div class="card">
-    <h3>🔔 الإشعارات</h3>
-    <div id="notificationsList">مفيش إشعارات جديدة</div>
-  </div>
+  <div class="wrap">
 
-  <div class="card" id="checkinCard">
-    <h3>بدء الوردية</h3>
-    <div id="qrStatus">امسح كود QR بتاع التوكتوك</div>
-    <div id="reader"></div>
+    <div class="section-title"><span class="dot" style="background:var(--amber)"></span>الإشعارات</div>
+    <div class="card accent-ink">
+      <div id="notificationsList" class="empty-note">مفيش إشعارات جديدة</div>
+    </div>
 
-    <button class="btn-info" onclick="capturePhoto('photoInputCheckIn')">📷 صورة التوكتوك</button>
-    <input type="file" id="photoInputCheckIn" accept="image/*" capture="environment" class="hidden">
-    <img id="photoPreviewCheckIn" class="photo-preview hidden">
-    <div id="checkinPhotoLabel" class="required-label">الصورة إجبارية لاستلام التوكتوك</div>
+    <div class="section-title"><span class="dot" style="background:var(--orange)"></span>الوردية</div>
 
-    <button id="checkInBtn" class="btn-primary" onclick="checkIn()" disabled>تسجيل الحضور وبدء الوردية</button>
-    <div id="result" class="result">جاهز</div>
-  </div>
+    <div class="card accent-orange" id="checkinCard">
+      <h3>بدء الوردية</h3>
+      <div id="qrStatus" class="result" style="margin-top:0; margin-bottom:10px;">امسح كود QR بتاع التوكتوك</div>
+      <div id="reader"></div>
 
-  <div class="card hidden" id="orderCard">
-    <h3>فتح أوردر</h3>
-    <select id="orderType">
-      <option value="delivery">توصيل عميل</option>
-      <option value="full_trip">رحلة كاملة</option>
-    </select>
-    <button class="btn-primary" onclick="openOrder()">فتح الأوردر</button>
-    <div id="resultOrderOpen" class="result">جاهز</div>
+      <button class="btn-photo" onclick="capturePhoto('photoInputCheckIn')">📷 صورة التوكتوك</button>
+      <input type="file" id="photoInputCheckIn" accept="image/*" capture="environment" class="hidden">
+      <img id="photoPreviewCheckIn" class="photo-preview hidden">
+      <div id="checkinPhotoLabel" class="required-label">الصورة إجبارية لاستلام التوكتوك</div>
 
-    <hr>
+      <button id="checkInBtn" class="btn-primary" onclick="checkIn()" disabled>تسجيل الحضور وبدء الوردية</button>
+      <div id="result" class="result">جاهز</div>
+    </div>
 
-    <h3>قفل أوردر</h3>
-    <input type="number" id="orderIdClose" placeholder="رقم الأوردر">
-    <button class="btn-info" onclick="capturePhoto('photoInputOrderClose')">📷 صورة توثيق الوصول</button>
-    <input type="file" id="photoInputOrderClose" accept="image/*" capture="environment" class="hidden">
-    <img id="photoPreviewOrderClose" class="photo-preview hidden">
-    <div id="orderClosePhotoLabel" class="optional-label">صورة اختيارية لتوثيق وصول الأوردر</div>
-    <button class="btn-warning" onclick="closeOrder()">قفل الأوردر</button>
-    <div id="resultOrderClose" class="result">جاهز</div>
-  </div>
+    <div class="card accent-orange hidden" id="orderCard">
+      <h3>فتح أوردر</h3>
+      <select id="orderType">
+        <option value="delivery">توصيل عميل</option>
+        <option value="full_trip">رحلة كاملة</option>
+      </select>
+      <button class="btn-primary" onclick="openOrder()">فتح الأوردر</button>
+      <div id="resultOrderOpen" class="result">جاهز</div>
 
-  <div class="card hidden" id="checkoutCard">
-    <h3>إنهاء الوردية</h3>
-    <button class="btn-info" onclick="capturePhoto('photoInputCheckOut')">📷 صورة تسليم التوكتوك</button>
-    <input type="file" id="photoInputCheckOut" accept="image/*" capture="environment" class="hidden">
-    <img id="photoPreviewCheckOut" class="photo-preview hidden">
-    <div id="checkoutPhotoLabel" class="required-label">الصورة إجبارية لتسليم التوكتوك</div>
-    <button class="btn-danger" onclick="checkOut()">تسجيل الانصراف وإنهاء الوردية</button>
-    <div id="resultOut" class="result">جاهز</div>
-  </div>
+      <hr>
 
-  <div class="card">
-    <h3>📅 طلب إجازة</h3>
-    <input type="date" id="leaveStart">
-    <input type="date" id="leaveEnd">
-    <textarea id="leaveReason" placeholder="سبب الإجازة (اختياري)" rows="2"></textarea>
-    <button class="btn-secondary" onclick="requestLeave()">إرسال طلب الإجازة</button>
-    <div id="resultLeave" class="result">جاهز</div>
-    <div id="leaveHistory"></div>
-  </div>
+      <h3>قفل أوردر</h3>
+      <input type="number" id="orderIdClose" placeholder="رقم الأوردر">
+      <button class="btn-photo" onclick="capturePhoto('photoInputOrderClose')">📷 صورة توثيق الوصول</button>
+      <input type="file" id="photoInputOrderClose" accept="image/*" capture="environment" class="hidden">
+      <img id="photoPreviewOrderClose" class="photo-preview hidden">
+      <div id="orderClosePhotoLabel" class="optional-label">صورة اختيارية لتوثيق وصول الأوردر</div>
+      <button class="btn-warning" onclick="closeOrder()">قفل الأوردر</button>
+      <div id="resultOrderClose" class="result">جاهز</div>
+    </div>
 
-  <div class="card">
-    <h3>💰 طلب سلفة</h3>
-    <input type="number" id="advanceAmount" placeholder="المبلغ المطلوب">
-    <textarea id="advanceReason" placeholder="سبب طلب السلفة (اختياري)" rows="2"></textarea>
-    <button class="btn-secondary" onclick="requestAdvance()">إرسال طلب السلفة</button>
-    <div id="resultAdvance" class="result">جاهز</div>
-    <div id="advanceHistory"></div>
-  </div>
+    <div class="card accent-rust hidden" id="checkoutCard">
+      <h3>إنهاء الوردية</h3>
+      <button class="btn-photo" onclick="capturePhoto('photoInputCheckOut')">📷 صورة تسليم التوكتوك</button>
+      <input type="file" id="photoInputCheckOut" accept="image/*" capture="environment" class="hidden">
+      <img id="photoPreviewCheckOut" class="photo-preview hidden">
+      <div id="checkoutPhotoLabel" class="required-label">الصورة إجبارية لتسليم التوكتوك</div>
+      <button class="btn-danger" onclick="checkOut()">تسجيل الانصراف وإنهاء الوردية</button>
+      <div id="resultOut" class="result">جاهز</div>
+    </div>
 
-  <div class="card">
-    <h3>📋 سجل الورديات (آخر 10)</h3>
-    <div id="shiftsHistoryList">جاري التحميل...</div>
-  </div>
+    <div class="section-title"><span class="dot" style="background:var(--nile)"></span>الطلبات</div>
 
-  <div class="card">
-    <h3>🚕 سجل الأوردرات (آخر 20)</h3>
-    <div id="ordersHistoryList">جاري التحميل...</div>
+    <div class="card accent-nile">
+      <h3>طلب إجازة</h3>
+      <input type="date" id="leaveStart">
+      <input type="date" id="leaveEnd">
+      <textarea id="leaveReason" placeholder="سبب الإجازة (اختياري)" rows="2"></textarea>
+      <button class="btn-secondary" onclick="requestLeave()">إرسال طلب الإجازة</button>
+      <div id="resultLeave" class="result">جاهز</div>
+      <div id="leaveHistory"></div>
+    </div>
+
+    <div class="card accent-nile">
+      <h3>طلب سلفة</h3>
+      <input type="number" id="advanceAmount" placeholder="المبلغ المطلوب">
+      <textarea id="advanceReason" placeholder="سبب طلب السلفة (اختياري)" rows="2"></textarea>
+      <button class="btn-secondary" onclick="requestAdvance()">إرسال طلب السلفة</button>
+      <div id="resultAdvance" class="result">جاهز</div>
+      <div id="advanceHistory"></div>
+    </div>
+
+    <div class="section-title"><span class="dot" style="background:var(--asphalt)"></span>السجل</div>
+
+    <div class="card accent-ink">
+      <h3>سجل الورديات</h3>
+      <div id="shiftsHistoryList" class="empty-note">جاري التحميل...</div>
+    </div>
+
+    <div class="card accent-ink">
+      <h3>سجل الأوردرات</h3>
+      <div id="ordersHistoryList" class="empty-note">جاري التحميل...</div>
+    </div>
+
   </div>
 
   <script>
@@ -136,7 +300,7 @@
           return;
         }
         currentDriverId = data.driverId;
-        document.getElementById('driverNameDisplay').textContent = 'أهلاً، ' + data.driverName;
+        document.getElementById('driverNameDisplay').textContent = data.driverName;
         loadNotifications();
         loadLeaveHistory();
         loadAdvanceHistory();
@@ -183,7 +347,7 @@
         .then(data => {
           const list = document.getElementById('notificationsList');
           if (data.length === 0) {
-            list.innerHTML = 'مفيش إشعارات جديدة';
+            list.innerHTML = '<div class="empty-note">مفيش إشعارات جديدة</div>';
             return;
           }
           list.innerHTML = data.map(n => `
@@ -199,9 +363,11 @@
         .then(res => res.json())
         .then(data => {
           const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
-          document.getElementById('leaveHistory').innerHTML = data.map(r => `
+          const el = document.getElementById('leaveHistory');
+          if (data.length === 0) { el.innerHTML = ''; return; }
+          el.innerHTML = data.map(r => `
             <div class="history-item">
-              ${r.start_date} إلى ${r.end_date}
+              <span>${r.start_date} إلى ${r.end_date}</span>
               <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
             </div>
           `).join('');
@@ -213,9 +379,11 @@
         .then(res => res.json())
         .then(data => {
           const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
-          document.getElementById('advanceHistory').innerHTML = data.map(r => `
+          const el = document.getElementById('advanceHistory');
+          if (data.length === 0) { el.innerHTML = ''; return; }
+          el.innerHTML = data.map(r => `
             <div class="history-item">
-              ${r.amount} جنيه
+              <span>${r.amount} جنيه</span>
               <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
             </div>
           `).join('');
@@ -228,14 +396,13 @@
         .then(data => {
           const list = document.getElementById('shiftsHistoryList');
           if (data.length === 0) {
-            list.innerHTML = 'مفيش ورديات مسجلة';
+            list.innerHTML = '<div class="empty-note">مفيش ورديات مسجلة</div>';
             return;
           }
           list.innerHTML = data.map(s => `
             <div class="history-item">
-              توكتوك ${s.tuktuk_number} —
-              حضور: ${s.check_in_time ? new Date(s.check_in_time).toLocaleString('ar-EG') : '-'} —
-              انصراف: ${s.check_out_time ? new Date(s.check_out_time).toLocaleString('ar-EG') : 'لسه شغال'}
+              <span>توكتوك ${s.tuktuk_number}</span>
+              <span style="color:#8A8272; font-size:12px;">${s.check_in_time ? new Date(s.check_in_time).toLocaleDateString('ar-EG') : '-'}</span>
             </div>
           `).join('');
         });
@@ -247,15 +414,13 @@
         .then(data => {
           const list = document.getElementById('ordersHistoryList');
           if (data.length === 0) {
-            list.innerHTML = 'مفيش أوردرات مسجلة';
+            list.innerHTML = '<div class="empty-note">مفيش أوردرات مسجلة</div>';
             return;
           }
           list.innerHTML = data.map(o => `
             <div class="history-item">
-              ${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'} —
-              ${o.distance_km || '-'} كم —
-              ${o.price || '-'} جنيه —
-              مستحقاتك: ${o.driver_earning || '-'} جنيه
+              <span>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'} — ${o.distance_km || '-'} كم</span>
+              <span class="history-earning">${o.driver_earning || '-'} ج</span>
             </div>
           `).join('');
         });
