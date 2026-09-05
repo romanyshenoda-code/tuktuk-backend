@@ -315,11 +315,24 @@ app.put('/drivers/:id/password', (req, res) => {
 
 app.put('/drivers/:id/customize', (req, res) => {
   const { id } = req.params;
-  const { is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct, custom_leave_balance } = req.body;
+  const {
+    is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct,
+    custom_delivery_base_price, custom_full_trip_base_price,
+    custom_working_days, custom_weekly_rest_days, custom_personal_leave_balance
+  } = req.body;
 
   db.query(
-    'UPDATE drivers SET is_customized = ?, custom_income_type = ?, custom_monthly_salary = ?, custom_commission_pct = ?, custom_leave_balance = ? WHERE id = ?',
-    [is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct, custom_leave_balance, id],
+    `UPDATE drivers SET
+      is_customized = ?, custom_income_type = ?, custom_monthly_salary = ?, custom_commission_pct = ?,
+      custom_delivery_base_price = ?, custom_full_trip_base_price = ?,
+      custom_working_days = ?, custom_weekly_rest_days = ?, custom_personal_leave_balance = ?
+     WHERE id = ?`,
+    [
+      is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct,
+      custom_delivery_base_price, custom_full_trip_base_price,
+      custom_working_days, custom_weekly_rest_days, custom_personal_leave_balance,
+      id
+    ],
     (err) => {
       if (err) {
         console.error(err);
@@ -1107,24 +1120,82 @@ app.get('/payroll-settings', (req, res) => {
 });
 
 app.put('/payroll-settings', (req, res) => {
-  const { income_type, monthly_salary, commission_pct, monthly_leave_balance } = req.body;
+  const { income_type, monthly_salary, commission_pct, monthly_leave_balance, delivery_base_price, full_trip_base_price } = req.body;
   db.query(
-    'UPDATE payroll_settings SET income_type = ?, monthly_salary = ?, commission_pct = ?, monthly_leave_balance = ? WHERE id = 1',
-    [income_type, monthly_salary, commission_pct, monthly_leave_balance],
+    'UPDATE payroll_settings SET income_type = ?, monthly_salary = ?, commission_pct = ?, monthly_leave_balance = ?, delivery_base_price = ?, full_trip_base_price = ? WHERE id = 1',
+    [income_type, monthly_salary, commission_pct, monthly_leave_balance, delivery_base_price, full_trip_base_price],
     (err, result) => {
       if (err) {
         console.error(err);
         return res.status(500).json({ error: 'حصل خطأ في تحديث الإعدادات' });
-      }
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'الإعدادات غير موجودة أصلاً' });
       }
       res.json({ message: 'تم تحديث الإعدادات العامة بنجاح' });
     }
   );
 });
 
+// ==================== إعدادات الإجازات العامة ====================
+app.get('/leave-config', (req, res) => {
+  db.query('SELECT * FROM leave_config ORDER BY id DESC LIMIT 1', (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب إعدادات الإجازات' });
+    }
+    res.json(results[0] || {});
+  });
+});
+
+app.put('/leave-config', (req, res) => {
+  const { working_days_per_month, weekly_rest_days, personal_leave_balance } = req.body;
+  db.query(
+    'UPDATE leave_config SET working_days_per_month = ?, weekly_rest_days = ?, personal_leave_balance = ? WHERE id = 1',
+    [working_days_per_month, weekly_rest_days, personal_leave_balance],
+    (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في تحديث إعدادات الإجازات' });
+      }
+      res.json({ message: 'تم تحديث إعدادات الإجازات بنجاح' });
+    }
+  );
+});
+
+// إضافة إجازة عيد يدوياً (بموافقة تلقائية، بدون خصم رصيد)
+app.post('/leave-requests/holiday', (req, res) => {
+  const { driver_id, start_date, end_date, reason } = req.body;
+  db.query(
+    `INSERT INTO leave_requests (driver_id, start_date, end_date, reason, leave_type, status, admin_note, reviewed_at)
+     VALUES (?, ?, ?, ?, 'holiday', 'approved', 'إجازة عيد - تضاف تلقائياً بمرتب كامل', NOW())`,
+    [driver_id, start_date, end_date, reason || 'إجازة عيد'],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في إضافة إجازة العيد' });
+      }
+      const message = `تم تسجيل إجازة عيد لك من ${start_date} إلى ${end_date} بمرتب كامل`;
+      db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [driver_id, message]);
+      res.status(201).json({ message: 'تم إضافة إجازة العيد بنجاح', id: result.insertId });
+    }
+  );
+});
+
 // ==================== حساب راتب سائق لشهر معين ====================
+
+// دالة تحسب عدد أيام يوم معين من الأسبوع في شهر معين (مثلاً كام يوم جمعة في سبتمبر)
+function countWeekdayInMonth(year, month, weekdayName) {
+  const weekdays = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
+  const targetDay = weekdays[weekdayName];
+  if (targetDay === undefined) return 0;
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let count = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month - 1, d);
+    if (date.getDay() === targetDay) count++;
+  }
+  return count;
+}
+
 app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
   const { driver_id, year, month } = req.params;
 
@@ -1141,86 +1212,169 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
       }
       const settings = settingsResults[0];
 
-      const income_type = driver.is_customized ? driver.custom_income_type : settings.income_type;
-      const monthly_salary = driver.is_customized ? driver.custom_monthly_salary : settings.monthly_salary;
-      const commission_pct = driver.is_customized ? driver.custom_commission_pct : settings.commission_pct;
-
-      const attendanceQuery = `
-        SELECT COUNT(DISTINCT DATE(check_in_time)) AS days_present
-        FROM shifts
-        WHERE driver_id = ? AND YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
-      `;
-      db.query(attendanceQuery, [driver_id, year, month], (err, attendanceResults) => {
+      db.query('SELECT * FROM leave_config ORDER BY id DESC LIMIT 1', (err, leaveConfigResults) => {
         if (err) {
           console.error(err);
-          return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' });
+          return res.status(500).json({ error: 'حصل خطأ في جلب إعدادات الإجازات' });
         }
-        const days_present = attendanceResults[0].days_present || 0;
+        const leaveConfig = leaveConfigResults[0];
 
-        const earningsQuery = `
-          SELECT COALESCE(SUM(price), 0) AS total_revenue
-          FROM orders
-          WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
+        // تحديد القيم الفعلية (مخصصة أو عامة)
+        const income_type = driver.is_customized ? driver.custom_income_type : settings.income_type;
+        const monthly_salary = driver.is_customized ? driver.custom_monthly_salary : settings.monthly_salary;
+        const commission_pct = driver.is_customized ? driver.custom_commission_pct : settings.commission_pct;
+        const delivery_base_price = driver.is_customized ? driver.custom_delivery_base_price : settings.delivery_base_price;
+        const full_trip_base_price = driver.is_customized ? driver.custom_full_trip_base_price : settings.full_trip_base_price;
+
+        const weekly_rest_days_str = driver.is_customized ? driver.custom_weekly_rest_days : leaveConfig.weekly_rest_days;
+        const weekly_rest_days = (weekly_rest_days_str || '').split(',').map(d => d.trim()).filter(Boolean);
+
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        // عدد أيام الراحة الأسبوعية الفعلية في الشهر ده (بناءً على الأيام المختارة)
+        let weeklyRestCount = 0;
+        weekly_rest_days.forEach(day => {
+          weeklyRestCount += countWeekdayInMonth(year, month, day);
+        });
+
+        const expectedWorkingDays = daysInMonth - weeklyRestCount;
+
+        // نجيب أيام الحضور الفعلية
+        const attendanceQuery = `
+          SELECT COUNT(DISTINCT DATE(check_in_time)) AS days_present
+          FROM shifts
+          WHERE driver_id = ? AND YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
         `;
-        db.query(earningsQuery, [driver_id, year, month], (err, earningsResults) => {
+        db.query(attendanceQuery, [driver_id, year, month], (err, attendanceResults) => {
           if (err) {
             console.error(err);
-            return res.status(500).json({ error: 'حصل خطأ في حساب الإيرادات' });
+            return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' });
           }
-          const total_revenue = parseFloat(earningsResults[0].total_revenue);
+          const days_present = attendanceResults[0].days_present || 0;
 
-          const deductionsQuery = `
-            SELECT COALESCE(SUM(amount), 0) AS total_deductions
-            FROM deductions
-            WHERE driver_id = ? AND YEAR(created_at) = ? AND MONTH(created_at) = ?
+          // نجيب أيام إجازة الأعياد المعتمدة في الشهر ده (بتتحسب كأنها حضور كامل)
+          const holidayQuery = `
+            SELECT start_date, end_date FROM leave_requests
+            WHERE driver_id = ? AND leave_type = 'holiday' AND status = 'approved'
+            AND (
+              (YEAR(start_date) = ? AND MONTH(start_date) = ?)
+              OR (YEAR(end_date) = ? AND MONTH(end_date) = ?)
+            )
           `;
-          db.query(deductionsQuery, [driver_id, year, month], (err, deductionsResults) => {
+          db.query(holidayQuery, [driver_id, year, month, year, month], (err, holidayResults) => {
             if (err) {
               console.error(err);
-              return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' });
+              return res.status(500).json({ error: 'حصل خطأ في حساب إجازات الأعياد' });
             }
-            const total_deductions = parseFloat(deductionsResults[0].total_deductions);
 
-            const advancesQuery = `
-              SELECT COALESCE(SUM(amount), 0) AS total_advances
-              FROM advances
-              WHERE driver_id = ? AND status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ?
+            let holidayDaysCount = 0;
+            holidayResults.forEach(h => {
+              const start = new Date(h.start_date);
+              const end = new Date(h.end_date);
+              const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+              holidayDaysCount += diffDays;
+            });
+
+            // إجمالي الأيام المحسوبة كـ"حضور فعلي" لأغراض المرتب = الحضور الحقيقي + أيام الأعياد
+            const effectivePresentDays = days_present + holidayDaysCount;
+
+            // نجيب عدد الأوردرات المقفولة حسب النوع (للعمولة الجديدة المبنية على سعر ثابت × عدد)
+            const ordersCountQuery = `
+              SELECT order_type, COUNT(*) AS count
+              FROM orders
+              WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
+              GROUP BY order_type
             `;
-            db.query(advancesQuery, [driver_id, year, month], (err, advancesResults) => {
+            db.query(ordersCountQuery, [driver_id, year, month], (err, ordersCountResults) => {
               if (err) {
                 console.error(err);
-                return res.status(500).json({ error: 'حصل خطأ في حساب السلف' });
-              }
-              const total_advances = parseFloat(advancesResults[0].total_advances);
-
-              const daysInMonth = new Date(year, month, 0).getDate();
-              let salaryPart = 0;
-              let commissionPart = 0;
-
-              if (income_type === 'salary' || income_type === 'both') {
-                const dailyRate = monthly_salary / daysInMonth;
-                salaryPart = dailyRate * days_present;
-              }
-              if (income_type === 'commission' || income_type === 'both') {
-                commissionPart = total_revenue * (commission_pct / 100);
+                return res.status(500).json({ error: 'حصل خطأ في حساب الأوردرات' });
               }
 
-              const grossPay = salaryPart + commissionPart;
-              const netPay = grossPay - total_deductions - total_advances;
+              let deliveryCount = 0;
+              let fullTripCount = 0;
+              ordersCountResults.forEach(r => {
+                if (r.order_type === 'delivery') deliveryCount = r.count;
+                if (r.order_type === 'full_trip') fullTripCount = r.count;
+              });
 
-              res.json({
-                driver_id: parseInt(driver_id),
-                driver_name: driver.name,
-                income_type,
-                days_present,
-                days_in_month: daysInMonth,
-                total_revenue: total_revenue.toFixed(2),
-                salary_part: salaryPart.toFixed(2),
-                commission_part: commissionPart.toFixed(2),
-                gross_pay: grossPay.toFixed(2),
-                total_deductions: total_deductions.toFixed(2),
-                total_advances: total_advances.toFixed(2),
-                net_pay: netPay.toFixed(2)
+              // إجمالي الإيراد الفعلي (لسه بنعرضه للمعلومية، من السعر الحقيقي المسجل وقت القفل)
+              const earningsQuery = `
+                SELECT COALESCE(SUM(price), 0) AS total_revenue
+                FROM orders
+                WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
+              `;
+              db.query(earningsQuery, [driver_id, year, month], (err, earningsResults) => {
+                if (err) {
+                  console.error(err);
+                  return res.status(500).json({ error: 'حصل خطأ في حساب الإيرادات' });
+                }
+                const total_revenue = parseFloat(earningsResults[0].total_revenue);
+
+                const deductionsQuery = `
+                  SELECT COALESCE(SUM(amount), 0) AS total_deductions
+                  FROM deductions
+                  WHERE driver_id = ? AND YEAR(created_at) = ? AND MONTH(created_at) = ?
+                `;
+                db.query(deductionsQuery, [driver_id, year, month], (err, deductionsResults) => {
+                  if (err) {
+                    console.error(err);
+                    return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' });
+                  }
+                  const total_deductions = parseFloat(deductionsResults[0].total_deductions);
+
+                  const advancesQuery = `
+                    SELECT COALESCE(SUM(amount), 0) AS total_advances
+                    FROM advances
+                    WHERE driver_id = ? AND status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ?
+                  `;
+                  db.query(advancesQuery, [driver_id, year, month], (err, advancesResults) => {
+                    if (err) {
+                      console.error(err);
+                      return res.status(500).json({ error: 'حصل خطأ في حساب السلف' });
+                    }
+                    const total_advances = parseFloat(advancesResults[0].total_advances);
+
+                    // ==================== الحساب النهائي ====================
+                    let salaryPart = 0;
+                    let commissionPart = 0;
+
+                    if (income_type === 'salary' || income_type === 'both') {
+                      const dailyRate = expectedWorkingDays > 0 ? monthly_salary / expectedWorkingDays : 0;
+                      salaryPart = dailyRate * effectivePresentDays;
+                    }
+
+                    if (income_type === 'commission' || income_type === 'both') {
+                      const deliveryCommission = deliveryCount * parseFloat(delivery_base_price || 0) * (commission_pct / 100);
+                      const fullTripCommission = fullTripCount * parseFloat(full_trip_base_price || 0) * (commission_pct / 100);
+                      commissionPart = deliveryCommission + fullTripCommission;
+                    }
+
+                    const grossPay = salaryPart + commissionPart;
+                    const netPay = grossPay - total_deductions - total_advances;
+
+                    res.json({
+                      driver_id: parseInt(driver_id),
+                      driver_name: driver.name,
+                      income_type,
+                      days_present,
+                      holiday_days: holidayDaysCount,
+                      effective_present_days: effectivePresentDays,
+                      expected_working_days: expectedWorkingDays,
+                      weekly_rest_count: weeklyRestCount,
+                      days_in_month: daysInMonth,
+                      delivery_count: deliveryCount,
+                      full_trip_count: fullTripCount,
+                      total_revenue: total_revenue.toFixed(2),
+                      salary_part: salaryPart.toFixed(2),
+                      commission_part: commissionPart.toFixed(2),
+                      gross_pay: grossPay.toFixed(2),
+                      total_deductions: total_deductions.toFixed(2),
+                      total_advances: total_advances.toFixed(2),
+                      net_pay: netPay.toFixed(2)
+                    });
+                  });
+                });
               });
             });
           });
@@ -1260,6 +1414,39 @@ app.get('/tuktuk-maintenance', (req, res) => {
       return res.status(500).json({ error: 'حصل خطأ في جلب سجل الصيانة' });
     }
     res.json(results);
+  });
+});
+app.put('/tuktuk-maintenance/:id', (req, res) => {
+  const { id } = req.params;
+  const { tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date } = req.body;
+
+  db.query(
+    'UPDATE tuktuk_maintenance SET tuktuk_id = ?, driver_id = ?, maintenance_type = ?, description = ?, cost = ?, maintenance_date = ? WHERE id = ?',
+    [tuktuk_id, driver_id || null, maintenance_type, description, cost, maintenance_date, id],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في تحديث مصروف الصيانة' });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'المصروف غير موجود' });
+      }
+      res.json({ message: 'تم تحديث مصروف الصيانة بنجاح' });
+    }
+  );
+});
+
+app.delete('/tuktuk-maintenance/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM tuktuk_maintenance WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في حذف مصروف الصيانة' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'المصروف غير موجود' });
+    }
+    res.json({ message: 'تم حذف مصروف الصيانة نهائياً' });
   });
 });
 
