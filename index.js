@@ -48,13 +48,89 @@ function requireLogin(req, res, next) {
 }
 
 app.post('/api/login', (req, res) => {
-  const { password } = req.body;
-  if (password === process.env.ADMIN_PASSWORD) {
+  const { username, password } = req.body;
+
+  db.query('SELECT * FROM admins WHERE username = ? AND password = ?', [username, password], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' });
+    }
+    if (results.length === 0) {
+      return res.status(401).json({ error: 'اسم المستخدم أو الباسورد غلط' });
+    }
     req.session.loggedIn = true;
+    req.session.adminId = results[0].id;
+    req.session.adminName = results[0].name;
     res.json({ message: 'تم تسجيل الدخول بنجاح' });
-  } else {
-    res.status(401).json({ error: 'الباسورد غلط' });
-  }
+  });
+});
+
+// ==================== إدارة الأدمنية ====================
+app.get('/admins', (req, res) => {
+  db.query('SELECT id, name, username, created_at FROM admins', (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب الأدمنية' });
+    }
+    res.json(results);
+  });
+});
+
+app.post('/admins', (req, res) => {
+  const { name, username, password } = req.body;
+  db.query('INSERT INTO admins (name, username, password) VALUES (?, ?, ?)', [name, username, password], (err, result) => {
+    if (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        return res.status(400).json({ error: 'اسم المستخدم ده مستخدم بالفعل' });
+      }
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في إضافة الأدمن' });
+    }
+    res.status(201).json({ message: 'تم إضافة الأدمن بنجاح', admin_id: result.insertId });
+  });
+});
+
+app.put('/admins/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, username } = req.body;
+  db.query('UPDATE admins SET name = ?, username = ? WHERE id = ?', [name, username, id], (err, result) => {
+    if (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        return res.status(400).json({ error: 'اسم المستخدم ده مستخدم بالفعل' });
+      }
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تحديث الأدمن' });
+    }
+    res.json({ message: 'تم تحديث بيانات الأدمن بنجاح' });
+  });
+});
+
+app.put('/admins/:id/password', (req, res) => {
+  const { id } = req.params;
+  const { password } = req.body;
+  db.query('UPDATE admins SET password = ? WHERE id = ?', [password, id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' });
+    }
+    res.json({ message: 'تم تغيير الباسورد بنجاح' });
+  });
+});
+
+app.delete('/admins/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('SELECT COUNT(*) AS total FROM admins', (err, results) => {
+    if (results[0].total <= 1) {
+      return res.status(400).json({ error: 'مينفعش تمسح آخر أدمن في النظام' });
+    }
+    db.query('DELETE FROM admins WHERE id = ?', [id], (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في حذف الأدمن' });
+      }
+      res.json({ message: 'تم حذف الأدمن بنجاح' });
+    });
+  });
 });
 
 app.get('/api/logout', (req, res) => {

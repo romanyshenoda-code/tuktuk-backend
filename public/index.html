@@ -86,6 +86,11 @@
         <div class="count" id="countPendingRequests">-</div>
         <div class="label">طلبات معلّقة</div>
       </a>
+            <a href="/admins.html" class="module-card">
+        <div class="icon">🛡️</div>
+        <div class="count" id="countAdmins">-</div>
+        <div class="label">مشرفين</div>
+      </a>
     </div>
   </div>
 
@@ -94,6 +99,7 @@
     fetch('/tuktuks').then(r => r.json()).then(d => document.getElementById('countTuktuks').textContent = d.length);
     fetch('/shifts').then(r => r.json()).then(d => document.getElementById('countShiftsOpen').textContent = d.filter(s => s.status === 'open').length);
     fetch('/orders/active').then(r => r.json()).then(d => document.getElementById('countOrdersOpen').textContent = d.length);
+    fetch('/admins').then(r => r.json()).then(d => document.getElementById('countAdmins').textContent = d.length);
     Promise.all([
       fetch('/leave-requests').then(r => r.json()),
       fetch('/advances').then(r => r.json())
