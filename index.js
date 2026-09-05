@@ -1045,6 +1045,48 @@ app.delete('/tuktuk-maintenance/:id', (req, res) => {
     res.json({ message: 'تم حذف مصروف الصيانة نهائياً' });
   });
 });
+// ==================== المصروفات العامة (إيجار، كافتيريا، إلخ) ====================
+app.post('/general-expenses', (req, res) => {
+  const { expense_name, amount, expense_date, notes } = req.body;
+  db.query(
+    'INSERT INTO general_expenses (expense_name, amount, expense_date, notes) VALUES (?, ?, ?, ?)',
+    [expense_name, amount, expense_date, notes],
+    (err, result) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل المصروف' }); }
+      res.status(201).json({ message: 'تم تسجيل المصروف بنجاح', id: result.insertId });
+    }
+  );
+});
+
+app.get('/general-expenses', (req, res) => {
+  db.query('SELECT * FROM general_expenses ORDER BY expense_date DESC', (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب المصروفات' }); }
+    res.json(results);
+  });
+});
+
+app.put('/general-expenses/:id', (req, res) => {
+  const { id } = req.params;
+  const { expense_name, amount, expense_date, notes } = req.body;
+  db.query(
+    'UPDATE general_expenses SET expense_name = ?, amount = ?, expense_date = ?, notes = ? WHERE id = ?',
+    [expense_name, amount, expense_date, notes, id],
+    (err, result) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث المصروف' }); }
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'المصروف غير موجود' });
+      res.json({ message: 'تم تحديث المصروف بنجاح' });
+    }
+  );
+});
+
+app.delete('/general-expenses/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM general_expenses WHERE id = ?', [id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف المصروف' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'المصروف غير موجود' });
+    res.json({ message: 'تم حذف المصروف نهائياً' });
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
