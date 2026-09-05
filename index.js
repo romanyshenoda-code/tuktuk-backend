@@ -1100,19 +1100,20 @@ app.put('/payroll-settings', (req, res) => {
 });
 
 // ==================== تخصيص سائق معين ====================
-app.put('/drivers/:id/customize', (req, res) => {
-  const { id } = req.params;
-  const { is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct, custom_leave_balance } = req.body;
-
+app.put('/payroll-settings', (req, res) => {
+  const { income_type, monthly_salary, commission_pct, monthly_leave_balance } = req.body;
   db.query(
-    'UPDATE drivers SET is_customized = ?, custom_income_type = ?, custom_monthly_salary = ?, custom_commission_pct = ?, custom_leave_balance = ? WHERE id = ?',
-    [is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct, custom_leave_balance, id],
-    (err) => {
+    'UPDATE payroll_settings SET income_type = ?, monthly_salary = ?, commission_pct = ?, monthly_leave_balance = ? WHERE id = 1',
+    [income_type, monthly_salary, commission_pct, monthly_leave_balance],
+    (err, result) => {
       if (err) {
         console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تحديث التخصيص' });
+        return res.status(500).json({ error: 'حصل خطأ في تحديث الإعدادات' });
       }
-      res.json({ message: 'تم تحديث تخصيص السائق بنجاح' });
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'الإعدادات غير موجودة أصلاً' });
+      }
+      res.json({ message: 'تم تحديث الإعدادات العامة بنجاح' });
     }
   );
 });
