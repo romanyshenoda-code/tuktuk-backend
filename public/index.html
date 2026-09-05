@@ -2,97 +2,226 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>لوحة تحكم الأدمن</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة تحكم الأدمن - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-    h1 { color: #333; }
-    h2 { color: #2c3e50; margin-top: 40px; }
-    table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: right; }
-    th { background: #2c3e50; color: white; }
-    .status-open { color: green; font-weight: bold; }
-    .status-closed { color: gray; }
-    .status-pending { color: #f39c12; font-weight: bold; }
-    .status-approved { color: green; font-weight: bold; }
-    .status-rejected { color: #c0392b; font-weight: bold; }
-    form { background: white; padding: 15px; margin-top: 10px; border-radius: 6px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-    button { padding: 8px 16px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    button:hover { background: #34495e; }
-    .btn-approve { background: #27ae60; }
-    .btn-reject { background: #c0392b; }
-    #addDriverMsg, #addTuktukMsg { margin-top: 10px; font-weight: bold; }
+    :root {
+      --ink: #1E1B16;
+      --asphalt: #16305C;
+      --sand: #F3EEE3;
+      --paper: #FFFFFF;
+      --orange: #EA4F1E;
+      --nile: #1F6F63;
+      --rust: #B23A1E;
+      --amber: #C97A1A;
+      --line: #E4DCCB;
+      --muted: #8A8272;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: var(--sand);
+      margin: 0;
+      color: var(--ink);
+    }
+
+    .topbar {
+      background: var(--asphalt);
+      color: var(--sand);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 4px solid var(--orange);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .topbar img { height: 40px; }
+    .topbar h1 { margin: 0; font-size: 17px; font-weight: 700; }
+    .topbar .sub { font-size: 11px; opacity: 0.7; letter-spacing: 0.3px; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 34px 0 12px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .section-title .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .section-title:first-child { margin-top: 0; }
+
+    .panel {
+      background: var(--paper);
+      border-radius: 12px;
+      border-inline-start: 5px solid var(--line);
+      box-shadow: 0 1px 3px rgba(30,27,22,0.06);
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .panel.accent-orange { border-inline-start-color: var(--orange); }
+    .panel.accent-nile { border-inline-start-color: var(--nile); }
+    .panel.accent-ink { border-inline-start-color: var(--asphalt); }
+
+    form.panel {
+      padding: 16px 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    input, select {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--sand);
+      color: var(--ink);
+    }
+    input:focus, select:focus { outline: 2px solid var(--orange); outline-offset: 1px; background: var(--paper); }
+
+    button {
+      padding: 10px 20px;
+      background: var(--orange);
+      color: white;
+      border: none;
+      border-radius: 7px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(0.94); }
+    .btn-approve { background: var(--nile); padding: 7px 14px; font-size: 13px; margin-inline-end: 6px; }
+    .btn-reject { background: var(--rust); padding: 7px 14px; font-size: 13px; }
+
+    .form-msg { padding: 0 18px 14px; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
+    th {
+      background: var(--asphalt);
+      color: var(--sand);
+      font-weight: 600;
+      font-size: 12.5px;
+    }
+    tbody tr:nth-child(even) { background: #FAF7F0; }
+    tbody tr:hover { background: #F3E9DA; }
+    td { border-bottom: 1px solid var(--line); }
+
+    .table-scroll { overflow-x: auto; }
+
+    .status-open, .status-approved { color: var(--nile); font-weight: 700; }
+    .status-closed { color: var(--muted); }
+    .status-pending { color: var(--amber); font-weight: 700; }
+    .status-rejected { color: var(--rust); font-weight: 700; }
+
+    .empty-row td { text-align: center; color: var(--muted); padding: 22px; }
   </style>
 </head>
 <body>
-  <h1>لوحة تحكم الأدمن</h1>
 
-  <h2>إضافة سائق جديد</h2>
-  <form id="addDriverForm">
-    <input type="text" id="newName" placeholder="الاسم" required>
-    <input type="text" id="newPhone" placeholder="رقم التليفون" required>
-    <input type="text" id="newNationalId" placeholder="الرقم القومي">
-    <input type="password" id="newPassword" placeholder="كلمة مرور السائق" required>
-    <button type="submit">إضافة السائق</button>
-  </form>
-  <div id="addDriverMsg"></div>
+  <div class="topbar">
+    <img src="/logo.png" alt="Ginger">
+    <div>
+      <h1>لوحة تحكم الأدمن</h1>
+      <div class="sub">GINGER — SPICE UP THE ORDINARY</div>
+    </div>
+  </div>
 
-  <h2>السواقين</h2>
-  <table id="driversTable">
-    <thead><tr><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الحالة</th></tr></thead>
-    <tbody></tbody>
-  </table>
+  <div class="container">
 
-  <h2>التوكتوكات</h2>
-  <form id="addTuktukForm">
-    <input type="text" id="newTuktukNumber" placeholder="رقم التوكتوك" required>
-    <input type="text" id="newQrCode" placeholder="كود QR" required>
-    <button type="submit">إضافة التوكتوك</button>
-  </form>
-  <div id="addTuktukMsg"></div>
-  <table id="tuktuksTable">
-    <thead><tr><th>الرقم</th><th>رقم التوكتوك</th><th>QR Code</th><th>الحالة</th></tr></thead>
-    <tbody></tbody>
-  </table>
+    <div class="section-title"><span class="dot" style="background:var(--orange)"></span>السواقين</div>
+    <form id="addDriverForm" class="panel accent-orange">
+      <input type="text" id="newName" placeholder="الاسم" required>
+      <input type="text" id="newPhone" placeholder="رقم التليفون" required>
+      <input type="text" id="newNationalId" placeholder="الرقم القومي">
+      <input type="password" id="newPassword" placeholder="كلمة مرور السائق" required>
+      <button type="submit">إضافة السائق</button>
+    </form>
+    <div id="addDriverMsg" class="form-msg"></div>
 
-  <h2>الورديات</h2>
-  <table id="shiftsTable">
-    <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th><th>وقت الانصراف</th><th>الحالة</th></tr></thead>
-    <tbody></tbody>
-  </table>
+    <div class="panel accent-orange table-scroll">
+      <table id="driversTable">
+        <thead><tr><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الحالة</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-  <h2>الأوردرات</h2>
-  <table id="ordersTable">
-    <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>المسافة (كم)</th><th>السعر</th><th>مستحقات السائق</th><th>الحالة</th></tr></thead>
-    <tbody></tbody>
-  </table>
+    <div class="section-title"><span class="dot" style="background:var(--asphalt)"></span>التوكتوكات</div>
+    <form id="addTuktukForm" class="panel accent-ink">
+      <input type="text" id="newTuktukNumber" placeholder="رقم التوكتوك" required>
+      <input type="text" id="newQrCode" placeholder="كود QR" required>
+      <button type="submit">إضافة التوكتوك</button>
+    </form>
+    <div id="addTuktukMsg" class="form-msg"></div>
 
-  <h2>ملخصات الورديات</h2>
-  <table id="summariesTable">
-    <thead><tr><th>الرقم</th><th>السائق</th><th>عدد الأوردرات</th><th>رحلات كاملة</th><th>توصيلات</th><th>إجمالي السعر</th><th>مستحقات السائق</th><th>معدّل يدوي؟</th></tr></thead>
-    <tbody></tbody>
-  </table>
+    <div class="panel accent-ink table-scroll">
+      <table id="tuktuksTable">
+        <thead><tr><th>الرقم</th><th>رقم التوكتوك</th><th>QR Code</th><th>الحالة</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-  <h2>طلبات الإجازة</h2>
-  <table id="leaveTable">
-    <thead><tr><th>الرقم</th><th>السائق</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
-    <tbody></tbody>
-  </table>
+    <div class="section-title"><span class="dot" style="background:var(--nile)"></span>الورديات</div>
+    <div class="panel accent-nile table-scroll">
+      <table id="shiftsTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th><th>وقت الانصراف</th><th>الحالة</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-  <h2>طلبات السلف</h2>
-  <table id="advancesTable">
-    <thead><tr><th>الرقم</th><th>السائق</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
-    <tbody></tbody>
-  </table>
+    <div class="section-title"><span class="dot" style="background:var(--nile)"></span>الأوردرات</div>
+    <div class="panel accent-nile table-scroll">
+      <table id="ordersTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>المسافة (كم)</th><th>السعر</th><th>مستحقات السائق</th><th>الحالة</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-  <h2>تسجيل خصم على سائق</h2>
-  <form id="addDeductionForm">
-    <input type="number" id="deductionDriverId" placeholder="رقم السائق" required>
-    <input type="number" id="deductionAmount" placeholder="المبلغ" required>
-    <input type="text" id="deductionReason" placeholder="السبب" required>
-    <button type="submit">تسجيل الخصم</button>
-  </form>
-  <div id="addDeductionMsg"></div>
+    <div class="section-title"><span class="dot" style="background:var(--nile)"></span>ملخصات الورديات</div>
+    <div class="panel accent-nile table-scroll">
+      <table id="summariesTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>عدد الأوردرات</th><th>رحلات كاملة</th><th>توصيلات</th><th>إجمالي السعر</th><th>مستحقات السائق</th><th>معدّل يدوي؟</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-title"><span class="dot" style="background:var(--amber)"></span>طلبات الإجازة</div>
+    <div class="panel accent-orange table-scroll">
+      <table id="leaveTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-title"><span class="dot" style="background:var(--amber)"></span>طلبات السلف</div>
+    <div class="panel accent-orange table-scroll">
+      <table id="advancesTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-title"><span class="dot" style="background:var(--rust)"></span>تسجيل خصم على سائق</div>
+    <form id="addDeductionForm" class="panel accent-orange">
+      <input type="number" id="deductionDriverId" placeholder="رقم السائق" required>
+      <input type="number" id="deductionAmount" placeholder="المبلغ" required>
+      <input type="text" id="deductionReason" placeholder="السبب" required>
+      <button type="submit">تسجيل الخصم</button>
+    </form>
+    <div id="addDeductionMsg" class="form-msg"></div>
+
+  </div>
 
   <script>
     function loadTable(url, tableId, rowBuilder) {
@@ -101,6 +230,10 @@
       fetch(url)
         .then(res => res.json())
         .then(data => {
+          if (data.length === 0) {
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="10">مفيش بيانات لسه</td></tr>`;
+            return;
+          }
           data.forEach(item => {
             const row = document.createElement('tr');
             row.innerHTML = rowBuilder(item);
@@ -158,6 +291,10 @@
         .then(res => res.json())
         .then(data => {
           const tbody = document.querySelector('#leaveTable tbody');
+          if (data.length === 0) {
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش طلبات إجازة</td></tr>`;
+            return;
+          }
           tbody.innerHTML = '';
           data.forEach(r => {
             const row = document.createElement('tr');
@@ -196,6 +333,10 @@
         .then(res => res.json())
         .then(data => {
           const tbody = document.querySelector('#advancesTable tbody');
+          if (data.length === 0) {
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش طلبات سلف</td></tr>`;
+            return;
+          }
           tbody.innerHTML = '';
           data.forEach(r => {
             const row = document.createElement('tr');
