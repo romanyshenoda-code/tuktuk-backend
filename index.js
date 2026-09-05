@@ -65,6 +65,11 @@ app.post('/api/login', (req, res) => {
   });
 });
 
+app.get('/api/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/login.html');
+});
+
 // ==================== إدارة الأدمنية ====================
 app.get('/admins', (req, res) => {
   db.query('SELECT id, name, username, created_at FROM admins', (err, results) => {
@@ -120,6 +125,10 @@ app.put('/admins/:id/password', (req, res) => {
 app.delete('/admins/:id', (req, res) => {
   const { id } = req.params;
   db.query('SELECT COUNT(*) AS total FROM admins', (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ' });
+    }
     if (results[0].total <= 1) {
       return res.status(400).json({ error: 'مينفعش تمسح آخر أدمن في النظام' });
     }
@@ -131,11 +140,6 @@ app.delete('/admins/:id', (req, res) => {
       res.json({ message: 'تم حذف الأدمن بنجاح' });
     });
   });
-});
-
-app.get('/api/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/login.html');
 });
 
 // ==================== تسجيل دخول السائق ====================
@@ -178,17 +182,50 @@ app.get('/api/driver-session', (req, res) => {
   }
 });
 
-// ==================== الصفحات الرئيسية ====================
+// ==================== تسجيل دخول قسم المالية ====================
+function requireFinanceLogin(req, res, next) {
+  if (req.session && req.session.financeLoggedIn) {
+    return next();
+  }
+  return res.redirect('/finance-login.html');
+}
+
+app.post('/api/finance-login', (req, res) => {
+  const { password } = req.body;
+  db.query('SELECT * FROM finance_admin WHERE password = ?', [password], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' });
+    }
+    if (results.length === 0) {
+      return res.status(401).json({ error: 'الباسورد غلط' });
+    }
+    req.session.financeLoggedIn = true;
+    res.json({ message: 'تم تسجيل الدخول بنجاح' });
+  });
+});
+
+app.get('/api/finance-logout', (req, res) => {
+  req.session.financeLoggedIn = false;
+  res.redirect('/finance-login.html');
+});
+
+app.get('/api/finance-session', (req, res) => {
+  res.json({ loggedIn: !!(req.session && req.session.financeLoggedIn) });
+});
+
+// ==================== الصفحات المحمية ====================
 app.get('/', requireLogin, (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
+
 app.get('/finance.html', requireFinanceLogin, (req, res) => {
   res.sendFile(__dirname + '/public/finance.html');
 });
 
 app.use(express.static('public'));
 
-// ==================== الإعدادات ====================
+// ==================== الإعدادات (صور) ====================
 app.get('/settings', (req, res) => {
   db.query('SELECT setting_key, setting_value FROM system_settings', (err, results) => {
     if (err) {
@@ -240,6 +277,76 @@ app.get('/drivers', (req, res) => {
   });
 });
 
+app.put('/drivers/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, phone, national_id } = req.body;
+
+  db.query('UPDATE drivers SET name = ?, phone = ?, national_id = ? WHERE id = ?', [name, phone, national_id, id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تحديث بيانات السائق' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'السائق غير موجود' });
+    }
+    res.json({ message: 'تم تحديث بيانات السائق بنجاح' });
+  });
+});
+
+app.put('/drivers/:id/password', (req, res) => {
+  const { id } = req.params;
+  const { password } = req.body;
+
+  if (!password) {
+    return res.status(400).json({ error: 'من فضلك ابعت الباسورد الجديد' });
+  }
+
+  db.query('UPDATE drivers SET password = ? WHERE id = ?', [password, id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'السائق غير موجود' });
+    }
+    res.json({ message: 'تم تغيير الباسورد بنجاح' });
+  });
+});
+
+app.put('/drivers/:id/customize', (req, res) => {
+  const { id } = req.params;
+  const { is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct, custom_leave_balance } = req.body;
+
+  db.query(
+    'UPDATE drivers SET is_customized = ?, custom_income_type = ?, custom_monthly_salary = ?, custom_commission_pct = ?, custom_leave_balance = ? WHERE id = ?',
+    [is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct, custom_leave_balance, id],
+    (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في تحديث التخصيص' });
+      }
+      res.json({ message: 'تم تحديث تخصيص السائق بنجاح' });
+    }
+  );
+});
+
+app.delete('/drivers/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM drivers WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+        return res.status(400).json({ error: 'مينفعش تمسح السائق ده لأن عنده ورديات أو أوردرات أو طلبات مسجلة' });
+      }
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في حذف السائق' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'السائق غير موجود' });
+    }
+    res.json({ message: 'تم حذف السائق نهائياً' });
+  });
+});
+
 // ==================== التوكتوكات ====================
 app.post('/tuktuks', (req, res) => {
   const { tuktuk_number, qr_code } = req.body;
@@ -262,6 +369,41 @@ app.get('/tuktuks', (req, res) => {
       return res.status(500).json({ error: 'حصل خطأ في جلب التوكتوكات' });
     }
     res.json(results);
+  });
+});
+
+app.put('/tuktuks/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const allowed = ['active', 'maintenance'];
+  if (!allowed.includes(status)) {
+    return res.status(400).json({ error: 'حالة غير صحيحة' });
+  }
+
+  db.query('UPDATE tuktuks SET status = ? WHERE id = ?', [status, id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تحديث حالة التوكتوك' });
+    }
+    res.json({ message: 'تم تحديث حالة التوكتوك بنجاح' });
+  });
+});
+
+app.delete('/tuktuks/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM tuktuks WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+        return res.status(400).json({ error: 'مينفعش تمسح التوكتوك ده لأن عنده ورديات مسجلة بالفعل' });
+      }
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في حذف التوكتوك' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'التوكتوك غير موجود' });
+    }
+    res.json({ message: 'تم حذف التوكتوك نهائياً' });
   });
 });
 
@@ -344,6 +486,67 @@ app.post('/shifts/check-out', upload.single('photo'), (req, res) => {
   });
 });
 
+// ==================== تغيير التوكتوك بدون فتح وردية جديدة ====================
+app.post('/shifts/change-tuktuk', (req, res) => {
+  const { driver_id, new_tuktuk_qr_code } = req.body;
+
+  const findOpenShift = 'SELECT id, tuktuk_id FROM shifts WHERE driver_id = ? AND status = "open"';
+  db.query(findOpenShift, [driver_id], (err, shiftResults) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في البحث عن الوردية' });
+    }
+    if (shiftResults.length === 0) {
+      return res.status(404).json({ error: 'مفيش وردية مفتوحة أصلاً عشان تغيّر توكتوكها' });
+    }
+
+    const shift_id = shiftResults[0].id;
+    const current_tuktuk_id = shiftResults[0].tuktuk_id;
+
+    const findTuktuk = 'SELECT id FROM tuktuks WHERE qr_code = ?';
+    db.query(findTuktuk, [new_tuktuk_qr_code], (err, tuktukResults) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في البحث عن التوكتوك' });
+      }
+      if (tuktukResults.length === 0) {
+        return res.status(404).json({ error: 'كود QR غير معروف' });
+      }
+
+      const new_tuktuk_id = tuktukResults[0].id;
+
+      if (new_tuktuk_id === current_tuktuk_id) {
+        return res.status(400).json({ error: 'ده نفس التوكتوك المسجل عليك بالفعل، مفيش داعي تغيّره' });
+      }
+
+      db.query('UPDATE shifts SET tuktuk_id = ? WHERE id = ?', [new_tuktuk_id, shift_id], (err) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: 'حصل خطأ في تحديث التوكتوك' });
+        }
+        res.json({ message: 'تم تغيير التوكتوك بنجاح', shift_id, new_tuktuk_id });
+      });
+    });
+  });
+});
+
+app.delete('/shifts/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM shifts WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+        return res.status(400).json({ error: 'مينفعش تمسح الوردية دي لأن فيها أوردرات مسجلة عليها. احذف الأوردرات الأول.' });
+      }
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في حذف الوردية' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'الوردية غير موجودة' });
+    }
+    res.json({ message: 'تم حذف الوردية نهائياً' });
+  });
+});
+
 // ==================== فتح أوردر ====================
 app.post('/orders/open', (req, res) => {
   const { shift_id, driver_id, order_type, start_lat, start_lng } = req.body;
@@ -398,7 +601,7 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
   return R * c;
 }
 
-// ==================== قفل أوردر (مع صورة اختيارية) ====================
+// ==================== قفل أوردر ====================
 app.post('/orders/close', upload.single('photo'), (req, res) => {
   const { order_id, end_lat, end_lng } = req.body;
   const photo = req.file ? req.file.filename : null;
@@ -458,6 +661,54 @@ app.post('/orders/close', upload.single('photo'), (req, res) => {
         });
       });
     });
+  });
+});
+
+// إلغاء أوردر مفتوح
+app.post('/orders/:id/cancel', (req, res) => {
+  const { id } = req.params;
+
+  db.query('UPDATE orders SET status = "cancelled" WHERE id = ? AND status = "open"', [id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في إلغاء الأوردر' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'الأوردر غير موجود أو مقفول بالفعل' });
+    }
+    res.json({ message: 'تم إلغاء الأوردر بنجاح' });
+  });
+});
+
+app.delete('/orders/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM orders WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في حذف الأوردر' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'الأوردر غير موجود' });
+    }
+    res.json({ message: 'تم حذف الأوردر نهائياً' });
+  });
+});
+
+// جلب الأوردرات المفتوحة فقط
+app.get('/orders/active', (req, res) => {
+  const query = `
+    SELECT orders.*, drivers.name AS driver_name
+    FROM orders
+    JOIN drivers ON orders.driver_id = drivers.id
+    WHERE orders.status = 'open'
+    ORDER BY orders.start_time DESC
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب الأوردرات الشغالة' });
+    }
+    res.json(results);
   });
 });
 
@@ -606,6 +857,42 @@ app.get('/shifts/open/:driver_id', (req, res) => {
       return res.status(404).json({ error: 'مفيش وردية مفتوحة للسائق ده' });
     }
     res.json(results[0]);
+  });
+});
+
+app.get('/shifts/history/:driver_id', (req, res) => {
+  const { driver_id } = req.params;
+  const query = `
+    SELECT shifts.*, tuktuks.tuktuk_number
+    FROM shifts
+    JOIN tuktuks ON shifts.tuktuk_id = tuktuks.id
+    WHERE shifts.driver_id = ?
+    ORDER BY shifts.check_in_time DESC
+    LIMIT 10
+  `;
+  db.query(query, [driver_id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الورديات' });
+    }
+    res.json(results);
+  });
+});
+
+app.get('/orders/history/:driver_id', (req, res) => {
+  const { driver_id } = req.params;
+  const query = `
+    SELECT * FROM orders
+    WHERE driver_id = ? AND status = 'closed'
+    ORDER BY start_time DESC
+    LIMIT 20
+  `;
+  db.query(query, [driver_id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الأوردرات' });
+    }
+    res.json(results);
   });
 });
 
@@ -807,289 +1094,8 @@ app.put('/notifications/:id/read', (req, res) => {
     res.json({ message: 'تم' });
   });
 });
-// سجل ورديات سائق معين
-app.get('/shifts/history/:driver_id', (req, res) => {
-  const { driver_id } = req.params;
-  const query = `
-    SELECT shifts.*, tuktuks.tuktuk_number
-    FROM shifts
-    JOIN tuktuks ON shifts.tuktuk_id = tuktuks.id
-    WHERE shifts.driver_id = ?
-    ORDER BY shifts.check_in_time DESC
-    LIMIT 10
-  `;
-  db.query(query, [driver_id], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الورديات' });
-    }
-    res.json(results);
-  });
-});
-
-// سجل أوردرات سائق معين
-app.get('/orders/history/:driver_id', (req, res) => {
-  const { driver_id } = req.params;
-  const query = `
-    SELECT * FROM orders
-    WHERE driver_id = ? AND status = 'closed'
-    ORDER BY start_time DESC
-    LIMIT 20
-  `;
-  db.query(query, [driver_id], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الأوردرات' });
-    }
-    res.json(results);
-  });
-});
-// إلغاء أوردر مفتوح
-app.post('/orders/:id/cancel', (req, res) => {
-  const { id } = req.params;
-
-  db.query('UPDATE orders SET status = "cancelled" WHERE id = ? AND status = "open"', [id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في إلغاء الأوردر' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'الأوردر غير موجود أو مقفول بالفعل' });
-    }
-    res.json({ message: 'تم إلغاء الأوردر بنجاح' });
-  });
-});
-
-// جلب الأوردرات المفتوحة فقط (شغالة فعلياً دلوقتي)
-app.get('/orders/active', (req, res) => {
-  const query = `
-    SELECT orders.*, drivers.name AS driver_name
-    FROM orders
-    JOIN drivers ON orders.driver_id = drivers.id
-    WHERE orders.status = 'open'
-    ORDER BY orders.start_time DESC
-  `;
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الأوردرات الشغالة' });
-    }
-    res.json(results);
-  });
-});
-
-// تغيير حالة التوكتوك (نشط / عطل)
-app.put('/tuktuks/:id/status', (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-
-  const allowed = ['active', 'maintenance'];
-  if (!allowed.includes(status)) {
-    return res.status(400).json({ error: 'حالة غير صحيحة' });
-  }
-
-  db.query('UPDATE tuktuks SET status = ? WHERE id = ?', [status, id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تحديث حالة التوكتوك' });
-    }
-    res.json({ message: 'تم تحديث حالة التوكتوك بنجاح' });
-  });
-});
-// حذف سائق نهائياً
-app.delete('/drivers/:id', (req, res) => {
-  const { id } = req.params;
-  db.query('DELETE FROM drivers WHERE id = ?', [id], (err, result) => {
-    if (err) {
-      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
-        return res.status(400).json({ error: 'مينفعش تمسح السائق ده لأن عنده ورديات أو أوردرات أو طلبات مسجلة' });
-      }
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في حذف السائق' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'السائق غير موجود' });
-    }
-    res.json({ message: 'تم حذف السائق نهائياً' });
-  });
-});
-
-// حذف أوردر نهائياً
-app.delete('/orders/:id', (req, res) => {
-  const { id } = req.params;
-  db.query('DELETE FROM orders WHERE id = ?', [id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في حذف الأوردر' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'الأوردر غير موجود' });
-    }
-    res.json({ message: 'تم حذف الأوردر نهائياً' });
-  });
-});
-// حذف توكتوك نهائياً
-app.delete('/tuktuks/:id', (req, res) => {
-  const { id } = req.params;
-  db.query('DELETE FROM tuktuks WHERE id = ?', [id], (err, result) => {
-    if (err) {
-      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
-        return res.status(400).json({ error: 'مينفعش تمسح التوكتوك ده لأن عنده ورديات مسجلة بالفعل' });
-      }
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في حذف التوكتوك' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'التوكتوك غير موجود' });
-    }
-    res.json({ message: 'تم حذف التوكتوك نهائياً' });
-  });
-});
-// تغيير باسورد سائق معين
-app.put('/drivers/:id/password', (req, res) => {
-  const { id } = req.params;
-  const { password } = req.body;
-
-  if (!password) {
-    return res.status(400).json({ error: 'من فضلك ابعت الباسورد الجديد' });
-  }
-
-  db.query('UPDATE drivers SET password = ? WHERE id = ?', [password, id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'السائق غير موجود' });
-    }
-    res.json({ message: 'تم تغيير الباسورد بنجاح' });
-  });
-});
-// تعديل بيانات سائق كاملة
-app.put('/drivers/:id', (req, res) => {
-  const { id } = req.params;
-  const { name, phone, national_id } = req.body;
-
-  db.query('UPDATE drivers SET name = ?, phone = ?, national_id = ? WHERE id = ?', [name, phone, national_id, id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تحديث بيانات السائق' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'السائق غير موجود' });
-    }
-    res.json({ message: 'تم تحديث بيانات السائق بنجاح' });
-  });
-});
-// حذف وردية نهائياً
-app.delete('/shifts/:id', (req, res) => {
-  const { id } = req.params;
-  db.query('DELETE FROM shifts WHERE id = ?', [id], (err, result) => {
-    if (err) {
-      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
-        return res.status(400).json({ error: 'مينفعش تمسح الوردية دي لأن فيها أوردرات مسجلة عليها. احذف الأوردرات الأول من صفحة الأوردرات.' });
-      }
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في حذف الوردية' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'الوردية غير موجودة' });
-    }
-    res.json({ message: 'تم حذف الوردية نهائياً' });
-  });
-});
-// تغيير التوكتوك للوردية المفتوحة (بدون فتح وردية جديدة)
-app.post('/shifts/change-tuktuk', (req, res) => {
-  const { driver_id, new_tuktuk_qr_code } = req.body;
-
-  const findOpenShift = 'SELECT id, tuktuk_id FROM shifts WHERE driver_id = ? AND status = "open"';
-  db.query(findOpenShift, [driver_id], (err, shiftResults) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في البحث عن الوردية' });
-    }
-    if (shiftResults.length === 0) {
-      return res.status(404).json({ error: 'مفيش وردية مفتوحة أصلاً عشان تغيّر توكتوكها' });
-    }
-
-    const shift_id = shiftResults[0].id;
-    const current_tuktuk_id = shiftResults[0].tuktuk_id;
-
-    const findTuktuk = 'SELECT id FROM tuktuks WHERE qr_code = ?';
-    db.query(findTuktuk, [new_tuktuk_qr_code], (err, tuktukResults) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في البحث عن التوكتوك' });
-      }
-      if (tuktukResults.length === 0) {
-        return res.status(404).json({ error: 'كود QR غير معروف' });
-      }
-
-      const new_tuktuk_id = tuktukResults[0].id;
-
-      if (new_tuktuk_id === current_tuktuk_id) {
-        return res.status(400).json({ error: 'ده نفس التوكتوك المسجل عليك بالفعل، مفيش داعي تغيّره' });
-      }
-
-      db.query('UPDATE shifts SET tuktuk_id = ? WHERE id = ?', [new_tuktuk_id, shift_id], (err) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: 'حصل خطأ في تحديث التوكتوك' });
-        }
-        res.json({ message: 'تم تغيير التوكتوك بنجاح', shift_id, new_tuktuk_id });
-      });
-    });
-  });
-});
-// ==================== تسجيل دخول قسم المالية ====================
-function requireFinanceLogin(req, res, next) {
-  if (req.session && req.session.financeLoggedIn) {
-    return next();
-  }
-  return res.redirect('/finance-login.html');
-}
-
-app.post('/api/finance-login', (req, res) => {
-  const { password } = req.body;
-  db.query('SELECT * FROM finance_admin WHERE password = ?', [password], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' });
-    }
-    if (results.length === 0) {
-      return res.status(401).json({ error: 'الباسورد غلط' });
-    }
-    req.session.financeLoggedIn = true;
-    res.json({ message: 'تم تسجيل الدخول بنجاح' });
-  });
-});
-
-app.get('/api/finance-logout', (req, res) => {
-  req.session.financeLoggedIn = false;
-  res.redirect('/finance-login.html');
-});
-
-app.get('/api/finance-session', (req, res) => {
-  res.json({ loggedIn: !!(req.session && req.session.financeLoggedIn) });
-});
 
 // ==================== إعدادات الرواتب العامة ====================
-app.put('/payroll-settings', (req, res) => {
-  const { income_type, monthly_salary, commission_pct, monthly_leave_balance } = req.body;
-  db.query(
-    'UPDATE payroll_settings SET income_type = ?, monthly_salary = ?, commission_pct = ?, monthly_leave_balance = ? WHERE id = (SELECT id FROM (SELECT id FROM payroll_settings ORDER BY id DESC LIMIT 1) AS t)',
-    [income_type, monthly_salary, commission_pct, monthly_leave_balance],
-    (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تحديث الإعدادات' });
-      }
-      res.json({ message: 'تم تحديث الإعدادات العامة بنجاح' });
-    }
-  );
-});
-
-// ==================== تخصيص سائق معين ====================
 app.get('/payroll-settings', (req, res) => {
   db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, results) => {
     if (err) {
@@ -1100,7 +1106,6 @@ app.get('/payroll-settings', (req, res) => {
   });
 });
 
-// ==================== تخصيص سائق معين ====================
 app.put('/payroll-settings', (req, res) => {
   const { income_type, monthly_salary, commission_pct, monthly_leave_balance } = req.body;
   db.query(
@@ -1119,50 +1124,16 @@ app.put('/payroll-settings', (req, res) => {
   );
 });
 
-// ==================== صيانة التوكتوكات ====================
-app.post('/tuktuk-maintenance', (req, res) => {
-  const { tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date } = req.body;
-  db.query(
-    'INSERT INTO tuktuk_maintenance (tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date) VALUES (?, ?, ?, ?, ?, ?)',
-    [tuktuk_id, driver_id || null, maintenance_type, description, cost, maintenance_date],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تسجيل الصيانة' });
-      }
-      res.status(201).json({ message: 'تم تسجيل مصروف الصيانة بنجاح', id: result.insertId });
-    }
-  );
-});
-
-app.get('/tuktuk-maintenance', (req, res) => {
-  const query = `
-    SELECT tuktuk_maintenance.*, tuktuks.tuktuk_number, drivers.name AS driver_name
-    FROM tuktuk_maintenance
-    JOIN tuktuks ON tuktuk_maintenance.tuktuk_id = tuktuks.id
-    LEFT JOIN drivers ON tuktuk_maintenance.driver_id = drivers.id
-    ORDER BY tuktuk_maintenance.maintenance_date DESC
-  `;
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الصيانة' });
-    }
-    res.json(results);
-  });
-});
 // ==================== حساب راتب سائق لشهر معين ====================
 app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
   const { driver_id, year, month } = req.params;
 
-  // نجيب بيانات السائق (فيها التخصيص لو موجود)
   db.query('SELECT * FROM drivers WHERE id = ?', [driver_id], (err, driverResults) => {
     if (err || driverResults.length === 0) {
       return res.status(404).json({ error: 'السائق غير موجود' });
     }
     const driver = driverResults[0];
 
-    // نجيب الإعدادات العامة
     db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
       if (err) {
         console.error(err);
@@ -1170,12 +1141,10 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
       }
       const settings = settingsResults[0];
 
-      // نحدد القيم الفعلية: مخصص للسائق ده، أو الإعداد العام
       const income_type = driver.is_customized ? driver.custom_income_type : settings.income_type;
       const monthly_salary = driver.is_customized ? driver.custom_monthly_salary : settings.monthly_salary;
       const commission_pct = driver.is_customized ? driver.custom_commission_pct : settings.commission_pct;
 
-      // نحسب عدد أيام الحضور الفعلية في الشهر ده
       const attendanceQuery = `
         SELECT COUNT(DISTINCT DATE(check_in_time)) AS days_present
         FROM shifts
@@ -1188,7 +1157,6 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
         }
         const days_present = attendanceResults[0].days_present || 0;
 
-        // نجيب إجمالي أرباح الأوردرات في الشهر ده (للعمولة)
         const earningsQuery = `
           SELECT COALESCE(SUM(price), 0) AS total_revenue
           FROM orders
@@ -1201,7 +1169,6 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
           }
           const total_revenue = parseFloat(earningsResults[0].total_revenue);
 
-          // نجيب إجمالي الخصومات في الشهر ده
           const deductionsQuery = `
             SELECT COALESCE(SUM(amount), 0) AS total_deductions
             FROM deductions
@@ -1214,7 +1181,6 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
             }
             const total_deductions = parseFloat(deductionsResults[0].total_deductions);
 
-            // نجيب إجمالي السلف الموافق عليها في الشهر ده
             const advancesQuery = `
               SELECT COALESCE(SUM(amount), 0) AS total_advances
               FROM advances
@@ -1227,7 +1193,6 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
               }
               const total_advances = parseFloat(advancesResults[0].total_advances);
 
-              // الحساب النهائي
               const daysInMonth = new Date(year, month, 0).getDate();
               let salaryPart = 0;
               let commissionPart = 0;
@@ -1264,7 +1229,40 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
     });
   });
 });
+
+// ==================== صيانة التوكتوكات ====================
+app.post('/tuktuk-maintenance', (req, res) => {
+  const { tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date } = req.body;
+  db.query(
+    'INSERT INTO tuktuk_maintenance (tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date) VALUES (?, ?, ?, ?, ?, ?)',
+    [tuktuk_id, driver_id || null, maintenance_type, description, cost, maintenance_date],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في تسجيل الصيانة' });
+      }
+      res.status(201).json({ message: 'تم تسجيل مصروف الصيانة بنجاح', id: result.insertId });
+    }
+  );
+});
+
+app.get('/tuktuk-maintenance', (req, res) => {
+  const query = `
+    SELECT tuktuk_maintenance.*, tuktuks.tuktuk_number, drivers.name AS driver_name
+    FROM tuktuk_maintenance
+    JOIN tuktuks ON tuktuk_maintenance.tuktuk_id = tuktuks.id
+    LEFT JOIN drivers ON tuktuk_maintenance.driver_id = drivers.id
+    ORDER BY tuktuk_maintenance.maintenance_date DESC
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الصيانة' });
+    }
+    res.json(results);
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
-
