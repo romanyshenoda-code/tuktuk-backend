@@ -65,6 +65,32 @@
     .btn-modal-save { background: var(--orange); color: white; }
     .btn-modal-cancel { background: var(--line); color: var(--ink); }
     .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+
+    .confirm-backdrop {
+      position: fixed; inset: 0; background: rgba(22,19,15,0.55);
+      display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px;
+      animation: fadeIn 0.18s ease;
+    }
+    .confirm-backdrop.open { display: flex; }
+    .confirm-box {
+      background: var(--paper); border-radius: 16px; padding: 24px; width: 100%; max-width: 340px;
+      border-top: 5px solid var(--rust); text-align: center; animation: popIn 0.22s cubic-bezier(.2,.9,.3,1.2);
+    }
+    .confirm-box p { font-size: 14.5px; margin: 0 0 18px; line-height: 1.6; }
+    .confirm-actions { display: flex; gap: 8px; }
+    .confirm-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
+    .btn-confirm-yes { background: var(--rust); color: white; }
+    .btn-confirm-no { background: var(--line); color: var(--ink); }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px;
+      font-size: 14px; font-weight: 600; z-index: 300; opacity: 0;
+      transition: opacity 0.25s, transform 0.25s; pointer-events: none;
+      max-width: 90%; text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+    .toast.error { background: var(--rust); }
   </style>
 </head>
 <body>
@@ -91,7 +117,6 @@
     </div>
   </div>
 
-  <!-- مودال إضافة سائق -->
   <div class="modal-backdrop" id="driverModal">
     <div class="modal-box">
       <h3>إضافة سائق جديد</h3>
@@ -111,7 +136,6 @@
     </div>
   </div>
 
-  <!-- مودال تعديل بيانات سائق -->
   <div class="modal-backdrop" id="editModal">
     <div class="modal-box">
       <h3>تعديل بيانات السائق</h3>
@@ -130,7 +154,6 @@
     </div>
   </div>
 
-  <!-- مودال تغيير الباسورد -->
   <div class="modal-backdrop" id="passwordModal">
     <div class="modal-box">
       <h3>تغيير كلمة المرور</h3>
@@ -147,8 +170,36 @@
     </div>
   </div>
 
+  <div class="confirm-backdrop" id="confirmBackdrop">
+    <div class="confirm-box">
+      <p id="confirmMessage"></p>
+      <div class="confirm-actions">
+        <button class="btn-confirm-no" onclick="closeConfirm(false)">إلغاء</button>
+        <button class="btn-confirm-yes" onclick="closeConfirm(true)">تأكيد</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
   <script>
     let allDrivers = [];
+    let confirmResolve = null;
+
+    function showConfirm(message) {
+      document.getElementById('confirmMessage').textContent = message;
+      document.getElementById('confirmBackdrop').classList.add('open');
+      return new Promise(resolve => { confirmResolve = resolve; });
+    }
+    function closeConfirm(result) {
+      document.getElementById('confirmBackdrop').classList.remove('open');
+      if (confirmResolve) confirmResolve(result);
+    }
+    function showToast(message, isError) {
+      const t = document.getElementById('toast');
+      t.textContent = message;
+      t.className = 'toast show' + (isError ? ' error' : '');
+      setTimeout(() => { t.className = 'toast'; }, 2500);
+    }
 
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -194,12 +245,14 @@
       renderDrivers(allDrivers.filter(d => d.name.includes(q) || d.phone.includes(q)));
     }
 
-    function deleteDriver(id) {
-      if (!confirm('متأكد إنك عايز تمسح السائق ده نهائياً؟ الإجراء ده مينفعش يترجع فيه.')) return;
+    async function deleteDriver(id) {
+      const confirmed = await showConfirm('متأكد إنك عايز تمسح السائق ده نهائياً؟ الإجراء ده مينفعش يترجع فيه.');
+      if (!confirmed) return;
+
       fetch(`/drivers/${id}`, { method: 'DELETE' })
         .then(res => res.json())
         .then(data => {
-          alert(data.message || data.error);
+          showToast(data.message || data.error, !data.message);
           loadDrivers();
         });
     }
@@ -238,6 +291,7 @@
         if (data.message) {
           document.getElementById('addDriverForm').reset();
           loadDrivers();
+          showToast(data.message);
           setTimeout(() => closeModal('driverModal'), 700);
         }
       });
@@ -260,6 +314,7 @@
         document.getElementById('editDriverMsg').textContent = data.message || data.error;
         if (data.message) {
           loadDrivers();
+          showToast(data.message);
           setTimeout(() => closeModal('editModal'), 700);
         }
       });
@@ -279,6 +334,7 @@
       .then(data => {
         document.getElementById('passwordMsg').textContent = data.message || data.error;
         if (data.message) {
+          showToast(data.message);
           setTimeout(() => closeModal('passwordModal'), 700);
         }
       });

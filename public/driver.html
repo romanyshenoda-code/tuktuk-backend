@@ -342,21 +342,27 @@
     }
 
     function loadNotifications() {
-      fetch('/notifications/driver/' + currentDriverId)
-        .then(res => res.json())
-        .then(data => {
-          const list = document.getElementById('notificationsList');
-          if (data.length === 0) {
-            list.innerHTML = '<div class="empty-note">مفيش إشعارات جديدة</div>';
-            return;
-          }
-          list.innerHTML = data.map(n => `
-            <div class="notification-item ${n.is_read ? '' : 'notification-unread'}">
-              ${n.message}
-            </div>
-          `).join('');
-        });
-    }
+  fetch('/notifications/driver/' + currentDriverId)
+    .then(res => res.json())
+    .then(data => {
+      const list = document.getElementById('notificationsList');
+      if (data.length === 0) {
+        list.innerHTML = '<div class="empty-note">مفيش إشعارات جديدة</div>';
+        return;
+      }
+      list.innerHTML = data.map(n => `
+        <div class="notification-item ${n.is_read ? '' : 'notification-unread'}" onclick="markNotificationRead(${n.id}, this)">
+          <div>${n.message}</div>
+          <div style="font-size:11px; color:#A39C8C; margin-top:4px;">${new Date(n.created_at).toLocaleString('ar-EG')}</div>
+        </div>
+      `).join('');
+    });
+}
+
+function markNotificationRead(id, el) {
+  el.classList.remove('notification-unread');
+  fetch(`/notifications/${id}/read`, { method: 'PUT' });
+}
 
     function loadLeaveHistory() {
       fetch('/leave-requests/driver/' + currentDriverId)
