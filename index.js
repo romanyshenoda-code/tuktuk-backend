@@ -1038,6 +1038,114 @@ app.post('/shifts/change-tuktuk', (req, res) => {
     });
   });
 });
+// ==================== تسجيل دخول قسم المالية ====================
+function requireFinanceLogin(req, res, next) {
+  if (req.session && req.session.financeLoggedIn) {
+    return next();
+  }
+  return res.redirect('/finance-login.html');
+}
+
+app.post('/api/finance-login', (req, res) => {
+  const { password } = req.body;
+  db.query('SELECT * FROM finance_admin WHERE password = ?', [password], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' });
+    }
+    if (results.length === 0) {
+      return res.status(401).json({ error: 'الباسورد غلط' });
+    }
+    req.session.financeLoggedIn = true;
+    res.json({ message: 'تم تسجيل الدخول بنجاح' });
+  });
+});
+
+app.get('/api/finance-logout', (req, res) => {
+  req.session.financeLoggedIn = false;
+  res.redirect('/finance-login.html');
+});
+
+app.get('/api/finance-session', (req, res) => {
+  res.json({ loggedIn: !!(req.session && req.session.financeLoggedIn) });
+});
+
+// ==================== إعدادات الرواتب العامة ====================
+app.get('/payroll-settings', (req, res) => {
+  db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' });
+    }
+    res.json(results[0] || {});
+  });
+});
+
+app.put('/payroll-settings', (req, res) => {
+  const { income_type, monthly_salary, commission_pct, monthly_leave_balance } = req.body;
+  db.query(
+    'UPDATE payroll_settings SET income_type = ?, monthly_salary = ?, commission_pct = ?, monthly_leave_balance = ? WHERE id = (SELECT id FROM (SELECT id FROM payroll_settings ORDER BY id DESC LIMIT 1) AS t)',
+    [income_type, monthly_salary, commission_pct, monthly_leave_balance],
+    (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في تحديث الإعدادات' });
+      }
+      res.json({ message: 'تم تحديث الإعدادات العامة بنجاح' });
+    }
+  );
+});
+
+// ==================== تخصيص سائق معين ====================
+app.put('/drivers/:id/customize', (req, res) => {
+  const { id } = req.params;
+  const { is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct, custom_leave_balance } = req.body;
+
+  db.query(
+    'UPDATE drivers SET is_customized = ?, custom_income_type = ?, custom_monthly_salary = ?, custom_commission_pct = ?, custom_leave_balance = ? WHERE id = ?',
+    [is_customized, custom_income_type, custom_monthly_salary, custom_commission_pct, custom_leave_balance, id],
+    (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في تحديث التخصيص' });
+      }
+      res.json({ message: 'تم تحديث تخصيص السائق بنجاح' });
+    }
+  );
+});
+
+// ==================== صيانة التوكتوكات ====================
+app.post('/tuktuk-maintenance', (req, res) => {
+  const { tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date } = req.body;
+  db.query(
+    'INSERT INTO tuktuk_maintenance (tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date) VALUES (?, ?, ?, ?, ?, ?)',
+    [tuktuk_id, driver_id || null, maintenance_type, description, cost, maintenance_date],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في تسجيل الصيانة' });
+      }
+      res.status(201).json({ message: 'تم تسجيل مصروف الصيانة بنجاح', id: result.insertId });
+    }
+  );
+});
+
+app.get('/tuktuk-maintenance', (req, res) => {
+  const query = `
+    SELECT tuktuk_maintenance.*, tuktuks.tuktuk_number, drivers.name AS driver_name
+    FROM tuktuk_maintenance
+    JOIN tuktuks ON tuktuk_maintenance.tuktuk_id = tuktuks.id
+    LEFT JOIN drivers ON tuktuk_maintenance.driver_id = drivers.id
+    ORDER BY tuktuk_maintenance.maintenance_date DESC
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الصيانة' });
+    }
+    res.json(results);
+  });
+});
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
