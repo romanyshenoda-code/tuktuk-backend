@@ -182,6 +182,9 @@ app.get('/api/driver-session', (req, res) => {
 app.get('/', requireLogin, (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
+app.get('/finance.html', requireFinanceLogin, (req, res) => {
+  res.sendFile(__dirname + '/public/finance.html');
+});
 
 app.use(express.static('public'));
 
