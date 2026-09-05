@@ -9,11 +9,8 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// إعداد رفع الصور
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
+  destination: (req, file, cb) => { cb(null, 'uploads/'); },
   filename: (req, file, cb) => {
     const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e9) + path.extname(file.originalname);
     cb(null, uniqueName);
@@ -22,12 +19,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 app.use('/uploads', express.static('uploads'));
 
-// دالة تجيب قيمة إعداد معين من قاعدة البيانات
 function getSetting(key, callback) {
   db.query('SELECT setting_value FROM system_settings WHERE setting_key = ?', [key], (err, results) => {
-    if (err || results.length === 0) {
-      return callback(null, 'false');
-    }
+    if (err || results.length === 0) return callback(null, 'false');
     callback(null, results[0].setting_value);
   });
 }
@@ -41,23 +35,15 @@ app.use(session({
 
 // ==================== تسجيل دخول الأدمن ====================
 function requireLogin(req, res, next) {
-  if (req.session && req.session.loggedIn) {
-    return next();
-  }
+  if (req.session && req.session.loggedIn) return next();
   return res.redirect('/login.html');
 }
 
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-
   db.query('SELECT * FROM admins WHERE username = ? AND password = ?', [username, password], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' });
-    }
-    if (results.length === 0) {
-      return res.status(401).json({ error: 'اسم المستخدم أو الباسورد غلط' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' }); }
+    if (results.length === 0) return res.status(401).json({ error: 'اسم المستخدم أو الباسورد غلط' });
     req.session.loggedIn = true;
     req.session.adminId = results[0].id;
     req.session.adminName = results[0].name;
@@ -73,10 +59,7 @@ app.get('/api/logout', (req, res) => {
 // ==================== إدارة الأدمنية ====================
 app.get('/admins', (req, res) => {
   db.query('SELECT id, name, username, created_at FROM admins', (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الأدمنية' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الأدمنية' }); }
     res.json(results);
   });
 });
@@ -85,11 +68,8 @@ app.post('/admins', (req, res) => {
   const { name, username, password } = req.body;
   db.query('INSERT INTO admins (name, username, password) VALUES (?, ?, ?)', [name, username, password], (err, result) => {
     if (err) {
-      if (err.code === 'ER_DUP_ENTRY') {
-        return res.status(400).json({ error: 'اسم المستخدم ده مستخدم بالفعل' });
-      }
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في إضافة الأدمن' });
+      if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'اسم المستخدم ده مستخدم بالفعل' });
+      console.error(err); return res.status(500).json({ error: 'حصل خطأ في إضافة الأدمن' });
     }
     res.status(201).json({ message: 'تم إضافة الأدمن بنجاح', admin_id: result.insertId });
   });
@@ -98,13 +78,10 @@ app.post('/admins', (req, res) => {
 app.put('/admins/:id', (req, res) => {
   const { id } = req.params;
   const { name, username } = req.body;
-  db.query('UPDATE admins SET name = ?, username = ? WHERE id = ?', [name, username, id], (err, result) => {
+  db.query('UPDATE admins SET name = ?, username = ? WHERE id = ?', [name, username, id], (err) => {
     if (err) {
-      if (err.code === 'ER_DUP_ENTRY') {
-        return res.status(400).json({ error: 'اسم المستخدم ده مستخدم بالفعل' });
-      }
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تحديث الأدمن' });
+      if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'اسم المستخدم ده مستخدم بالفعل' });
+      console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الأدمن' });
     }
     res.json({ message: 'تم تحديث بيانات الأدمن بنجاح' });
   });
@@ -113,11 +90,8 @@ app.put('/admins/:id', (req, res) => {
 app.put('/admins/:id/password', (req, res) => {
   const { id } = req.params;
   const { password } = req.body;
-  db.query('UPDATE admins SET password = ? WHERE id = ?', [password, id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' });
-    }
+  db.query('UPDATE admins SET password = ? WHERE id = ?', [password, id], (err) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' }); }
     res.json({ message: 'تم تغيير الباسورد بنجاح' });
   });
 });
@@ -125,43 +99,21 @@ app.put('/admins/:id/password', (req, res) => {
 app.delete('/admins/:id', (req, res) => {
   const { id } = req.params;
   db.query('SELECT COUNT(*) AS total FROM admins', (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ' });
-    }
-    if (results[0].total <= 1) {
-      return res.status(400).json({ error: 'مينفعش تمسح آخر أدمن في النظام' });
-    }
-    db.query('DELETE FROM admins WHERE id = ?', [id], (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في حذف الأدمن' });
-      }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ' }); }
+    if (results[0].total <= 1) return res.status(400).json({ error: 'مينفعش تمسح آخر أدمن في النظام' });
+    db.query('DELETE FROM admins WHERE id = ?', [id], (err) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف الأدمن' }); }
       res.json({ message: 'تم حذف الأدمن بنجاح' });
     });
   });
 });
 
 // ==================== تسجيل دخول السائق ====================
-function requireDriverLogin(req, res, next) {
-  if (req.session && req.session.driverId) {
-    return next();
-  }
-  return res.redirect('/driver-login.html');
-}
-
 app.post('/api/driver-login', (req, res) => {
   const { driver_id, password } = req.body;
-
   db.query('SELECT * FROM drivers WHERE id = ? AND password = ?', [driver_id, password], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' });
-    }
-    if (results.length === 0) {
-      return res.status(401).json({ error: 'رقم السائق أو الباسورد غلط' });
-    }
-
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' }); }
+    if (results.length === 0) return res.status(401).json({ error: 'رقم السائق أو الباسورد غلط' });
     req.session.driverId = results[0].id;
     req.session.driverName = results[0].name;
     res.json({ message: 'تم تسجيل الدخول بنجاح', driver: results[0] });
@@ -184,22 +136,15 @@ app.get('/api/driver-session', (req, res) => {
 
 // ==================== تسجيل دخول قسم المالية ====================
 function requireFinanceLogin(req, res, next) {
-  if (req.session && req.session.financeLoggedIn) {
-    return next();
-  }
+  if (req.session && req.session.financeLoggedIn) return next();
   return res.redirect('/finance-login.html');
 }
 
 app.post('/api/finance-login', (req, res) => {
   const { password } = req.body;
   db.query('SELECT * FROM finance_admin WHERE password = ?', [password], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' });
-    }
-    if (results.length === 0) {
-      return res.status(401).json({ error: 'الباسورد غلط' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' }); }
+    if (results.length === 0) return res.status(401).json({ error: 'الباسورد غلط' });
     req.session.financeLoggedIn = true;
     res.json({ message: 'تم تسجيل الدخول بنجاح' });
   });
@@ -225,13 +170,10 @@ app.get('/finance.html', requireFinanceLogin, (req, res) => {
 
 app.use(express.static('public'));
 
-// ==================== الإعدادات (صور) ====================
+// ==================== إعدادات الصور ====================
 app.get('/settings', (req, res) => {
   db.query('SELECT setting_key, setting_value FROM system_settings', (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
     res.json(results);
   });
 });
@@ -239,15 +181,9 @@ app.get('/settings', (req, res) => {
 app.put('/settings/:key', (req, res) => {
   const { key } = req.params;
   const { value } = req.body;
-
   db.query('UPDATE system_settings SET setting_value = ? WHERE setting_key = ?', [value, key], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تحديث الإعداد' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'الإعداد غير موجود' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الإعداد' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الإعداد غير موجود' });
     res.json({ message: 'تم تحديث الإعداد بنجاح' });
   });
 });
@@ -255,24 +191,15 @@ app.put('/settings/:key', (req, res) => {
 // ==================== السواقين ====================
 app.post('/drivers', (req, res) => {
   const { name, phone, national_id, password } = req.body;
-
-  const query = 'INSERT INTO drivers (name, phone, national_id, password) VALUES (?, ?, ?, ?)';
-  db.query(query, [name, phone, national_id, password], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في حفظ السائق' });
-    }
+  db.query('INSERT INTO drivers (name, phone, national_id, password) VALUES (?, ?, ?, ?)', [name, phone, national_id, password], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حفظ السائق' }); }
     res.status(201).json({ message: 'تم تسجيل السائق بنجاح', driver_id: result.insertId });
   });
 });
 
 app.get('/drivers', (req, res) => {
-  const query = 'SELECT * FROM drivers';
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب السواقين' });
-    }
+  db.query('SELECT * FROM drivers', (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب السواقين' }); }
     res.json(results);
   });
 });
@@ -280,15 +207,9 @@ app.get('/drivers', (req, res) => {
 app.put('/drivers/:id', (req, res) => {
   const { id } = req.params;
   const { name, phone, national_id } = req.body;
-
   db.query('UPDATE drivers SET name = ?, phone = ?, national_id = ? WHERE id = ?', [name, phone, national_id, id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تحديث بيانات السائق' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'السائق غير موجود' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث بيانات السائق' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'السائق غير موجود' });
     res.json({ message: 'تم تحديث بيانات السائق بنجاح' });
   });
 });
@@ -296,19 +217,10 @@ app.put('/drivers/:id', (req, res) => {
 app.put('/drivers/:id/password', (req, res) => {
   const { id } = req.params;
   const { password } = req.body;
-
-  if (!password) {
-    return res.status(400).json({ error: 'من فضلك ابعت الباسورد الجديد' });
-  }
-
+  if (!password) return res.status(400).json({ error: 'من فضلك ابعت الباسورد الجديد' });
   db.query('UPDATE drivers SET password = ? WHERE id = ?', [password, id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'السائق غير موجود' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'السائق غير موجود' });
     res.json({ message: 'تم تغيير الباسورد بنجاح' });
   });
 });
@@ -348,36 +260,38 @@ app.put('/drivers/:id/customize', (req, res) => {
       id
     ],
     (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تحديث التخصيص' });
-      }
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث التخصيص' }); }
       res.json({ message: 'تم تحديث تخصيص السائق بنجاح' });
     }
   );
 });
 
+app.delete('/drivers/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM drivers WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+        return res.status(400).json({ error: 'مينفعش تمسح السائق ده لأن عنده ورديات أو أوردرات أو طلبات مسجلة' });
+      }
+      console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف السائق' });
+    }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'السائق غير موجود' });
+    res.json({ message: 'تم حذف السائق نهائياً' });
+  });
+});
+
 // ==================== التوكتوكات ====================
 app.post('/tuktuks', (req, res) => {
   const { tuktuk_number, qr_code } = req.body;
-
-  const query = 'INSERT INTO tuktuks (tuktuk_number, qr_code) VALUES (?, ?)';
-  db.query(query, [tuktuk_number, qr_code], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تسجيل التوكتوك' });
-    }
+  db.query('INSERT INTO tuktuks (tuktuk_number, qr_code) VALUES (?, ?)', [tuktuk_number, qr_code], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل التوكتوك' }); }
     res.status(201).json({ message: 'تم تسجيل التوكتوك بنجاح', tuktuk_id: result.insertId });
   });
 });
 
 app.get('/tuktuks', (req, res) => {
-  const query = 'SELECT * FROM tuktuks';
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب التوكتوكات' });
-    }
+  db.query('SELECT * FROM tuktuks', (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب التوكتوكات' }); }
     res.json(results);
   });
 });
@@ -385,17 +299,9 @@ app.get('/tuktuks', (req, res) => {
 app.put('/tuktuks/:id/status', (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-
-  const allowed = ['active', 'maintenance'];
-  if (!allowed.includes(status)) {
-    return res.status(400).json({ error: 'حالة غير صحيحة' });
-  }
-
-  db.query('UPDATE tuktuks SET status = ? WHERE id = ?', [status, id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تحديث حالة التوكتوك' });
-    }
+  if (!['active', 'maintenance'].includes(status)) return res.status(400).json({ error: 'حالة غير صحيحة' });
+  db.query('UPDATE tuktuks SET status = ? WHERE id = ?', [status, id], (err) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث حالة التوكتوك' }); }
     res.json({ message: 'تم تحديث حالة التوكتوك بنجاح' });
   });
 });
@@ -407,12 +313,9 @@ app.delete('/tuktuks/:id', (req, res) => {
       if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
         return res.status(400).json({ error: 'مينفعش تمسح التوكتوك ده لأن عنده ورديات مسجلة بالفعل' });
       }
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في حذف التوكتوك' });
+      console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف التوكتوك' });
     }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'التوكتوك غير موجود' });
-    }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'التوكتوك غير موجود' });
     res.json({ message: 'تم حذف التوكتوك نهائياً' });
   });
 });
@@ -420,120 +323,76 @@ app.delete('/tuktuks/:id', (req, res) => {
 // ==================== مواقع الحضور ====================
 app.post('/admin-locations', (req, res) => {
   const { name, latitude, longitude, radius_meters } = req.body;
-
-  const query = 'INSERT INTO admin_locations (name, latitude, longitude, radius_meters) VALUES (?, ?, ?, ?)';
-  db.query(query, [name, latitude, longitude, radius_meters || 100], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تسجيل الموقع' });
-    }
+  db.query('INSERT INTO admin_locations (name, latitude, longitude, radius_meters) VALUES (?, ?, ?, ?)', [name, latitude, longitude, radius_meters || 100], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الموقع' }); }
     res.status(201).json({ message: 'تم تسجيل الموقع بنجاح', location_id: result.insertId });
   });
 });
 
-// ==================== الحضور (Check-in) ====================
+// ==================== الحضور ====================
 app.post('/shifts/check-in', upload.single('photo'), (req, res) => {
   const { driver_id, tuktuk_qr_code, lat, lng } = req.body;
   const photo = req.file ? req.file.filename : null;
 
   getSetting('photo_required_checkin', (err, required) => {
-    if (required === 'true' && !photo) {
-      return res.status(400).json({ error: 'الصورة إجبارية عند تسجيل الحضور' });
-    }
+    if (required === 'true' && !photo) return res.status(400).json({ error: 'الصورة إجبارية عند تسجيل الحضور' });
 
-    const findTuktuk = 'SELECT id FROM tuktuks WHERE qr_code = ?';
-    db.query(findTuktuk, [tuktuk_qr_code], (err, tuktukResults) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في البحث عن التوكتوك' });
-      }
-      if (tuktukResults.length === 0) {
-        return res.status(404).json({ error: 'كود QR غير معروف' });
-      }
+    db.query('SELECT id FROM tuktuks WHERE qr_code = ?', [tuktuk_qr_code], (err, tuktukResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في البحث عن التوكتوك' }); }
+      if (tuktukResults.length === 0) return res.status(404).json({ error: 'كود QR غير معروف' });
 
       const tuktuk_id = tuktukResults[0].id;
-
-      const insertShift = `
-        INSERT INTO shifts (driver_id, tuktuk_id, check_in_time, check_in_photo, check_in_lat, check_in_lng, status)
-        VALUES (?, ?, NOW(), ?, ?, ?, 'open')
-      `;
-      db.query(insertShift, [driver_id, tuktuk_id, photo, lat, lng], (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: 'حصل خطأ في تسجيل الحضور' });
+      db.query(
+        `INSERT INTO shifts (driver_id, tuktuk_id, check_in_time, check_in_photo, check_in_lat, check_in_lng, status) VALUES (?, ?, NOW(), ?, ?, ?, 'open')`,
+        [driver_id, tuktuk_id, photo, lat, lng],
+        (err, result) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الحضور' }); }
+          res.status(201).json({ message: 'تم تسجيل الحضور بنجاح', shift_id: result.insertId, tuktuk_id });
         }
-        res.status(201).json({ message: 'تم تسجيل الحضور بنجاح', shift_id: result.insertId, tuktuk_id });
-      });
+      );
     });
   });
 });
 
-// ==================== الانصراف (Check-out) ====================
 app.post('/shifts/check-out', upload.single('photo'), (req, res) => {
   const { shift_id } = req.body;
   const photo = req.file ? req.file.filename : null;
 
   getSetting('photo_required_checkout', (err, required) => {
-    if (required === 'true' && !photo) {
-      return res.status(400).json({ error: 'الصورة إجبارية عند تسجيل الانصراف' });
-    }
+    if (required === 'true' && !photo) return res.status(400).json({ error: 'الصورة إجبارية عند تسجيل الانصراف' });
 
-    const updateShift = `
-      UPDATE shifts
-      SET check_out_time = NOW(), check_out_photo = ?, status = 'closed'
-      WHERE id = ? AND status = 'open'
-    `;
-    db.query(updateShift, [photo, shift_id], (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تسجيل الانصراف' });
+    db.query(
+      `UPDATE shifts SET check_out_time = NOW(), check_out_photo = ?, status = 'closed' WHERE id = ? AND status = 'open'`,
+      [photo, shift_id],
+      (err, result) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الانصراف' }); }
+        if (result.affectedRows === 0) return res.status(404).json({ error: 'الوردية غير موجودة أو مقفولة بالفعل' });
+        res.json({ message: 'تم تسجيل الانصراف بنجاح' });
       }
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'الوردية غير موجودة أو مقفولة بالفعل' });
-      }
-      res.json({ message: 'تم تسجيل الانصراف بنجاح' });
-    });
+    );
   });
 });
 
-// ==================== تغيير التوكتوك بدون فتح وردية جديدة ====================
 app.post('/shifts/change-tuktuk', (req, res) => {
   const { driver_id, new_tuktuk_qr_code } = req.body;
-
-  const findOpenShift = 'SELECT id, tuktuk_id FROM shifts WHERE driver_id = ? AND status = "open"';
-  db.query(findOpenShift, [driver_id], (err, shiftResults) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في البحث عن الوردية' });
-    }
-    if (shiftResults.length === 0) {
-      return res.status(404).json({ error: 'مفيش وردية مفتوحة أصلاً عشان تغيّر توكتوكها' });
-    }
+  db.query('SELECT id, tuktuk_id FROM shifts WHERE driver_id = ? AND status = "open"', [driver_id], (err, shiftResults) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في البحث عن الوردية' }); }
+    if (shiftResults.length === 0) return res.status(404).json({ error: 'مفيش وردية مفتوحة أصلاً عشان تغيّر توكتوكها' });
 
     const shift_id = shiftResults[0].id;
     const current_tuktuk_id = shiftResults[0].tuktuk_id;
 
-    const findTuktuk = 'SELECT id FROM tuktuks WHERE qr_code = ?';
-    db.query(findTuktuk, [new_tuktuk_qr_code], (err, tuktukResults) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في البحث عن التوكتوك' });
-      }
-      if (tuktukResults.length === 0) {
-        return res.status(404).json({ error: 'كود QR غير معروف' });
-      }
+    db.query('SELECT id FROM tuktuks WHERE qr_code = ?', [new_tuktuk_qr_code], (err, tuktukResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في البحث عن التوكتوك' }); }
+      if (tuktukResults.length === 0) return res.status(404).json({ error: 'كود QR غير معروف' });
 
       const new_tuktuk_id = tuktukResults[0].id;
-
       if (new_tuktuk_id === current_tuktuk_id) {
         return res.status(400).json({ error: 'ده نفس التوكتوك المسجل عليك بالفعل، مفيش داعي تغيّره' });
       }
 
       db.query('UPDATE shifts SET tuktuk_id = ? WHERE id = ?', [new_tuktuk_id, shift_id], (err) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: 'حصل خطأ في تحديث التوكتوك' });
-        }
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث التوكتوك' }); }
         res.json({ message: 'تم تغيير التوكتوك بنجاح', shift_id, new_tuktuk_id });
       });
     });
@@ -547,145 +406,87 @@ app.delete('/shifts/:id', (req, res) => {
       if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
         return res.status(400).json({ error: 'مينفعش تمسح الوردية دي لأن فيها أوردرات مسجلة عليها. احذف الأوردرات الأول.' });
       }
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في حذف الوردية' });
+      console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف الوردية' });
     }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'الوردية غير موجودة' });
-    }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الوردية غير موجودة' });
     res.json({ message: 'تم حذف الوردية نهائياً' });
   });
 });
 
-// ==================== فتح أوردر ====================
+// ==================== الأوردرات ====================
 app.post('/orders/open', (req, res) => {
   const { shift_id, driver_id, order_type, start_lat, start_lng } = req.body;
+  db.query('SELECT id FROM orders WHERE driver_id = ? AND status = "open"', [driver_id], (err, openResults) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحقق من الأوردرات' }); }
+    if (openResults.length > 0) return res.status(400).json({ error: 'السائق عنده أوردر مفتوح بالفعل، لازم يقفله الأول' });
 
-  const checkOpen = 'SELECT id FROM orders WHERE driver_id = ? AND status = "open"';
-  db.query(checkOpen, [driver_id], (err, openResults) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في التحقق من الأوردرات' });
-    }
-    if (openResults.length > 0) {
-      return res.status(400).json({ error: 'السائق عنده أوردر مفتوح بالفعل، لازم يقفله الأول' });
-    }
-
-    const getPricing = 'SELECT driver_commission_pct FROM pricing_rules WHERE order_type = ? ORDER BY effective_from DESC LIMIT 1';
-    db.query(getPricing, [order_type], (err, pricingResults) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في جلب التسعيرة' });
-      }
-      if (pricingResults.length === 0) {
-        return res.status(400).json({ error: 'مفيش تسعيرة محددة لنوع الرحلة ده' });
-      }
+    db.query('SELECT driver_commission_pct FROM pricing_rules WHERE order_type = ? ORDER BY effective_from DESC LIMIT 1', [order_type], (err, pricingResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب التسعيرة' }); }
+      if (pricingResults.length === 0) return res.status(400).json({ error: 'مفيش تسعيرة محددة لنوع الرحلة ده' });
 
       const commission_pct = pricingResults[0].driver_commission_pct;
-
-      const insertOrder = `
-        INSERT INTO orders (shift_id, driver_id, order_type, start_lat, start_lng, start_time, driver_commission_pct, status)
-        VALUES (?, ?, ?, ?, ?, NOW(), ?, 'open')
-      `;
-      db.query(insertOrder, [shift_id, driver_id, order_type, start_lat, start_lng, commission_pct], (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: 'حصل خطأ في فتح الأوردر' });
+      db.query(
+        `INSERT INTO orders (shift_id, driver_id, order_type, start_lat, start_lng, start_time, driver_commission_pct, status) VALUES (?, ?, ?, ?, ?, NOW(), ?, 'open')`,
+        [shift_id, driver_id, order_type, start_lat, start_lng, commission_pct],
+        (err, result) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في فتح الأوردر' }); }
+          res.status(201).json({ message: 'تم فتح الأوردر بنجاح', order_id: result.insertId });
         }
-        res.status(201).json({ message: 'تم فتح الأوردر بنجاح', order_id: result.insertId });
-      });
+      );
     });
   });
 });
 
-// دالة حساب المسافة بمعادلة Haversine
 function calculateDistance(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
-// ==================== قفل أوردر ====================
 app.post('/orders/close', upload.single('photo'), (req, res) => {
   const { order_id, end_lat, end_lng } = req.body;
   const photo = req.file ? req.file.filename : null;
 
   getSetting('photo_required_order_close', (err, required) => {
-    if (required === 'true' && !photo) {
-      return res.status(400).json({ error: 'الصورة إجبارية عند قفل الأوردر' });
-    }
+    if (required === 'true' && !photo) return res.status(400).json({ error: 'الصورة إجبارية عند قفل الأوردر' });
 
-    const getOrder = 'SELECT * FROM orders WHERE id = ? AND status = "open"';
-    db.query(getOrder, [order_id], (err, orderResults) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في جلب الأوردر' });
-      }
-      if (orderResults.length === 0) {
-        return res.status(404).json({ error: 'الأوردر غير موجود أو مقفول بالفعل' });
-      }
+    db.query('SELECT * FROM orders WHERE id = ? AND status = "open"', [order_id], (err, orderResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الأوردر' }); }
+      if (orderResults.length === 0) return res.status(404).json({ error: 'الأوردر غير موجود أو مقفول بالفعل' });
 
       const order = orderResults[0];
       const distance_km = calculateDistance(order.start_lat, order.start_lng, end_lat, end_lng);
 
-      const getPricing = 'SELECT * FROM pricing_rules WHERE order_type = ? ORDER BY effective_from DESC LIMIT 1';
-      db.query(getPricing, [order.order_type], (err, pricingResults) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: 'حصل خطأ في جلب التسعيرة' });
-        }
-
+      db.query('SELECT * FROM pricing_rules WHERE order_type = ? ORDER BY effective_from DESC LIMIT 1', [order.order_type], (err, pricingResults) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب التسعيرة' }); }
         const pricing = pricingResults[0];
         let price = 0;
-
-        if (order.order_type === 'delivery') {
-          price = distance_km * pricing.price_per_km;
-        } else if (order.order_type === 'full_trip') {
-          price = pricing.price_per_day;
-        }
+        if (order.order_type === 'delivery') price = distance_km * pricing.price_per_km;
+        else if (order.order_type === 'full_trip') price = pricing.price_per_day;
 
         const driver_earning = price * (order.driver_commission_pct / 100);
 
-        const updateOrder = `
-          UPDATE orders
-          SET end_lat = ?, end_lng = ?, end_time = NOW(), distance_km = ?, price = ?, driver_earning = ?, status = 'closed', delivery_photo = ?
-          WHERE id = ?
-        `;
-        db.query(updateOrder, [end_lat, end_lng, distance_km.toFixed(2), price.toFixed(2), driver_earning.toFixed(2), photo, order_id], (err, result) => {
-          if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'حصل خطأ في قفل الأوردر' });
+        db.query(
+          `UPDATE orders SET end_lat = ?, end_lng = ?, end_time = NOW(), distance_km = ?, price = ?, driver_earning = ?, status = 'closed', delivery_photo = ? WHERE id = ?`,
+          [end_lat, end_lng, distance_km.toFixed(2), price.toFixed(2), driver_earning.toFixed(2), photo, order_id],
+          (err) => {
+            if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في قفل الأوردر' }); }
+            res.json({ message: 'تم قفل الأوردر بنجاح', distance_km: distance_km.toFixed(2), price: price.toFixed(2), driver_earning: driver_earning.toFixed(2) });
           }
-          res.json({
-            message: 'تم قفل الأوردر بنجاح',
-            distance_km: distance_km.toFixed(2),
-            price: price.toFixed(2),
-            driver_earning: driver_earning.toFixed(2)
-          });
-        });
+        );
       });
     });
   });
 });
 
-// إلغاء أوردر مفتوح
 app.post('/orders/:id/cancel', (req, res) => {
   const { id } = req.params;
-
   db.query('UPDATE orders SET status = "cancelled" WHERE id = ? AND status = "open"', [id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في إلغاء الأوردر' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'الأوردر غير موجود أو مقفول بالفعل' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في إلغاء الأوردر' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الأوردر غير موجود أو مقفول بالفعل' });
     res.json({ message: 'تم إلغاء الأوردر بنجاح' });
   });
 });
@@ -693,45 +494,27 @@ app.post('/orders/:id/cancel', (req, res) => {
 app.delete('/orders/:id', (req, res) => {
   const { id } = req.params;
   db.query('DELETE FROM orders WHERE id = ?', [id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في حذف الأوردر' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'الأوردر غير موجود' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف الأوردر' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الأوردر غير موجود' });
     res.json({ message: 'تم حذف الأوردر نهائياً' });
   });
 });
 
-// جلب الأوردرات المفتوحة فقط
 app.get('/orders/active', (req, res) => {
-  const query = `
-    SELECT orders.*, drivers.name AS driver_name
-    FROM orders
-    JOIN drivers ON orders.driver_id = drivers.id
-    WHERE orders.status = 'open'
-    ORDER BY orders.start_time DESC
-  `;
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الأوردرات الشغالة' });
+  db.query(
+    `SELECT orders.*, drivers.name AS driver_name FROM orders JOIN drivers ON orders.driver_id = drivers.id WHERE orders.status = 'open' ORDER BY orders.start_time DESC`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الأوردرات الشغالة' }); }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 
 // ==================== ملخص الوردية ====================
 app.post('/shifts/:shift_id/summary', (req, res) => {
   const { shift_id } = req.params;
-
-  const getOrders = 'SELECT * FROM orders WHERE shift_id = ? AND status = "closed"';
-  db.query(getOrders, [shift_id], (err, orders) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب أوردرات الوردية' });
-    }
+  db.query('SELECT * FROM orders WHERE shift_id = ? AND status = "closed"', [shift_id], (err, orders) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب أوردرات الوردية' }); }
 
     const total_orders = orders.length;
     const full_trip_count = orders.filter(o => o.order_type === 'full_trip').length;
@@ -739,210 +522,129 @@ app.post('/shifts/:shift_id/summary', (req, res) => {
     const total_price = orders.reduce((sum, o) => sum + parseFloat(o.price || 0), 0);
     const total_driver_earning = orders.reduce((sum, o) => sum + parseFloat(o.driver_earning || 0), 0);
 
-    const insertSummary = `
-      INSERT INTO shift_summary (shift_id, total_orders, full_trip_count, delivery_count, total_price, total_driver_earning)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-    db.query(insertSummary, [shift_id, total_orders, full_trip_count, delivery_count, total_price.toFixed(2), total_driver_earning.toFixed(2)], (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في حفظ الملخص' });
+    db.query(
+      `INSERT INTO shift_summary (shift_id, total_orders, full_trip_count, delivery_count, total_price, total_driver_earning) VALUES (?, ?, ?, ?, ?, ?)`,
+      [shift_id, total_orders, full_trip_count, delivery_count, total_price.toFixed(2), total_driver_earning.toFixed(2)],
+      (err, result) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حفظ الملخص' }); }
+        res.status(201).json({ message: 'تم إنشاء ملخص الوردية بنجاح', summary_id: result.insertId, total_orders, full_trip_count, delivery_count, total_price: total_price.toFixed(2), total_driver_earning: total_driver_earning.toFixed(2) });
       }
-      res.status(201).json({
-        message: 'تم إنشاء ملخص الوردية بنجاح',
-        summary_id: result.insertId,
-        total_orders,
-        full_trip_count,
-        delivery_count,
-        total_price: total_price.toFixed(2),
-        total_driver_earning: total_driver_earning.toFixed(2)
-      });
-    });
+    );
   });
 });
 
 app.put('/shift-summary/:id', (req, res) => {
   const { id } = req.params;
   const { field_name, new_value, admin_id } = req.body;
-
   const allowedFields = ['total_orders', 'full_trip_count', 'delivery_count', 'total_price', 'total_driver_earning'];
-  if (!allowedFields.includes(field_name)) {
-    return res.status(400).json({ error: 'الحقل ده مش مسموح تعديله' });
-  }
+  if (!allowedFields.includes(field_name)) return res.status(400).json({ error: 'الحقل ده مش مسموح تعديله' });
 
-  const getOld = `SELECT ${field_name} AS old_value FROM shift_summary WHERE id = ?`;
-  db.query(getOld, [id], (err, oldResults) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب البيانات' });
-    }
-    if (oldResults.length === 0) {
-      return res.status(404).json({ error: 'الملخص غير موجود' });
-    }
+  db.query(`SELECT ${field_name} AS old_value FROM shift_summary WHERE id = ?`, [id], (err, oldResults) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب البيانات' }); }
+    if (oldResults.length === 0) return res.status(404).json({ error: 'الملخص غير موجود' });
 
     const old_value = oldResults[0].old_value;
-
-    const updateQuery = `UPDATE shift_summary SET ${field_name} = ?, is_manually_edited = TRUE, edited_by = ?, edited_at = NOW() WHERE id = ?`;
-    db.query(updateQuery, [new_value, admin_id, id], (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في التعديل' });
-      }
-
-      const logQuery = `
-        INSERT INTO audit_logs (entity_type, entity_id, admin_id, field_name, old_value, new_value)
-        VALUES ('shift_summary', ?, ?, ?, ?, ?)
-      `;
-      db.query(logQuery, [id, admin_id, field_name, old_value, new_value], (err) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: 'حصل خطأ في تسجيل السجل' });
+    db.query(`UPDATE shift_summary SET ${field_name} = ?, is_manually_edited = TRUE, edited_by = ?, edited_at = NOW() WHERE id = ?`, [new_value, admin_id, id], (err) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التعديل' }); }
+      db.query(
+        `INSERT INTO audit_logs (entity_type, entity_id, admin_id, field_name, old_value, new_value) VALUES ('shift_summary', ?, ?, ?, ?, ?)`,
+        [id, admin_id, field_name, old_value, new_value],
+        (err) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل السجل' }); }
+          res.json({ message: 'تم التعديل وتسجيله بنجاح', field_name, old_value, new_value });
         }
-        res.json({ message: 'تم التعديل وتسجيله بنجاح', field_name, old_value, new_value });
-      });
+      );
     });
   });
 });
 
-// ==================== جلب البيانات ====================
+// ==================== جلب البيانات العامة ====================
 app.get('/shifts', (req, res) => {
-  const query = `
-    SELECT shifts.*, drivers.name AS driver_name, tuktuks.tuktuk_number
-    FROM shifts
-    JOIN drivers ON shifts.driver_id = drivers.id
-    JOIN tuktuks ON shifts.tuktuk_id = tuktuks.id
-    ORDER BY shifts.check_in_time DESC
-  `;
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الورديات' });
+  db.query(
+    `SELECT shifts.*, drivers.name AS driver_name, tuktuks.tuktuk_number FROM shifts JOIN drivers ON shifts.driver_id = drivers.id JOIN tuktuks ON shifts.tuktuk_id = tuktuks.id ORDER BY shifts.check_in_time DESC`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الورديات' }); }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 
 app.get('/orders', (req, res) => {
-  const query = `
-    SELECT orders.*, drivers.name AS driver_name
-    FROM orders
-    JOIN drivers ON orders.driver_id = drivers.id
-    ORDER BY orders.start_time DESC
-  `;
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الأوردرات' });
+  db.query(
+    `SELECT orders.*, drivers.name AS driver_name FROM orders JOIN drivers ON orders.driver_id = drivers.id ORDER BY orders.start_time DESC`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الأوردرات' }); }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 
 app.get('/shift-summaries', (req, res) => {
-  const query = `
-    SELECT shift_summary.*, drivers.name AS driver_name
-    FROM shift_summary
-    JOIN shifts ON shift_summary.shift_id = shifts.id
-    JOIN drivers ON shifts.driver_id = drivers.id
-    ORDER BY shift_summary.created_at DESC
-  `;
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الملخصات' });
+  db.query(
+    `SELECT shift_summary.*, drivers.name AS driver_name FROM shift_summary JOIN shifts ON shift_summary.shift_id = shifts.id JOIN drivers ON shifts.driver_id = drivers.id ORDER BY shift_summary.created_at DESC`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الملخصات' }); }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 
 app.get('/shifts/open/:driver_id', (req, res) => {
   const { driver_id } = req.params;
-  const query = 'SELECT * FROM shifts WHERE driver_id = ? AND status = "open"';
-  db.query(query, [driver_id], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في البحث عن الوردية' });
-    }
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'مفيش وردية مفتوحة للسائق ده' });
-    }
+  db.query('SELECT * FROM shifts WHERE driver_id = ? AND status = "open"', [driver_id], (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في البحث عن الوردية' }); }
+    if (results.length === 0) return res.status(404).json({ error: 'مفيش وردية مفتوحة للسائق ده' });
     res.json(results[0]);
   });
 });
 
 app.get('/shifts/history/:driver_id', (req, res) => {
   const { driver_id } = req.params;
-  const query = `
-    SELECT shifts.*, tuktuks.tuktuk_number
-    FROM shifts
-    JOIN tuktuks ON shifts.tuktuk_id = tuktuks.id
-    WHERE shifts.driver_id = ?
-    ORDER BY shifts.check_in_time DESC
-    LIMIT 10
-  `;
-  db.query(query, [driver_id], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الورديات' });
+  db.query(
+    `SELECT shifts.*, tuktuks.tuktuk_number FROM shifts JOIN tuktuks ON shifts.tuktuk_id = tuktuks.id WHERE shifts.driver_id = ? ORDER BY shifts.check_in_time DESC LIMIT 10`,
+    [driver_id],
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب سجل الورديات' }); }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 
 app.get('/orders/history/:driver_id', (req, res) => {
   const { driver_id } = req.params;
-  const query = `
-    SELECT * FROM orders
-    WHERE driver_id = ? AND status = 'closed'
-    ORDER BY start_time DESC
-    LIMIT 20
-  `;
-  db.query(query, [driver_id], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الأوردرات' });
+  db.query(
+    `SELECT * FROM orders WHERE driver_id = ? AND status = 'closed' ORDER BY start_time DESC LIMIT 20`,
+    [driver_id],
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب سجل الأوردرات' }); }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 
 // ==================== طلبات الإجازة ====================
 app.post('/leave-requests', (req, res) => {
   const { driver_id, start_date, end_date, reason } = req.body;
-
-  const query = 'INSERT INTO leave_requests (driver_id, start_date, end_date, reason) VALUES (?, ?, ?, ?)';
-  db.query(query, [driver_id, start_date, end_date, reason], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تسجيل طلب الإجازة' });
-    }
+  db.query('INSERT INTO leave_requests (driver_id, start_date, end_date, reason) VALUES (?, ?, ?, ?)', [driver_id, start_date, end_date, reason], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل طلب الإجازة' }); }
     res.status(201).json({ message: 'تم إرسال طلب الإجازة بنجاح', request_id: result.insertId });
   });
 });
 
 app.get('/leave-requests', (req, res) => {
-  const query = `
-    SELECT leave_requests.*, drivers.name AS driver_name
-    FROM leave_requests
-    JOIN drivers ON leave_requests.driver_id = drivers.id
-    ORDER BY leave_requests.created_at DESC
-  `;
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب طلبات الإجازة' });
+  db.query(
+    `SELECT leave_requests.*, drivers.name AS driver_name FROM leave_requests JOIN drivers ON leave_requests.driver_id = drivers.id ORDER BY leave_requests.created_at DESC`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب طلبات الإجازة' }); }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 
 app.get('/leave-requests/driver/:driver_id', (req, res) => {
   const { driver_id } = req.params;
   db.query('SELECT * FROM leave_requests WHERE driver_id = ? ORDER BY created_at DESC', [driver_id], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب طلبات الإجازة' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب طلبات الإجازة' }); }
     res.json(results);
   });
 });
@@ -950,27 +652,15 @@ app.get('/leave-requests/driver/:driver_id', (req, res) => {
 app.put('/leave-requests/:id', (req, res) => {
   const { id } = req.params;
   const { status, admin_note } = req.body;
-
   db.query('SELECT * FROM leave_requests WHERE id = ?', [id], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الطلب' });
-    }
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'الطلب غير موجود' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الطلب' }); }
+    if (results.length === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
 
     const request = results[0];
-
     db.query('UPDATE leave_requests SET status = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?', [status, admin_note, id], (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تحديث الطلب' });
-      }
-
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الطلب' }); }
       const statusText = status === 'approved' ? 'تمت الموافقة' : 'تم الرفض';
       const message = `طلب الإجازة الخاص بك من ${request.start_date} إلى ${request.end_date}: ${statusText}${admin_note ? ' - ' + admin_note : ''}`;
-
       db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [request.driver_id, message], (err) => {
         if (err) console.error(err);
         res.json({ message: 'تم تحديث حالة الطلب بنجاح' });
@@ -982,40 +672,26 @@ app.put('/leave-requests/:id', (req, res) => {
 // ==================== طلبات السلف ====================
 app.post('/advances', (req, res) => {
   const { driver_id, amount, reason } = req.body;
-
-  const query = 'INSERT INTO advances (driver_id, amount, reason) VALUES (?, ?, ?)';
-  db.query(query, [driver_id, amount, reason], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تسجيل طلب السلفة' });
-    }
+  db.query('INSERT INTO advances (driver_id, amount, reason) VALUES (?, ?, ?)', [driver_id, amount, reason], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل طلب السلفة' }); }
     res.status(201).json({ message: 'تم إرسال طلب السلفة بنجاح', request_id: result.insertId });
   });
 });
 
 app.get('/advances', (req, res) => {
-  const query = `
-    SELECT advances.*, drivers.name AS driver_name
-    FROM advances
-    JOIN drivers ON advances.driver_id = drivers.id
-    ORDER BY advances.created_at DESC
-  `;
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب طلبات السلف' });
+  db.query(
+    `SELECT advances.*, drivers.name AS driver_name FROM advances JOIN drivers ON advances.driver_id = drivers.id ORDER BY advances.created_at DESC`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب طلبات السلف' }); }
+      res.json(results);
     }
-    res.json(results);
-  });
+  );
 });
 
 app.get('/advances/driver/:driver_id', (req, res) => {
   const { driver_id } = req.params;
   db.query('SELECT * FROM advances WHERE driver_id = ? ORDER BY created_at DESC', [driver_id], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب طلبات السلف' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب طلبات السلف' }); }
     res.json(results);
   });
 });
@@ -1023,27 +699,15 @@ app.get('/advances/driver/:driver_id', (req, res) => {
 app.put('/advances/:id', (req, res) => {
   const { id } = req.params;
   const { status, admin_note } = req.body;
-
   db.query('SELECT * FROM advances WHERE id = ?', [id], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الطلب' });
-    }
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'الطلب غير موجود' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الطلب' }); }
+    if (results.length === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
 
     const request = results[0];
-
     db.query('UPDATE advances SET status = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?', [status, admin_note, id], (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تحديث الطلب' });
-      }
-
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الطلب' }); }
       const statusText = status === 'approved' ? 'تمت الموافقة' : 'تم الرفض';
       const message = `طلب السلفة بمبلغ ${request.amount} جنيه: ${statusText}${admin_note ? ' - ' + admin_note : ''}`;
-
       db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [request.driver_id, message], (err) => {
         if (err) console.error(err);
         res.json({ message: 'تم تحديث حالة الطلب بنجاح' });
@@ -1055,14 +719,8 @@ app.put('/advances/:id', (req, res) => {
 // ==================== الخصومات ====================
 app.post('/deductions', (req, res) => {
   const { driver_id, amount, reason } = req.body;
-
-  const query = 'INSERT INTO deductions (driver_id, amount, reason) VALUES (?, ?, ?)';
-  db.query(query, [driver_id, amount, reason], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تسجيل الخصم' });
-    }
-
+  db.query('INSERT INTO deductions (driver_id, amount, reason) VALUES (?, ?, ?)', [driver_id, amount, reason], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الخصم' }); }
     const message = `تم تسجيل خصم بمبلغ ${amount} جنيه - السبب: ${reason}`;
     db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [driver_id, message], (err) => {
       if (err) console.error(err);
@@ -1074,10 +732,7 @@ app.post('/deductions', (req, res) => {
 app.get('/deductions/driver/:driver_id', (req, res) => {
   const { driver_id } = req.params;
   db.query('SELECT * FROM deductions WHERE driver_id = ? ORDER BY created_at DESC', [driver_id], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الخصومات' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الخصومات' }); }
     res.json(results);
   });
 });
@@ -1086,10 +741,7 @@ app.get('/deductions/driver/:driver_id', (req, res) => {
 app.get('/notifications/driver/:driver_id', (req, res) => {
   const { driver_id } = req.params;
   db.query('SELECT * FROM notifications WHERE driver_id = ? ORDER BY created_at DESC LIMIT 20', [driver_id], (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الإشعارات' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإشعارات' }); }
     res.json(results);
   });
 });
@@ -1097,10 +749,7 @@ app.get('/notifications/driver/:driver_id', (req, res) => {
 app.put('/notifications/:id/read', (req, res) => {
   const { id } = req.params;
   db.query('UPDATE notifications SET is_read = TRUE WHERE id = ?', [id], (err) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في تحديث الإشعار' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الإشعار' }); }
     res.json({ message: 'تم' });
   });
 });
@@ -1108,24 +757,18 @@ app.put('/notifications/:id/read', (req, res) => {
 // ==================== إعدادات الرواتب العامة ====================
 app.get('/payroll-settings', (req, res) => {
   db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
     res.json(results[0] || {});
   });
 });
 
 app.put('/payroll-settings', (req, res) => {
-  const { income_type, monthly_salary, commission_pct, monthly_leave_balance, delivery_base_price, full_trip_base_price } = req.body;
+  const { income_type, monthly_salary, commission_pct, delivery_base_price, full_trip_base_price } = req.body;
   db.query(
-    'UPDATE payroll_settings SET income_type = ?, monthly_salary = ?, commission_pct = ?, monthly_leave_balance = ?, delivery_base_price = ?, full_trip_base_price = ? WHERE id = 1',
-    [income_type, monthly_salary, commission_pct, monthly_leave_balance, delivery_base_price, full_trip_base_price],
+    'UPDATE payroll_settings SET income_type = ?, monthly_salary = ?, commission_pct = ?, delivery_base_price = ?, full_trip_base_price = ? WHERE id = 1',
+    [income_type, monthly_salary, commission_pct, delivery_base_price, full_trip_base_price],
     (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تحديث الإعدادات' });
-      }
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الإعدادات' }); }
       res.json({ message: 'تم تحديث الإعدادات العامة بنجاح' });
     }
   );
@@ -1134,332 +777,86 @@ app.put('/payroll-settings', (req, res) => {
 // ==================== إعدادات الإجازات العامة ====================
 app.get('/leave-config', (req, res) => {
   db.query('SELECT * FROM leave_config ORDER BY id DESC LIMIT 1', (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب إعدادات الإجازات' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب إعدادات الإجازات' }); }
     res.json(results[0] || {});
   });
 });
 
+app.put('/leave-config', (req, res) => {
+  const { working_days_per_month, weekly_rest_days, personal_leave_balance } = req.body;
 
+  const restDaysArray = (weekly_rest_days || '').split(',').map(d => d.trim()).filter(Boolean);
+  const restDaysPerWeek = restDaysArray.length;
+  const expectedRestDays = Math.round(restDaysPerWeek * (30 / 7));
+  const computedWorkingDays = 30 - expectedRestDays;
+  const enteredWorkingDays = parseInt(working_days_per_month);
 
-// إضافة إجازة عيد يدوياً (بموافقة تلقائية، بدون خصم رصيد)
-app.post('/leave-requests/holiday', (req, res) => {
-  const { driver_id, start_date, end_date, reason } = req.body;
+  if (Math.abs(computedWorkingDays - enteredWorkingDays) > 1) {
+    return res.status(400).json({
+      error: `عدد أيام الراحة اللي اخترتها (${restDaysPerWeek} أيام أسبوعياً) بيدّي تقريباً ${computedWorkingDays} يوم عمل بالشهر، مش ${enteredWorkingDays}. من فضلك عدّل العدد أو أيام الراحة عشان يتطابقوا.`
+    });
+  }
+
   db.query(
-    `INSERT INTO leave_requests (driver_id, start_date, end_date, reason, leave_type, status, admin_note, reviewed_at)
-     VALUES (?, ?, ?, ?, 'holiday', 'approved', 'إجازة عيد - تضاف تلقائياً بمرتب كامل', NOW())`,
-    [driver_id, start_date, end_date, reason || 'إجازة عيد'],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في إضافة إجازة العيد' });
-      }
-      const message = `تم تسجيل إجازة عيد لك من ${start_date} إلى ${end_date} بمرتب كامل`;
-      db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [driver_id, message]);
-      res.status(201).json({ message: 'تم إضافة إجازة العيد بنجاح', id: result.insertId });
+    'UPDATE leave_config SET working_days_per_month = ?, weekly_rest_days = ?, personal_leave_balance = ? WHERE id = 1',
+    [working_days_per_month, weekly_rest_days, personal_leave_balance],
+    (err) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث إعدادات الإجازات' }); }
+      res.json({ message: 'تم تحديث إعدادات الإجازات بنجاح' });
     }
   );
 });
 
-// ==================== حساب راتب سائق لشهر معين ====================
+// ==================== المناسبات الجماعية ====================
+app.post('/holiday-events', (req, res) => {
+  const { event_name, start_date, end_date, driver_ids } = req.body;
+  db.query('INSERT INTO holiday_events (event_name, start_date, end_date) VALUES (?, ?, ?)', [event_name, start_date, end_date], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل المناسبة' }); }
+    const event_id = result.insertId;
 
-// دالة تحسب عدد أيام يوم معين من الأسبوع في شهر معين (مثلاً كام يوم جمعة في سبتمبر)
-function countWeekdayInMonth(year, month, weekdayName) {
-  const weekdays = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
-  const targetDay = weekdays[weekdayName];
-  if (targetDay === undefined) return 0;
-
-  const daysInMonth = new Date(year, month, 0).getDate();
-  let count = 0;
-  for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(year, month - 1, d);
-    if (date.getDay() === targetDay) count++;
-  }
-  return count;
-}
-
-app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
-  const { driver_id, year, month } = req.params;
-
-  db.query('SELECT * FROM drivers WHERE id = ?', [driver_id], (err, driverResults) => {
-    if (err || driverResults.length === 0) {
-      return res.status(404).json({ error: 'السائق غير موجود' });
+    if (!driver_ids || driver_ids.length === 0) {
+      return res.status(201).json({ message: 'تم تسجيل المناسبة بنجاح بدون سواقين' });
     }
-    const driver = driverResults[0];
 
-    db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' });
-      }
-      const settings = settingsResults[0];
-
-      db.query('SELECT * FROM leave_config ORDER BY id DESC LIMIT 1', (err, leaveConfigResults) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: 'حصل خطأ في جلب إعدادات الإجازات' });
-        }
-        const leaveConfig = leaveConfigResults[0];
-
-        const income_type = driver.is_customized ? driver.custom_income_type : settings.income_type;
-        const monthly_salary = driver.is_customized ? driver.custom_monthly_salary : settings.monthly_salary;
-        const commission_pct = driver.is_customized ? driver.custom_commission_pct : settings.commission_pct;
-        const delivery_base_price = driver.is_customized ? driver.custom_delivery_base_price : settings.delivery_base_price;
-        const full_trip_base_price = driver.is_customized ? driver.custom_full_trip_base_price : settings.full_trip_base_price;
-        const baseWorkingDays = driver.is_customized ? driver.custom_working_days : leaveConfig.working_days_per_month;
-
-        // نجيب أيام العيد المعتمدة للسائق ده في الشهر ده
-        getHolidayDaysForDriver(driver_id, year, month, (err, holidayDaysCount) => {
-          if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'حصل خطأ في حساب أيام الأعياد' });
-          }
-
-          // أيام العمل المطلوبة الفعلية = أيام العمل الأساسية - أيام الأعياد المعتمدة
-          const requiredWorkingDays = Math.max(baseWorkingDays - holidayDaysCount, 0);
-
-          const attendanceQuery = `
-            SELECT COUNT(DISTINCT DATE(check_in_time)) AS days_present
-            FROM shifts
-            WHERE driver_id = ? AND YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
-          `;
-          db.query(attendanceQuery, [driver_id, year, month], (err, attendanceResults) => {
-            if (err) {
-              console.error(err);
-              return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' });
-            }
-            const days_present = attendanceResults[0].days_present || 0;
-
-            const ordersCountQuery = `
-              SELECT order_type, COUNT(*) AS count
-              FROM orders
-              WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
-              GROUP BY order_type
-            `;
-            db.query(ordersCountQuery, [driver_id, year, month], (err, ordersCountResults) => {
-              if (err) {
-                console.error(err);
-                return res.status(500).json({ error: 'حصل خطأ في حساب الأوردرات' });
-              }
-
-              let deliveryCount = 0;
-              let fullTripCount = 0;
-              ordersCountResults.forEach(r => {
-                if (r.order_type === 'delivery') deliveryCount = r.count;
-                if (r.order_type === 'full_trip') fullTripCount = r.count;
-              });
-
-              const earningsQuery = `
-                SELECT COALESCE(SUM(price), 0) AS total_revenue
-                FROM orders
-                WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
-              `;
-              db.query(earningsQuery, [driver_id, year, month], (err, earningsResults) => {
-                if (err) {
-                  console.error(err);
-                  return res.status(500).json({ error: 'حصل خطأ في حساب الإيرادات' });
-                }
-                const total_revenue = parseFloat(earningsResults[0].total_revenue);
-
-                const deductionsQuery = `
-                  SELECT COALESCE(SUM(amount), 0) AS total_deductions
-                  FROM deductions
-                  WHERE driver_id = ? AND YEAR(created_at) = ? AND MONTH(created_at) = ?
-                `;
-                db.query(deductionsQuery, [driver_id, year, month], (err, deductionsResults) => {
-                  if (err) {
-                    console.error(err);
-                    return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' });
-                  }
-                  const total_deductions = parseFloat(deductionsResults[0].total_deductions);
-
-                  const advancesQuery = `
-                    SELECT COALESCE(SUM(amount), 0) AS total_advances
-                    FROM advances
-                    WHERE driver_id = ? AND status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ?
-                  `;
-                  db.query(advancesQuery, [driver_id, year, month], (err, advancesResults) => {
-                    if (err) {
-                      console.error(err);
-                      return res.status(500).json({ error: 'حصل خطأ في حساب السلف' });
-                    }
-                    const total_advances = parseFloat(advancesResults[0].total_advances);
-
-                    let salaryPart = 0;
-                    let commissionPart = 0;
-
-                    if (income_type === 'salary' || income_type === 'both') {
-                      const dailyRate = requiredWorkingDays > 0 ? monthly_salary / requiredWorkingDays : 0;
-                      // مايتجاوزش المرتب الكامل حتى لو حضر أيام زيادة
-                      const cappedPresentDays = Math.min(days_present, requiredWorkingDays);
-                      salaryPart = dailyRate * cappedPresentDays;
-                    }
-
-                    if (income_type === 'commission' || income_type === 'both') {
-                      const deliveryCommission = deliveryCount * parseFloat(delivery_base_price || 0) * (commission_pct / 100);
-                      const fullTripCommission = fullTripCount * parseFloat(full_trip_base_price || 0) * (commission_pct / 100);
-                      commissionPart = deliveryCommission + fullTripCommission;
-                    }
-
-                    const grossPay = salaryPart + commissionPart;
-                    const netPay = grossPay - total_deductions - total_advances;
-
-                    res.json({
-                      driver_id: parseInt(driver_id),
-                      driver_name: driver.name,
-                      income_type,
-                      days_present,
-                      holiday_days: holidayDaysCount,
-                      base_working_days: baseWorkingDays,
-                      required_working_days: requiredWorkingDays,
-                      expected_working_days: requiredWorkingDays,
-                      delivery_count: deliveryCount,
-                      full_trip_count: fullTripCount,
-                      total_revenue: total_revenue.toFixed(2),
-                      salary_part: salaryPart.toFixed(2),
-                      commission_part: commissionPart.toFixed(2),
-                      gross_pay: grossPay.toFixed(2),
-                      total_deductions: total_deductions.toFixed(2),
-                      total_advances: total_advances.toFixed(2),
-                      net_pay: netPay.toFixed(2)
-                    });
-                  });
-                });
-              });
-            });
-          });
-        });
+    const values = driver_ids.map(driver_id => [event_id, driver_id]);
+    db.query('INSERT INTO holiday_event_drivers (holiday_event_id, driver_id) VALUES ?', [values], (err) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في ربط السواقين بالمناسبة' }); }
+      driver_ids.forEach(driver_id => {
+        const message = `تم تسجيل إجازة "${event_name}" لك من ${start_date} إلى ${end_date} بمرتب كامل`;
+        db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [driver_id, message]);
       });
+      res.status(201).json({ message: 'تم تسجيل المناسبة بنجاح لكل السواقين المحددين', event_id });
     });
   });
 });
 
-// ==================== صيانة التوكتوكات ====================
-app.post('/tuktuk-maintenance', (req, res) => {
-  const { tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date } = req.body;
-  db.query(
-    'INSERT INTO tuktuk_maintenance (tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date) VALUES (?, ?, ?, ?, ?, ?)',
-    [tuktuk_id, driver_id || null, maintenance_type, description, cost, maintenance_date],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تسجيل الصيانة' });
-      }
-      res.status(201).json({ message: 'تم تسجيل مصروف الصيانة بنجاح', id: result.insertId });
-    }
-  );
-});
-
-app.get('/tuktuk-maintenance', (req, res) => {
-  const query = `
-    SELECT tuktuk_maintenance.*, tuktuks.tuktuk_number, drivers.name AS driver_name
-    FROM tuktuk_maintenance
-    JOIN tuktuks ON tuktuk_maintenance.tuktuk_id = tuktuks.id
-    LEFT JOIN drivers ON tuktuk_maintenance.driver_id = drivers.id
-    ORDER BY tuktuk_maintenance.maintenance_date DESC
-  `;
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب سجل الصيانة' });
-    }
-    res.json(results);
-  });
-});
-app.put('/tuktuk-maintenance/:id', (req, res) => {
-  const { id } = req.params;
-  const { tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date } = req.body;
-
-  db.query(
-    'UPDATE tuktuk_maintenance SET tuktuk_id = ?, driver_id = ?, maintenance_type = ?, description = ?, cost = ?, maintenance_date = ? WHERE id = ?',
-    [tuktuk_id, driver_id || null, maintenance_type, description, cost, maintenance_date, id],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تحديث مصروف الصيانة' });
-      }
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'المصروف غير موجود' });
-      }
-      res.json({ message: 'تم تحديث مصروف الصيانة بنجاح' });
-    }
-  );
-});
-
-app.delete('/tuktuk-maintenance/:id', (req, res) => {
-  const { id } = req.params;
-  db.query('DELETE FROM tuktuk_maintenance WHERE id = ?', [id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في حذف مصروف الصيانة' });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'المصروف غير موجود' });
-    }
-    res.json({ message: 'تم حذف مصروف الصيانة نهائياً' });
-  });
-});
-// ==================== المناسبات الجماعية (إجازات الأعياد) ====================
-app.post('/holiday-events', (req, res) => {
-  const { event_name, start_date, end_date, driver_ids } = req.body;
-
-  db.query(
-    'INSERT INTO holiday_events (event_name, start_date, end_date) VALUES (?, ?, ?)',
-    [event_name, start_date, end_date],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'حصل خطأ في تسجيل المناسبة' });
-      }
-
-      const event_id = result.insertId;
-
-      if (!driver_ids || driver_ids.length === 0) {
-        return res.status(201).json({ message: 'تم تسجيل المناسبة بنجاح بدون سواقين' });
-      }
-
-      const values = driver_ids.map(driver_id => [event_id, driver_id]);
-      db.query('INSERT INTO holiday_event_drivers (holiday_event_id, driver_id) VALUES ?', [values], (err) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: 'حصل خطأ في ربط السواقين بالمناسبة' });
-        }
-
-        driver_ids.forEach(driver_id => {
-          const message = `تم تسجيل إجازة "${event_name}" لك من ${start_date} إلى ${end_date} بمرتب كامل`;
-          db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [driver_id, message]);
-        });
-
-        res.status(201).json({ message: 'تم تسجيل المناسبة بنجاح لكل السواقين المحددين', event_id });
-      });
-    }
-  );
-});
-
 app.get('/holiday-events', (req, res) => {
   db.query('SELECT * FROM holiday_events ORDER BY start_date DESC', (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب المناسبات' });
-    }
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب المناسبات' }); }
     res.json(results);
   });
+});
+
+app.get('/holiday-events/:id/drivers', (req, res) => {
+  const { id } = req.params;
+  db.query(
+    `SELECT hed.driver_id, drivers.name FROM holiday_event_drivers hed JOIN drivers ON hed.driver_id = drivers.id WHERE hed.holiday_event_id = ?`,
+    [id],
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب سواقين المناسبة' }); }
+      res.json(results);
+    }
+  );
 });
 
 app.delete('/holiday-events/:id', (req, res) => {
   const { id } = req.params;
-  db.query('DELETE FROM holiday_events WHERE id = ?', [id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في حذف المناسبة' });
-    }
+  db.query('DELETE FROM holiday_events WHERE id = ?', [id], (err) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف المناسبة' }); }
     res.json({ message: 'تم حذف المناسبة نهائياً' });
   });
 });
 
-// دالة تحسب عدد أيام إجازة العيد للسائق ده في شهر معين
 function getHolidayDaysForDriver(driver_id, year, month, callback) {
   const query = `
     SELECT he.start_date, he.end_date
@@ -1483,6 +880,171 @@ function getHolidayDaysForDriver(driver_id, year, month, callback) {
     callback(null, totalDays);
   });
 }
+
+// ==================== حساب راتب سائق لشهر معين ====================
+app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
+  const { driver_id, year, month } = req.params;
+
+  db.query('SELECT * FROM drivers WHERE id = ?', [driver_id], (err, driverResults) => {
+    if (err || driverResults.length === 0) return res.status(404).json({ error: 'السائق غير موجود' });
+    const driver = driverResults[0];
+
+    db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
+      const settings = settingsResults[0];
+
+      db.query('SELECT * FROM leave_config ORDER BY id DESC LIMIT 1', (err, leaveConfigResults) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب إعدادات الإجازات' }); }
+        const leaveConfig = leaveConfigResults[0];
+
+        const income_type = driver.is_customized ? driver.custom_income_type : settings.income_type;
+        const monthly_salary = driver.is_customized ? driver.custom_monthly_salary : settings.monthly_salary;
+        const commission_pct = driver.is_customized ? driver.custom_commission_pct : settings.commission_pct;
+        const delivery_base_price = driver.is_customized ? driver.custom_delivery_base_price : settings.delivery_base_price;
+        const full_trip_base_price = driver.is_customized ? driver.custom_full_trip_base_price : settings.full_trip_base_price;
+        const baseWorkingDays = driver.is_customized ? driver.custom_working_days : leaveConfig.working_days_per_month;
+
+        getHolidayDaysForDriver(driver_id, year, month, (err, holidayDaysCount) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب أيام الأعياد' }); }
+
+          const requiredWorkingDays = Math.max(baseWorkingDays - holidayDaysCount, 0);
+
+          db.query(
+            `SELECT COUNT(DISTINCT DATE(check_in_time)) AS days_present FROM shifts WHERE driver_id = ? AND YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?`,
+            [driver_id, year, month],
+            (err, attendanceResults) => {
+              if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' }); }
+              const days_present = attendanceResults[0].days_present || 0;
+
+              db.query(
+                `SELECT order_type, COUNT(*) AS count FROM orders WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ? GROUP BY order_type`,
+                [driver_id, year, month],
+                (err, ordersCountResults) => {
+                  if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الأوردرات' }); }
+
+                  let deliveryCount = 0, fullTripCount = 0;
+                  ordersCountResults.forEach(r => {
+                    if (r.order_type === 'delivery') deliveryCount = r.count;
+                    if (r.order_type === 'full_trip') fullTripCount = r.count;
+                  });
+
+                  db.query(
+                    `SELECT COALESCE(SUM(price), 0) AS total_revenue FROM orders WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?`,
+                    [driver_id, year, month],
+                    (err, earningsResults) => {
+                      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الإيرادات' }); }
+                      const total_revenue = parseFloat(earningsResults[0].total_revenue);
+
+                      db.query(
+                        `SELECT COALESCE(SUM(amount), 0) AS total_deductions FROM deductions WHERE driver_id = ? AND YEAR(created_at) = ? AND MONTH(created_at) = ?`,
+                        [driver_id, year, month],
+                        (err, deductionsResults) => {
+                          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' }); }
+                          const total_deductions = parseFloat(deductionsResults[0].total_deductions);
+
+                          db.query(
+                            `SELECT COALESCE(SUM(amount), 0) AS total_advances FROM advances WHERE driver_id = ? AND status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ?`,
+                            [driver_id, year, month],
+                            (err, advancesResults) => {
+                              if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب السلف' }); }
+                              const total_advances = parseFloat(advancesResults[0].total_advances);
+
+                              let salaryPart = 0, commissionPart = 0;
+
+                              if (income_type === 'salary' || income_type === 'both') {
+                                const dailyRate = requiredWorkingDays > 0 ? monthly_salary / requiredWorkingDays : 0;
+                                const cappedPresentDays = Math.min(days_present, requiredWorkingDays);
+                                salaryPart = dailyRate * cappedPresentDays;
+                              }
+
+                              if (income_type === 'commission' || income_type === 'both') {
+                                const deliveryCommission = deliveryCount * parseFloat(delivery_base_price || 0) * (commission_pct / 100);
+                                const fullTripCommission = fullTripCount * parseFloat(full_trip_base_price || 0) * (commission_pct / 100);
+                                commissionPart = deliveryCommission + fullTripCommission;
+                              }
+
+                              const grossPay = salaryPart + commissionPart;
+                              const netPay = grossPay - total_deductions - total_advances;
+
+                              res.json({
+                                driver_id: parseInt(driver_id),
+                                driver_name: driver.name,
+                                income_type,
+                                days_present,
+                                holiday_days: holidayDaysCount,
+                                base_working_days: baseWorkingDays,
+                                required_working_days: requiredWorkingDays,
+                                delivery_count: deliveryCount,
+                                full_trip_count: fullTripCount,
+                                total_revenue: total_revenue.toFixed(2),
+                                salary_part: salaryPart.toFixed(2),
+                                commission_part: commissionPart.toFixed(2),
+                                gross_pay: grossPay.toFixed(2),
+                                total_deductions: total_deductions.toFixed(2),
+                                total_advances: total_advances.toFixed(2),
+                                net_pay: netPay.toFixed(2)
+                              });
+                            }
+                          );
+                        }
+                      );
+                    }
+                  );
+                }
+              );
+            }
+          );
+        });
+      });
+    });
+  });
+});
+
+// ==================== صيانة التوكتوكات ====================
+app.post('/tuktuk-maintenance', (req, res) => {
+  const { tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date } = req.body;
+  db.query(
+    'INSERT INTO tuktuk_maintenance (tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date) VALUES (?, ?, ?, ?, ?, ?)',
+    [tuktuk_id, driver_id || null, maintenance_type, description, cost, maintenance_date],
+    (err, result) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الصيانة' }); }
+      res.status(201).json({ message: 'تم تسجيل مصروف الصيانة بنجاح', id: result.insertId });
+    }
+  );
+});
+
+app.get('/tuktuk-maintenance', (req, res) => {
+  db.query(
+    `SELECT tuktuk_maintenance.*, tuktuks.tuktuk_number, drivers.name AS driver_name FROM tuktuk_maintenance JOIN tuktuks ON tuktuk_maintenance.tuktuk_id = tuktuks.id LEFT JOIN drivers ON tuktuk_maintenance.driver_id = drivers.id ORDER BY tuktuk_maintenance.maintenance_date DESC`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب سجل الصيانة' }); }
+      res.json(results);
+    }
+  );
+});
+
+app.put('/tuktuk-maintenance/:id', (req, res) => {
+  const { id } = req.params;
+  const { tuktuk_id, driver_id, maintenance_type, description, cost, maintenance_date } = req.body;
+  db.query(
+    'UPDATE tuktuk_maintenance SET tuktuk_id = ?, driver_id = ?, maintenance_type = ?, description = ?, cost = ?, maintenance_date = ? WHERE id = ?',
+    [tuktuk_id, driver_id || null, maintenance_type, description, cost, maintenance_date, id],
+    (err, result) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث مصروف الصيانة' }); }
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'المصروف غير موجود' });
+      res.json({ message: 'تم تحديث مصروف الصيانة بنجاح' });
+    }
+  );
+});
+
+app.delete('/tuktuk-maintenance/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM tuktuk_maintenance WHERE id = ?', [id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف مصروف الصيانة' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'المصروف غير موجود' });
+    res.json({ message: 'تم حذف مصروف الصيانة نهائياً' });
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
