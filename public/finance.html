@@ -185,24 +185,24 @@
       });
     }
 
-    document.getElementById('settingsForm').addEventListener('submit', function(e) {
+   document.getElementById('settingsForm').addEventListener('submit', function(e) {
   e.preventDefault();
-      fetch('/payroll-settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          income_type: document.getElementById('incomeType').value,
-          monthly_salary: document.getElementById('monthlySalary').value,
-          commission_pct: document.getElementById('commissionPct').value,
-          monthly_leave_balance: document.getElementById('leaveBalance').value
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('settingsMsg').textContent = data.message || data.error;
-        loadPayroll();
-      });
-    });
+  fetch('/payroll-settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      income_type: document.getElementById('incomeType').value,
+      monthly_salary: document.getElementById('monthlySalary').value,
+      commission_pct: document.getElementById('commissionPct').value,
+      monthly_leave_balance: document.getElementById('leaveBalance').value
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById('settingsMsg').textContent = data.message || data.error;
+    loadPayroll();
+  });
+});
 
     // كشف المرتبات
     function loadDriversAndPayroll() {
