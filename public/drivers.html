@@ -132,7 +132,7 @@
         tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش سواقين لسه</td></tr>`;
         return;
       }
-      tbody.innerHTML = data.map(d => `
+           tbody.innerHTML = data.map(d => `
         <tr>
           <td>${d.id}</td>
           <td>${d.name}</td>
@@ -140,7 +140,10 @@
           <td>${d.national_id || '-'}</td>
           <td>${formatDate(d.created_at)}</td>
           <td><span class="badge">${d.status === 'active' ? 'نشط' : 'غير نشط'}</span></td>
-          <td><button class="row-btn btn-delete" onclick="deleteDriver(${d.id})">حذف نهائي</button></td>
+          <td>
+            <button class="row-btn btn-active" onclick="changePassword(${d.id})">تغيير الباسورد</button>
+            <button class="row-btn btn-delete" onclick="deleteDriver(${d.id})">حذف نهائي</button>
+          </td>
         </tr>
       `).join('');
     }

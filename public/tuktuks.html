@@ -127,7 +127,7 @@
         tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش توكتوكات لسه</td></tr>`;
         return;
       }
-      tbody.innerHTML = data.map(t => `
+           tbody.innerHTML = data.map(t => `
         <tr>
           <td>${t.id}</td>
           <td>${t.tuktuk_number}</td>
@@ -137,6 +137,7 @@
             ${t.status === 'active'
               ? `<button class="row-btn btn-fix" onclick="toggleTuktukStatus(${t.id}, 'maintenance')">تسجيل عطل</button>`
               : `<button class="row-btn btn-active" onclick="toggleTuktukStatus(${t.id}, 'active')">إعادة تفعيل</button>`}
+            <button class="row-btn btn-delete" onclick="deleteTuktuk(${t.id})">حذف نهائي</button>
           </td>
         </tr>
       `).join('');

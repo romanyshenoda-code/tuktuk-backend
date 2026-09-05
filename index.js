@@ -849,6 +849,43 @@ app.delete('/orders/:id', (req, res) => {
     res.json({ message: 'تم حذف الأوردر نهائياً' });
   });
 });
+// حذف توكتوك نهائياً
+app.delete('/tuktuks/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM tuktuks WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+        return res.status(400).json({ error: 'مينفعش تمسح التوكتوك ده لأن عنده ورديات مسجلة بالفعل' });
+      }
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في حذف التوكتوك' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'التوكتوك غير موجود' });
+    }
+    res.json({ message: 'تم حذف التوكتوك نهائياً' });
+  });
+});
+// تغيير باسورد سائق معين
+app.put('/drivers/:id/password', (req, res) => {
+  const { id } = req.params;
+  const { password } = req.body;
+
+  if (!password) {
+    return res.status(400).json({ error: 'من فضلك ابعت الباسورد الجديد' });
+  }
+
+  db.query('UPDATE drivers SET password = ? WHERE id = ?', [password, id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'السائق غير موجود' });
+    }
+    res.json({ message: 'تم تغيير الباسورد بنجاح' });
+  });
+});
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
