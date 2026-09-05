@@ -186,7 +186,7 @@
     }
 
     document.getElementById('settingsForm').addEventListener('submit', function(e) {
-      e.preventDefault();
+  e.preventDefault();
       fetch('/payroll-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
