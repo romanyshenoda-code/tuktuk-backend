@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة تحكم الأدمن - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --muted: #8A8272;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+
+    .topbar {
+      background: var(--asphalt); color: var(--sand); padding: 16px 24px;
+      display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange);
+    }
+    .topbar img { height: 40px; }
+    .topbar h1 { margin: 0; font-size: 17px; font-weight: 700; }
+    .topbar .sub { font-size: 11px; opacity: 0.7; letter-spacing: 0.3px; }
+    .logout-link { margin-inline-start: auto; color: var(--sand); opacity: 0.75; font-size: 13px; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); padding: 6px 12px; border-radius: 20px; }
+
+    .container { max-width: 1000px; margin: 0 auto; padding: 40px 24px; }
+    .container h2 { font-size: 20px; margin-bottom: 22px; }
+
+    .modules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+
+    .module-card {
+      background: var(--paper); border-radius: 16px; padding: 28px 18px; text-align: center;
+      text-decoration: none; color: var(--ink); border: 1px solid #E4DCCB;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      animation: riseIn 0.4s ease backwards; display: block;
+    }
+    .module-card:hover { transform: translateY(-5px); box-shadow: 0 12px 26px rgba(22,48,92,0.16); }
+    .module-card .icon { font-size: 32px; margin-bottom: 10px; }
+    .module-card .count { font-size: 30px; font-weight: 800; }
+    .module-card .label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .module-card:nth-child(1) { border-top: 5px solid var(--orange); animation-delay: 0.02s; }
+    .module-card:nth-child(2) { border-top: 5px solid var(--asphalt); animation-delay: 0.08s; }
+    .module-card:nth-child(3) { border-top: 5px solid var(--nile); animation-delay: 0.14s; }
+    .module-card:nth-child(4) { border-top: 5px solid var(--amber); animation-delay: 0.20s; }
+    .module-card:nth-child(5) { border-top: 5px solid var(--rust); animation-delay: 0.26s; }
+
+    @keyframes riseIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <img src="/logo.png" alt="Ginger">
+    <div>
+      <h1>لوحة تحكم الأدمن</h1>
+      <div class="sub">GINGER — SPICE UP THE ORDINARY</div>
+    </div>
+    <a href="/api/logout" class="logout-link">خروج</a>
+  </div>
+
+  <div class="container">
+    <h2>اختار القسم اللي عايز تديره</h2>
+    <div class="modules-grid">
+      <a href="/drivers.html" class="module-card">
+        <div class="icon">🧑‍✈️</div>
+        <div class="count" id="countDrivers">-</div>
+        <div class="label">السواقين</div>
+      </a>
+      <a href="/tuktuks.html" class="module-card">
+        <div class="icon">🛺</div>
+        <div class="count" id="countTuktuks">-</div>
+        <div class="label">التوكتوكات</div>
+      </a>
+      <a href="/shifts.html" class="module-card">
+        <div class="icon">🕐</div>
+        <div class="count" id="countShiftsOpen">-</div>
+        <div class="label">ورديات شغالة</div>
+      </a>
+      <a href="/orders.html" class="module-card">
+        <div class="icon">📦</div>
+        <div class="count" id="countOrdersOpen">-</div>
+        <div class="label">أوردرات شغالة</div>
+      </a>
+      <a href="/hr.html" class="module-card">
+        <div class="icon">📋</div>
+        <div class="count" id="countPendingRequests">-</div>
+        <div class="label">طلبات معلّقة</div>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    fetch('/drivers').then(r => r.json()).then(d => document.getElementById('countDrivers').textContent = d.length);
+    fetch('/tuktuks').then(r => r.json()).then(d => document.getElementById('countTuktuks').textContent = d.length);
+    fetch('/shifts').then(r => r.json()).then(d => document.getElementById('countShiftsOpen').textContent = d.filter(s => s.status === 'open').length);
+    fetch('/orders/active').then(r => r.json()).then(d => document.getElementById('countOrdersOpen').textContent = d.length);
+    Promise.all([
+      fetch('/leave-requests').then(r => r.json()),
+      fetch('/advances').then(r => r.json())
+    ]).then(([leaves, advances]) => {
+      const pending = leaves.filter(l => l.status === 'pending').length + advances.filter(a => a.status === 'pending').length;
+      document.getElementById('countPendingRequests').textContent = pending;
+    });
+  </script>
+</body>
+</html>

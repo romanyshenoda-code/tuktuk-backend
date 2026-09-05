@@ -817,6 +817,38 @@ app.put('/tuktuks/:id/status', (req, res) => {
     res.json({ message: 'تم تحديث حالة التوكتوك بنجاح' });
   });
 });
+// حذف سائق نهائياً
+app.delete('/drivers/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM drivers WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+        return res.status(400).json({ error: 'مينفعش تمسح السائق ده لأن عنده ورديات أو أوردرات أو طلبات مسجلة' });
+      }
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في حذف السائق' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'السائق غير موجود' });
+    }
+    res.json({ message: 'تم حذف السائق نهائياً' });
+  });
+});
+
+// حذف أوردر نهائياً
+app.delete('/orders/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM orders WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في حذف الأوردر' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'الأوردر غير موجود' });
+    }
+    res.json({ message: 'تم حذف الأوردر نهائياً' });
+  });
+});
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
