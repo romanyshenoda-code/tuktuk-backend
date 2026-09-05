@@ -3,52 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تسجيل دخول السائق</title>
+  <title>تسجيل دخول السائق - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
+    :root { --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF; --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; }
+    * { box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
+      font-family: 'Cairo', sans-serif;
+      margin: 0; min-height: 100vh;
+      background: linear-gradient(160deg, var(--asphalt) 0%, #0F2244 100%);
+      display: flex; justify-content: center; align-items: center;
+      padding: 20px;
     }
     .box {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      width: 90%;
-      max-width: 320px;
-      text-align: center;
+      background: var(--paper); padding: 36px 30px; border-radius: 20px;
+      width: 100%; max-width: 360px; text-align: center;
+      border-top: 6px solid var(--orange);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+      animation: riseIn 0.5s ease;
     }
+    @keyframes riseIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .box img { height: 60px; margin-bottom: 14px; }
+    .welcome { font-size: 20px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
+    .wish { font-size: 13.5px; color: var(--nile); font-weight: 600; margin-bottom: 22px; }
     input {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 16px;
+      width: 100%; padding: 13px 14px; margin: 7px 0; border: 1px solid #E4DCCB;
+      border-radius: 10px; box-sizing: border-box; font-size: 15px; font-family: inherit; background: var(--sand);
     }
+    input:focus { outline: 2px solid var(--orange); background: var(--paper); }
     button {
-      width: 100%;
-      padding: 12px;
-      background: #2c3e50;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-      margin-top: 10px;
+      width: 100%; padding: 13px; background: var(--orange); color: white; border: none;
+      border-radius: 10px; font-size: 15.5px; font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 14px;
     }
-    #msg { color: #c0392b; margin-top: 10px; font-size: 14px; }
+    button:hover { filter: brightness(0.95); }
+    #msg { color: var(--rust); margin-top: 10px; font-size: 13.5px; min-height: 14px; }
   </style>
 </head>
 <body>
   <div class="box">
-    <h2>تسجيل دخول السائق</h2>
+    <img src="/logo.png" alt="Ginger">
+    <div class="welcome">أهلاً بيك يا كابتن 🚕</div>
+    <div class="wish" id="wishText">نتمنالك يوم شغل جميل ومليان رزق</div>
     <input type="number" id="driverId" placeholder="رقم السائق">
     <input type="password" id="password" placeholder="كلمة المرور">
     <button onclick="login()">دخول</button>
@@ -56,6 +52,14 @@
   </div>
 
   <script>
+    const hour = new Date().getHours();
+    let greeting = 'نتمنالك يوم شغل جميل ومليان رزق';
+    if (hour >= 5 && hour < 12) greeting = 'صباح الخير يا كابتن، يوم مليان رزق إن شاء الله';
+    else if (hour >= 12 && hour < 17) greeting = 'نهارك سعيد، نتمنالك باقي يوم شغل موفق';
+    else if (hour >= 17 && hour < 21) greeting = 'مساء الخير، نتمنالك وردية آمنة';
+    else greeting = 'مساء النور، خد بالك من نفسك في الطريق';
+    document.getElementById('wishText').textContent = greeting;
+
     function login() {
       const driver_id = document.getElementById('driverId').value;
       const password = document.getElementById('password').value;
