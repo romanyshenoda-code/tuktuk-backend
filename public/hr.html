@@ -20,8 +20,8 @@
     .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
     .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
     .section-head h2 { font-size: 18px; margin: 0; }
-    input { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
-    input:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
+    input, textarea { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
+    input:focus, textarea:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
     .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 30px; }
     form.panel { padding: 16px 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     button.submit-btn { padding: 10px 20px; background: var(--orange); color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
@@ -41,6 +41,23 @@
     .btn-reject { background: var(--rust); }
     .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
     .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+
+    /* بوب أب إدخال ملاحظة بدل prompt() */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; animation: fadeIn 0.18s ease; }
+    .modal-backdrop.open { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal-box { background: var(--paper); border-radius: 16px; padding: 24px; width: 100%; max-width: 380px; border-top: 5px solid var(--orange); animation: popIn 0.22s cubic-bezier(.2,.9,.3,1.2); }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.92) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .modal-box h3 { margin: 0 0 12px; font-size: 17px; }
+    .modal-box textarea { width: 100%; min-height: 70px; resize: vertical; font-family: inherit; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .modal-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
+    .btn-modal-save { background: var(--orange); color: white; }
+    .btn-modal-cancel { background: var(--line); color: var(--ink); }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; max-width: 90%; text-align: center; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+    .toast.error { background: var(--rust); }
   </style>
 </head>
 <body>
@@ -78,7 +95,39 @@
     <div id="addDeductionMsg" class="form-msg"></div>
   </div>
 
+  <!-- بوب أب الموافقة/الرفض مع ملاحظة -->
+  <div class="modal-backdrop" id="noteModal">
+    <div class="modal-box">
+      <h3 id="noteModalTitle">إضافة ملاحظة</h3>
+      <textarea id="noteInput" placeholder="اكتب ملاحظة (اختياري)"></textarea>
+      <div class="modal-actions">
+        <button class="btn-modal-cancel" onclick="closeNoteModal(false)">إلغاء</button>
+        <button class="btn-modal-save" onclick="closeNoteModal(true)">تأكيد</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
   <script>
+    let noteResolve = null;
+    function showNoteModal(title) {
+      document.getElementById('noteModalTitle').textContent = title;
+      document.getElementById('noteInput').value = '';
+      document.getElementById('noteModal').classList.add('open');
+      return new Promise(resolve => { noteResolve = resolve; });
+    }
+    function closeNoteModal(confirmed) {
+      document.getElementById('noteModal').classList.remove('open');
+      const value = document.getElementById('noteInput').value;
+      if (noteResolve) noteResolve(confirmed ? (value || '') : null);
+    }
+    function showToast(message, isError) {
+      const t = document.getElementById('toast');
+      t.textContent = message;
+      t.className = 'toast show' + (isError ? ' error' : '');
+      setTimeout(() => { t.className = 'toast'; }, 2500);
+    }
+
     const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
 
     function loadLeaveRequests() {
@@ -105,13 +154,21 @@
       });
     }
 
-    function reviewLeave(id, status) {
-      const admin_note = status === 'rejected' ? prompt('سبب الرفض (اختياري):') : prompt('ملاحظة (اختياري):');
+    async function reviewLeave(id, status) {
+      const title = status === 'rejected' ? 'سبب الرفض' : 'ملاحظة الموافقة';
+      const admin_note = await showNoteModal(title);
+      if (admin_note === null) return;
+
       fetch(`/leave-requests/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, admin_note: admin_note || '' })
-      }).then(res => res.json()).then(() => loadLeaveRequests());
+        body: JSON.stringify({ status, admin_note })
+      })
+      .then(res => res.json())
+      .then(data => {
+        showToast(data.message || data.error, !data.message);
+        loadLeaveRequests();
+      });
     }
 
     function loadAdvances() {
@@ -137,13 +194,21 @@
       });
     }
 
-    function reviewAdvance(id, status) {
-      const admin_note = status === 'rejected' ? prompt('سبب الرفض (اختياري):') : prompt('ملاحظة (اختياري):');
+    async function reviewAdvance(id, status) {
+      const title = status === 'rejected' ? 'سبب الرفض' : 'ملاحظة الموافقة';
+      const admin_note = await showNoteModal(title);
+      if (admin_note === null) return;
+
       fetch(`/advances/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, admin_note: admin_note || '' })
-      }).then(res => res.json()).then(() => loadAdvances());
+        body: JSON.stringify({ status, admin_note })
+      })
+      .then(res => res.json())
+      .then(data => {
+        showToast(data.message || data.error, !data.message);
+        loadAdvances();
+      });
     }
 
     document.getElementById('addDeductionForm').addEventListener('submit', function(e) {
@@ -160,7 +225,10 @@
       .then(res => res.json())
       .then(data => {
         document.getElementById('addDeductionMsg').textContent = data.message || data.error;
-        document.getElementById('addDeductionForm').reset();
+        if (data.message) {
+          document.getElementById('addDeductionForm').reset();
+          showToast(data.message);
+        }
       });
     });
 

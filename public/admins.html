@@ -13,20 +13,15 @@
     }
     * { box-sizing: border-box; }
     body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
-
     .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
     .topbar img { height: 36px; }
     .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
     .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; margin-inline-end: auto; }
-
     .container { max-width: 1000px; margin: 0 auto; padding: 24px; }
-
     .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
     .section-head h2 { font-size: 18px; margin: 0; }
-
     .add-square { width: 40px; height: 40px; border-radius: 10px; background: var(--orange); color: white; border: none; font-size: 22px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; padding: 0; }
     .add-square:hover { transform: scale(1.06); }
-
     .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
@@ -35,15 +30,12 @@
     tbody tr:hover { background: #F3E9DA; }
     td { border-bottom: 1px solid var(--line); }
     .table-scroll { overflow-x: auto; }
-
     .actions-cell { display: flex; gap: 6px; flex-wrap: wrap; }
     .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; }
     .btn-edit { background: var(--amber); }
     .btn-password { background: var(--asphalt); }
     .btn-delete { background: var(--rust); }
-
     .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
-
     input { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
     input:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
 
@@ -60,6 +52,19 @@
     .btn-modal-save { background: var(--orange); color: white; }
     .btn-modal-cancel { background: var(--line); color: var(--ink); }
     .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+
+    .confirm-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; animation: fadeIn 0.18s ease; }
+    .confirm-backdrop.open { display: flex; }
+    .confirm-box { background: var(--paper); border-radius: 16px; padding: 24px; width: 100%; max-width: 340px; border-top: 5px solid var(--rust); text-align: center; animation: popIn 0.22s cubic-bezier(.2,.9,.3,1.2); }
+    .confirm-box p { font-size: 14.5px; margin: 0 0 18px; line-height: 1.6; }
+    .confirm-actions { display: flex; gap: 8px; }
+    .confirm-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
+    .btn-confirm-yes { background: var(--rust); color: white; }
+    .btn-confirm-no { background: var(--line); color: var(--ink); }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; max-width: 90%; text-align: center; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+    .toast.error { background: var(--rust); }
   </style>
 </head>
 <body>
@@ -83,7 +88,6 @@
     </div>
   </div>
 
-  <!-- مودال إضافة مشرف -->
   <div class="modal-backdrop" id="adminModal">
     <div class="modal-box">
       <h3>إضافة مشرف جديد</h3>
@@ -101,7 +105,6 @@
     </div>
   </div>
 
-  <!-- مودال تعديل مشرف -->
   <div class="modal-backdrop" id="editAdminModal">
     <div class="modal-box">
       <h3>تعديل بيانات المشرف</h3>
@@ -118,7 +121,6 @@
     </div>
   </div>
 
-  <!-- مودال تغيير باسورد مشرف -->
   <div class="modal-backdrop" id="adminPasswordModal">
     <div class="modal-box">
       <h3>تغيير كلمة المرور</h3>
@@ -134,7 +136,36 @@
     </div>
   </div>
 
+  <div class="confirm-backdrop" id="confirmBackdrop">
+    <div class="confirm-box">
+      <p id="confirmMessage"></p>
+      <div class="confirm-actions">
+        <button class="btn-confirm-no" onclick="closeConfirm(false)">إلغاء</button>
+        <button class="btn-confirm-yes" onclick="closeConfirm(true)">تأكيد</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
   <script>
+    let confirmResolve = null;
+
+    function showConfirm(message) {
+      document.getElementById('confirmMessage').textContent = message;
+      document.getElementById('confirmBackdrop').classList.add('open');
+      return new Promise(resolve => { confirmResolve = resolve; });
+    }
+    function closeConfirm(result) {
+      document.getElementById('confirmBackdrop').classList.remove('open');
+      if (confirmResolve) confirmResolve(result);
+    }
+    function showToast(message, isError) {
+      const t = document.getElementById('toast');
+      t.textContent = message;
+      t.className = 'toast show' + (isError ? ' error' : '');
+      setTimeout(() => { t.className = 'toast'; }, 2500);
+    }
+
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
     document.querySelectorAll('.modal-backdrop').forEach(b => b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); }));
@@ -181,12 +212,14 @@
       openModal('adminPasswordModal');
     }
 
-    function deleteAdmin(id) {
-      if (!confirm('متأكد إنك عايز تمسح المشرف ده نهائياً؟')) return;
+    async function deleteAdmin(id) {
+      const confirmed = await showConfirm('متأكد إنك عايز تمسح المشرف ده نهائياً؟');
+      if (!confirmed) return;
+
       fetch(`/admins/${id}`, { method: 'DELETE' })
         .then(res => res.json())
         .then(data => {
-          alert(data.message || data.error);
+          showToast(data.message || data.error, !data.message);
           loadAdmins();
         });
     }
@@ -208,6 +241,7 @@
         if (data.message) {
           document.getElementById('addAdminForm').reset();
           loadAdmins();
+          showToast(data.message);
           setTimeout(() => closeModal('adminModal'), 700);
         }
       });
@@ -229,6 +263,7 @@
         document.getElementById('editAdminMsg').textContent = data.message || data.error;
         if (data.message) {
           loadAdmins();
+          showToast(data.message);
           setTimeout(() => closeModal('editAdminModal'), 700);
         }
       });
@@ -248,6 +283,7 @@
       .then(data => {
         document.getElementById('adminPasswordMsg').textContent = data.message || data.error;
         if (data.message) {
+          showToast(data.message);
           setTimeout(() => closeModal('adminPasswordModal'), 700);
         }
       });
