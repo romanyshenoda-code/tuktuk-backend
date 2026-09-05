@@ -163,6 +163,20 @@
           loadDrivers();
         });
     }
+        function changePassword(id) {
+      const newPassword = prompt('اكتب الباسورد الجديد للسائق:');
+      if (!newPassword) return;
+
+      fetch(`/drivers/${id}/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message || data.error);
+      });
+    }
 
     document.getElementById('addDriverForm').addEventListener('submit', function(e) {
       e.preventDefault();
