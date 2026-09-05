@@ -22,7 +22,13 @@
 
     .wrap { max-width: 480px; margin: 0 auto; padding: 18px 16px; }
 
-    /* شاشة اختيار الكروت الفرعية */
+    .status-banner {
+      padding: 12px 16px; border-radius: 10px; font-size: 13px; font-weight: 700;
+      margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+    }
+    .status-open { background: #E3EEEC; color: var(--nile); }
+    .status-closed { background: #F6E1DC; color: var(--rust); }
+
     .modules-grid { display: grid; gap: 14px; }
     .module-card {
       background: var(--paper); border-radius: 16px; padding: 22px 18px;
@@ -34,14 +40,13 @@
     .module-card .icon-box { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
     .module-card .txt h3 { margin: 0 0 3px; font-size: 15.5px; }
     .module-card .txt p { margin: 0; font-size: 12px; color: var(--muted); }
-    .module-card:nth-child(1) .icon-box { background: #E3EEEC; color: var(--nile); animation-delay: .03s; }
-    .module-card:nth-child(2) .icon-box { background: #FBF0DF; color: var(--amber); }
-    .module-card:nth-child(2) { animation-delay: .08s; }
-    .module-card:nth-child(3) .icon-box { background: #F6E1DC; color: var(--rust); }
-    .module-card:nth-child(3) { animation-delay: .13s; }
+    .module-card.card-checkin .icon-box { background: #E3EEEC; color: var(--nile); }
+    .module-card.card-change .icon-box { background: #FBF0DF; color: var(--amber); }
+    .module-card.card-checkout .icon-box { background: #F6E1DC; color: var(--rust); }
     @keyframes riseIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* الكروت الفرعية التفصيلية */
+    .hidden { display: none !important; }
+
     .card {
       background: var(--paper); border-radius: 14px; padding: 20px; margin-bottom: 16px;
       border-inline-start: 5px solid var(--line); display: none;
@@ -84,17 +89,20 @@
 
   <div class="wrap">
 
+    <div class="status-banner status-closed hidden" id="statusClosed">🔴 لسه ما سجّلتش حضورك النهاردة</div>
+    <div class="status-banner status-open hidden" id="statusOpen">🟢 وردية شغالة دلوقتي</div>
+
     <!-- شاشة الاختيار -->
     <div id="selectionScreen" class="modules-grid">
-      <div class="module-card" onclick="showCard('checkinCard')">
+      <div class="module-card card-checkin" id="checkinOption" onclick="showCard('checkinCard')">
         <div class="icon-box">✅</div>
         <div class="txt"><h3>تسجيل حضور</h3><p>ابدأ ورديتك بمسح كود التوكتوك</p></div>
       </div>
-      <div class="module-card" onclick="showCard('changeCard')">
+      <div class="module-card card-change hidden" id="changeOption" onclick="showCard('changeCard')">
         <div class="icon-box">🔄</div>
         <div class="txt"><h3>تغيير التوكتوك</h3><p>لو فيه عطل، غيّر التوكتوك من غير ما تقفل الوردية</p></div>
       </div>
-      <div class="module-card" onclick="showCard('checkoutCard')">
+      <div class="module-card card-checkout hidden" id="checkoutOption" onclick="showCard('checkoutCard')">
         <div class="icon-box">🚪</div>
         <div class="txt"><h3>تسجيل انصراف</h3><p>اقفل ورديتك وسلّم التوكتوك</p></div>
       </div>
@@ -142,6 +150,7 @@
 
   <script>
     let currentDriverId = null;
+    let hasOpenShift = false;
     let scannedQrCode = null;
     let scannedQrCode2 = null;
     let html5QrCode = null;
@@ -150,7 +159,28 @@
     fetch('/api/driver-session').then(res => res.json()).then(data => {
       if (!data.loggedIn) { window.location.href = '/driver-login.html'; return; }
       currentDriverId = data.driverId;
+      checkShiftStatus();
     });
+
+    function checkShiftStatus() {
+      fetch('/shifts/open/' + currentDriverId)
+        .then(res => res.json())
+        .then(data => {
+          if (data.id) {
+            hasOpenShift = true;
+            document.getElementById('statusOpen').classList.remove('hidden');
+            document.getElementById('checkinOption').classList.add('hidden');
+            document.getElementById('changeOption').classList.remove('hidden');
+            document.getElementById('checkoutOption').classList.remove('hidden');
+          } else {
+            hasOpenShift = false;
+            document.getElementById('statusClosed').classList.remove('hidden');
+            document.getElementById('checkinOption').classList.remove('hidden');
+            document.getElementById('changeOption').classList.add('hidden');
+            document.getElementById('checkoutOption').classList.add('hidden');
+          }
+        });
+    }
 
     function showCard(cardId) {
       document.getElementById('selectionScreen').style.display = 'none';
@@ -208,6 +238,7 @@
       const btn = document.getElementById('checkInBtn');
       const photoFile = document.getElementById('photoInputCheckIn').files[0];
 
+      if (hasOpenShift) { resultDiv.textContent = 'عندك وردية شغالة بالفعل، اقفلها الأول أو استخدم تغيير التوكتوك'; return; }
       if (!scannedQrCode) { resultDiv.textContent = 'من فضلك امسح كود QR الأول'; return; }
       if (!photoFile) { resultDiv.textContent = 'من فضلك التقط صورة التوكتوك، الصورة إجبارية'; return; }
       if (!navigator.geolocation) { resultDiv.textContent = 'المتصفح مش بيدعم تحديد الموقع'; return; }
@@ -230,6 +261,10 @@
           .then(data => {
             btn.disabled = false;
             resultDiv.textContent = data.message || data.error;
+            if (data.message) {
+              checkShiftStatus();
+              setTimeout(backToSelection, 1000);
+            }
           })
           .catch(() => { btn.disabled = false; resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
       }, function(error) {
@@ -240,6 +275,7 @@
 
     function changeTuktuk() {
       const resultDiv = document.getElementById('resultChange');
+      if (!hasOpenShift) { resultDiv.textContent = 'لازم يكون عندك وردية مفتوحة الأول عشان تغيّر التوكتوك'; return; }
       if (!scannedQrCode2) { resultDiv.textContent = 'من فضلك امسح كود QR الأول'; return; }
 
       resultDiv.textContent = 'جاري تغيير التوكتوك...';
@@ -258,6 +294,7 @@
       const resultDiv = document.getElementById('resultCheckout');
       const photoFile = document.getElementById('photoInputCheckOut').files[0];
 
+      if (!hasOpenShift) { resultDiv.textContent = 'مفيش وردية مفتوحة أصلاً'; return; }
       if (!photoFile) { resultDiv.textContent = 'من فضلك التقط صورة تسليم التوكتوك، الصورة إجبارية'; return; }
 
       resultDiv.textContent = 'جاري البحث عن الوردية المفتوحة...';
@@ -275,7 +312,13 @@
 
           fetch('/shifts/check-out', { method: 'POST', body: formData })
             .then(res => res.json())
-            .then(data => { resultDiv.textContent = data.message || data.error; })
+            .then(data => {
+              resultDiv.textContent = data.message || data.error;
+              if (data.message) {
+                checkShiftStatus();
+                setTimeout(backToSelection, 1000);
+              }
+            })
             .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
         })
         .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
