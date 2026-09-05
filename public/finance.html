@@ -10,7 +10,6 @@
     :root {
       --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
       --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
-      --purple: #5B4B8A;
     }
     * { box-sizing: border-box; }
     body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
@@ -20,6 +19,15 @@
     .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; }
     .logout-link { margin-inline-start: auto; color: var(--sand); opacity: 0.75; font-size: 13px; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); padding: 6px 12px; border-radius: 20px; }
     .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
+
+    .month-picker {
+      display: flex; align-items: center; gap: 10px; background: var(--paper);
+      border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .month-picker label { font-size: 13px; font-weight: 700; color: var(--muted); }
+    .month-picker select { width: auto; min-width: 110px; }
+    .month-picker .current-badge { font-size: 12px; background: var(--nile); color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
 
     .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 26px; }
     .stat-card { background: var(--paper); border-radius: 14px; padding: 20px; text-align: center; border-top: 4px solid var(--line); box-shadow: 0 1px 3px rgba(30,27,22,0.06); }
@@ -123,6 +131,13 @@
 
   <div class="container">
 
+    <div class="month-picker">
+      <label>عرض بيانات شهر:</label>
+      <select id="monthSelect"></select>
+      <select id="yearSelect"></select>
+      <span class="current-badge" id="currentMonthBadge" style="display:none;">الشهر الحالي</span>
+    </div>
+
     <div class="stats-row">
       <div class="stat-card rev"><div class="num" id="statRevenue">-</div><div class="lbl">إجمالي الإيرادات</div></div>
       <div class="stat-card exp"><div class="num" id="statExpenses">-</div><div class="lbl">إجمالي المصروفات</div></div>
@@ -137,10 +152,9 @@
       <button class="tab-btn" data-tab="reports">صافي الربح والفوترة</button>
     </div>
 
-    <!-- ==================== تبويب 1: كشف المرتبات ==================== -->
     <div class="tab-panel active" id="tab-payroll" style="--tab-color: var(--nile);">
       <div class="section-head">
-        <h2><span class="dot"></span>كشف مرتبات السواقين (الشهر الحالي)</h2>
+        <h2><span class="dot"></span>كشف مرتبات السواقين</h2>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <input type="text" id="payrollSearch" class="search-input" placeholder="بحث باسم السائق..." oninput="filterPayroll()">
           <button class="row-btn btn-edit" onclick="loadDriversAndPayroll()">تحديث الجدول</button>
@@ -154,7 +168,6 @@
       </div>
     </div>
 
-    <!-- ==================== تبويب 2: الإعدادات ==================== -->
     <div class="tab-panel" id="tab-settings" style="--tab-color: var(--asphalt);">
       <div class="section-head"><h2><span class="dot"></span>إعدادات الدخل العامة</h2></div>
       <form id="settingsForm" class="panel">
@@ -217,7 +230,6 @@
       <div id="leaveConfigMsg" class="form-msg"></div>
     </div>
 
-    <!-- ==================== تبويب 3: المناسبات والأعياد ==================== -->
     <div class="tab-panel" id="tab-holidays" style="--tab-color: var(--amber);">
       <div class="section-head"><h2><span class="dot"></span>إضافة مناسبة / عيد (مرتب كامل، بدون خصم رصيد)</h2></div>
       <form id="holidayForm" class="panel">
@@ -258,7 +270,6 @@
       </div>
     </div>
 
-    <!-- ==================== تبويب 4: الصيانة والمصروفات الأخرى ==================== -->
     <div class="tab-panel" id="tab-maintenance" style="--tab-color: var(--rust);">
       <div class="section-head"><h2><span class="dot"></span>صيانة التوكتوكات</h2></div>
       <form id="maintenanceForm" class="panel">
@@ -297,7 +308,7 @@
       <div id="maintMsg" class="form-msg"></div>
 
       <div class="section-head">
-        <h2><span class="dot"></span>سجل الصيانة</h2>
+        <h2><span class="dot"></span>سجل الصيانة (الشهر المختار)</h2>
         <input type="text" id="maintSearch" class="search-input" placeholder="بحث برقم التوكتوك أو السائق..." oninput="filterMaintenance()">
       </div>
       <div class="panel table-scroll" style="padding:0;">
@@ -307,7 +318,7 @@
         </table>
       </div>
 
-      <div class="section-head"><h2><span class="dot"></span>مصروفات أخرى (إيجار، كافتيريا، إلخ)</h2></div>
+      <div class="section-head"><h2><span class="dot"></span>مصروفات أخرى (إيجار، كافتيريا، إلخ) — الشهر المختار</h2></div>
       <form id="generalExpenseForm" class="panel">
         <input type="hidden" id="genExpEditId">
         <div class="fields-row">
@@ -339,11 +350,10 @@
       </div>
     </div>
 
-    <!-- ==================== تبويب 5: صافي الربح والفوترة ==================== -->
     <div class="tab-panel" id="tab-reports" style="--tab-color: var(--orange);">
       <div class="net-hero">
         <div class="big-num" id="reportNetProfit">-</div>
-        <div class="sub">صافي الربح الفعلي للشهر الحالي (بعد كل المصروفات)</div>
+        <div class="sub" id="reportPeriodLabel">صافي الربح الفعلي (بعد كل المصروفات)</div>
       </div>
       <div class="breakdown-row">
         <div class="breakdown-card">
@@ -424,15 +434,55 @@
     let allGeneralExpenses = [];
     let selectedRestDays = [];
     let selectedCustomRestDays = [];
+
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
+    const realCurrentYear = now.getFullYear();
+    const realCurrentMonth = now.getMonth() + 1;
+    let selectedYear = realCurrentYear;
+    let selectedMonth = realCurrentMonth;
+
+    const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
     fetch('/api/finance-session').then(res => res.json()).then(data => {
       if (!data.loggedIn) window.location.href = '/finance-login.html';
     });
 
-    // ==================== نظام التبويبات ====================
+    function initMonthPicker() {
+      const monthSelect = document.getElementById('monthSelect');
+      monthSelect.innerHTML = monthNames.map((name, i) => `<option value="${i + 1}">${name}</option>`).join('');
+      monthSelect.value = selectedMonth;
+
+      const yearSelect = document.getElementById('yearSelect');
+      const years = [];
+      for (let y = realCurrentYear - 2; y <= realCurrentYear + 1; y++) years.push(y);
+      yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+      yearSelect.value = selectedYear;
+
+      updateCurrentBadge();
+
+      monthSelect.addEventListener('change', () => {
+        selectedMonth = parseInt(monthSelect.value);
+        updateCurrentBadge();
+        refreshAllForSelectedMonth();
+      });
+      yearSelect.addEventListener('change', () => {
+        selectedYear = parseInt(yearSelect.value);
+        updateCurrentBadge();
+        refreshAllForSelectedMonth();
+      });
+    }
+
+    function updateCurrentBadge() {
+      const badge = document.getElementById('currentMonthBadge');
+      badge.style.display = (selectedMonth === realCurrentMonth && selectedYear === realCurrentYear) ? 'inline-block' : 'none';
+    }
+
+    function refreshAllForSelectedMonth() {
+      loadPayroll();
+      loadMaintenance();
+      loadGeneralExpenses();
+    }
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -485,7 +535,6 @@
       });
     }
 
-    // ==================== إعدادات الدخل ====================
     function loadSettings() {
       fetch('/payroll-settings').then(res => res.json()).then(data => {
         document.getElementById('incomeType').value = data.income_type || 'commission';
@@ -514,11 +563,10 @@
         document.getElementById('settingsMsg').textContent = data.message || data.error;
         document.getElementById('settingsMsg').className = 'form-msg' + (data.error ? ' error-msg' : '');
         showToast(data.message || data.error, !!data.error);
-        loadDriversAndPayroll();
+        loadPayroll();
       });
     });
 
-    // ==================== إعدادات الإجازات ====================
     function loadLeaveConfig() {
       fetch('/leave-config').then(res => res.json()).then(data => {
         document.getElementById('workingDaysPerMonth').value = data.working_days_per_month || 26;
@@ -544,7 +592,7 @@
         document.getElementById('leaveConfigMsg').textContent = data.message || data.error;
         document.getElementById('leaveConfigMsg').className = 'form-msg' + (data.error ? ' error-msg' : '');
         showToast(data.message || data.error, !!data.error);
-        if (data.message) loadDriversAndPayroll();
+        if (data.message) loadPayroll();
       })
       .catch(err => {
         document.getElementById('leaveConfigMsg').textContent = 'حصل خطأ في الاتصال بالسيرفر';
@@ -552,7 +600,6 @@
       });
     });
 
-    // ==================== المناسبات ====================
     function loadHolidayDriversList() {
       fetch('/drivers').then(res => res.json()).then(data => {
         allDrivers = data;
@@ -596,7 +643,7 @@
           document.getElementById('holidayForm').reset();
           document.querySelectorAll('.holiday-driver-cb').forEach(cb => cb.checked = true);
           showToast(data.message);
-          loadDriversAndPayroll();
+          loadPayroll();
           loadHolidayEvents();
         }
       });
@@ -635,19 +682,29 @@
         .then(data => {
           showToast(data.message || data.error);
           loadHolidayEvents();
-          loadDriversAndPayroll();
+          loadPayroll();
         });
     }
 
-    // ==================== كشف المرتبات ====================
     function loadDriversAndPayroll() {
       fetch('/drivers').then(res => res.json()).then(data => {
         allDrivers = data;
-        loadPayroll();
+        runPayrollCalculation();
       });
     }
 
     function loadPayroll() {
+      if (allDrivers.length === 0) {
+        fetch('/drivers').then(res => res.json()).then(data => {
+          allDrivers = data;
+          runPayrollCalculation();
+        });
+        return;
+      }
+      runPayrollCalculation();
+    }
+
+    function runPayrollCalculation() {
       const tbody = document.querySelector('#payrollTable tbody');
       if (allDrivers.length === 0) {
         tbody.innerHTML = `<tr class="empty-row"><td colspan="11">مفيش سواقين لسه</td></tr>`;
@@ -657,7 +714,7 @@
       let totalNet = 0;
       let totalRevenue = 0;
       let promises = allDrivers.map(d =>
-        fetch(`/payroll/calculate/${d.id}/${currentYear}/${currentMonth}?t=${Date.now()}`).then(res => res.json())
+        fetch(`/payroll/calculate/${d.id}/${selectedYear}/${selectedMonth}?t=${Date.now()}`).then(res => res.json())
       );
 
       Promise.all(promises).then(results => {
@@ -669,6 +726,7 @@
         document.getElementById('statRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
         document.getElementById('repRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
         document.getElementById('repPayroll').textContent = totalNet.toFixed(2) + ' ج';
+        document.getElementById('reportPeriodLabel').textContent = `صافي الربح لشهر ${monthNames[selectedMonth - 1]} ${selectedYear}`;
         loadFinancialSummary(totalRevenue, totalNet);
         renderPayrollTable(allPayrollRows);
       });
@@ -706,18 +764,18 @@
 
     function loadFinancialSummary(totalRevenue, totalPayroll) {
       fetch('/tuktuk-maintenance').then(res => res.json()).then(maintData => {
-        const currentMonthMaint = maintData.filter(m => {
+        const filteredMaint = maintData.filter(m => {
           const d = new Date(m.maintenance_date);
-          return d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth;
+          return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
         });
-        const totalMaintenance = currentMonthMaint.reduce((sum, m) => sum + parseFloat(m.cost), 0);
+        const totalMaintenance = filteredMaint.reduce((sum, m) => sum + parseFloat(m.cost), 0);
 
         fetch('/general-expenses').then(res => res.json()).then(genData => {
-          const currentMonthGen = genData.filter(g => {
+          const filteredGen = genData.filter(g => {
             const d = new Date(g.expense_date);
-            return d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth;
+            return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
           });
-          const totalGeneral = currentMonthGen.reduce((sum, g) => sum + parseFloat(g.amount), 0);
+          const totalGeneral = filteredGen.reduce((sum, g) => sum + parseFloat(g.amount), 0);
 
           const totalExpenses = totalPayroll + totalMaintenance + totalGeneral;
           const netProfit = totalRevenue - totalExpenses;
@@ -733,7 +791,6 @@
       });
     }
 
-    // ==================== تخصيص السائق ====================
     function openCustomizeModal(driverId) {
       const driver = allDrivers.find(d => d.id === driverId);
       document.getElementById('customizeDriverId').value = driverId;
@@ -777,14 +834,13 @@
         if (data.message) {
           showToast(data.message);
           setTimeout(closeModal, 700);
-          loadDriversAndPayroll();
+          loadPayroll();
         } else {
           showToast(data.error, true);
         }
       });
     }
 
-    // ==================== صيانة التوكتوكات ====================
     function loadTuktuksDropdown() {
       fetch('/tuktuks').then(res => res.json()).then(data => {
         const select = document.getElementById('maintTuktuk');
@@ -801,15 +857,18 @@
 
     function loadMaintenance() {
       fetch('/tuktuk-maintenance').then(res => res.json()).then(data => {
-        allMaintenance = data;
-        renderMaintenanceTable(data);
+        allMaintenance = data.filter(m => {
+          const d = new Date(m.maintenance_date);
+          return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
+        });
+        renderMaintenanceTable(allMaintenance);
       });
     }
 
     function renderMaintenanceTable(data) {
       const tbody = document.querySelector('#maintenanceTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش سجل صيانة لسه</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش سجل صيانة في الشهر المختار</td></tr>`;
         return;
       }
       const typeLabel = { scheduled: 'دورية', repair: 'إصلاح عطل' };
@@ -855,7 +914,7 @@
         .then(data => {
           showToast(data.message || data.error);
           loadMaintenance();
-          loadDriversAndPayroll();
+          loadPayroll();
         });
     }
 
@@ -887,24 +946,26 @@
           document.getElementById('maintEditId').value = '';
           document.getElementById('maintSubmitBtn').textContent = 'تسجيل مصروف الصيانة';
           loadMaintenance();
-          loadDriversAndPayroll();
+          loadPayroll();
           showToast(data.message);
         }
       });
     });
 
-    // ==================== المصروفات العامة ====================
     function loadGeneralExpenses() {
       fetch('/general-expenses').then(res => res.json()).then(data => {
-        allGeneralExpenses = data;
-        renderGeneralExpensesTable(data);
+        allGeneralExpenses = data.filter(g => {
+          const d = new Date(g.expense_date);
+          return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
+        });
+        renderGeneralExpensesTable(allGeneralExpenses);
       });
     }
 
     function renderGeneralExpensesTable(data) {
       const tbody = document.querySelector('#generalExpensesTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش مصروفات مسجلة لسه</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش مصروفات مسجلة في الشهر المختار</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(g => `
@@ -937,7 +998,7 @@
         .then(data => {
           showToast(data.message || data.error);
           loadGeneralExpenses();
-          loadDriversAndPayroll();
+          loadPayroll();
         });
     }
 
@@ -967,12 +1028,13 @@
           document.getElementById('genExpEditId').value = '';
           document.getElementById('genExpSubmitBtn').textContent = 'تسجيل المصروف';
           loadGeneralExpenses();
-          loadDriversAndPayroll();
+          loadPayroll();
           showToast(data.message);
         }
       });
     });
 
+    initMonthPicker();
     loadSettings();
     loadLeaveConfig();
     loadHolidayDriversList();
