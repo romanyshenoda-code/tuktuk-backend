@@ -99,7 +99,6 @@
       <div class="stat-card net"><div class="num" id="statNet">-</div><div class="lbl">صافي الربح</div></div>
     </div>
 
-    <!-- إعدادات الدخل العامة -->
     <div class="section-head"><h2>إعدادات الدخل العامة</h2></div>
     <form id="settingsForm" class="panel">
       <div class="fields-row">
@@ -132,7 +131,6 @@
     </form>
     <div id="settingsMsg" class="form-msg"></div>
 
-    <!-- إعدادات الإجازات العامة -->
     <div class="section-head"><h2>إعدادات الإجازات العامة</h2></div>
     <form id="leaveConfigForm" class="panel">
       <div class="fields-row">
@@ -161,7 +159,6 @@
     </form>
     <div id="leaveConfigMsg" class="form-msg"></div>
 
-    <!-- المناسبات الجماعية -->
     <div class="section-head"><h2>إضافة مناسبة / عيد (مرتب كامل، بدون خصم رصيد)</h2></div>
     <form id="holidayForm" class="panel">
       <div class="fields-row">
@@ -192,7 +189,14 @@
     </form>
     <div id="holidayMsg" class="form-msg"></div>
 
-    <!-- كشف المرتبات -->
+    <div class="section-head"><h2>سجل المناسبات المسجلة</h2></div>
+    <div class="panel table-scroll" style="padding:0;">
+      <table id="holidayEventsTable">
+        <thead><tr><th>اسم المناسبة</th><th>من</th><th>إلى</th><th>عدد السواقين المشمولين</th><th>إجراء</th></tr></thead>
+        <tbody><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+      </table>
+    </div>
+
     <div class="section-head">
       <h2>كشف مرتبات السواقين (الشهر الحالي)</h2>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -207,7 +211,6 @@
       </table>
     </div>
 
-    <!-- صيانة التوكتوكات -->
     <div class="section-head"><h2>صيانة التوكتوكات</h2></div>
     <form id="maintenanceForm" class="panel">
       <input type="hidden" id="maintEditId">
@@ -257,7 +260,6 @@
 
   </div>
 
-  <!-- مودال تخصيص سائق -->
   <div class="modal-backdrop" id="customizeModal">
     <div class="modal-box">
       <h3>تخصيص إعدادات السائق</h3>
@@ -428,12 +430,16 @@
         document.getElementById('leaveConfigMsg').className = 'form-msg' + (data.error ? ' error-msg' : '');
         showToast(data.message || data.error, !!data.error);
         if (data.message) loadDriversAndPayroll();
+      })
+      .catch(err => {
+        document.getElementById('leaveConfigMsg').textContent = 'حصل خطأ في الاتصال بالسيرفر';
+        console.error(err);
       });
     });
 
-    // ==================== المناسبات الجماعية ====================
     function loadHolidayDriversList() {
       fetch('/drivers').then(res => res.json()).then(data => {
+        allDrivers = data;
         const container = document.getElementById('holidayDriversList');
         container.innerHTML = data.map(d => `
           <div class="driver-check-row">
@@ -475,9 +481,47 @@
           document.querySelectorAll('.holiday-driver-cb').forEach(cb => cb.checked = true);
           showToast(data.message);
           loadDriversAndPayroll();
+          loadHolidayEvents();
         }
       });
     });
+
+    function loadHolidayEvents() {
+      fetch('/holiday-events').then(res => res.json()).then(events => {
+        const tbody = document.querySelector('#holidayEventsTable tbody');
+        if (events.length === 0) {
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش مناسبات مسجلة لسه</td></tr>`;
+          return;
+        }
+
+        const promises = events.map(ev =>
+          fetch(`/holiday-events/${ev.id}/drivers`).then(res => res.json()).then(drivers => ({ ...ev, driversCount: drivers.length }))
+        );
+
+        Promise.all(promises).then(fullEvents => {
+          tbody.innerHTML = fullEvents.map(ev => `
+            <tr>
+              <td>${ev.event_name}</td>
+              <td>${ev.start_date}</td>
+              <td>${ev.end_date}</td>
+              <td>${ev.driversCount} سائق</td>
+              <td><button class="row-btn btn-delete" onclick="deleteHolidayEvent(${ev.id})">حذف</button></td>
+            </tr>
+          `).join('');
+        });
+      });
+    }
+
+    function deleteHolidayEvent(id) {
+      if (!confirm('متأكد إنك عايز تمسح المناسبة دي؟ ده هيأثر على حساب مرتبات السواقين المرتبطين بيها.')) return;
+      fetch(`/holiday-events/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          showToast(data.message || data.error);
+          loadHolidayEvents();
+          loadDriversAndPayroll();
+        });
+    }
 
     function loadDriversAndPayroll() {
       fetch('/drivers').then(res => res.json()).then(data => {
@@ -718,6 +762,7 @@
     loadSettings();
     loadLeaveConfig();
     loadHolidayDriversList();
+    loadHolidayEvents();
     loadDriversAndPayroll();
     loadTuktuksDropdown();
     loadDriversDropdown();
