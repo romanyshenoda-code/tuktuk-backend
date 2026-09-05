@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الحضور والانصراف - Ginger</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
+    .topbar img { height: 34px; }
+    .topbar h1 { margin: 0; font-size: 15.5px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.85; font-size: 13px; text-decoration: none; margin-inline-end: auto; }
+
+    .wrap { max-width: 480px; margin: 0 auto; padding: 18px 16px; }
+
+    /* شاشة اختيار الكروت الفرعية */
+    .modules-grid { display: grid; gap: 14px; }
+    .module-card {
+      background: var(--paper); border-radius: 16px; padding: 22px 18px;
+      display: flex; align-items: center; gap: 16px; border: 1px solid var(--line);
+      cursor: pointer; transition: transform 0.15s ease;
+      animation: riseIn 0.4s ease backwards;
+    }
+    .module-card:active { transform: scale(0.98); }
+    .module-card .icon-box { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    .module-card .txt h3 { margin: 0 0 3px; font-size: 15.5px; }
+    .module-card .txt p { margin: 0; font-size: 12px; color: var(--muted); }
+    .module-card:nth-child(1) .icon-box { background: #E3EEEC; color: var(--nile); animation-delay: .03s; }
+    .module-card:nth-child(2) .icon-box { background: #FBF0DF; color: var(--amber); }
+    .module-card:nth-child(2) { animation-delay: .08s; }
+    .module-card:nth-child(3) .icon-box { background: #F6E1DC; color: var(--rust); }
+    .module-card:nth-child(3) { animation-delay: .13s; }
+    @keyframes riseIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* الكروت الفرعية التفصيلية */
+    .card {
+      background: var(--paper); border-radius: 14px; padding: 20px; margin-bottom: 16px;
+      border-inline-start: 5px solid var(--line); display: none;
+    }
+    .card.active { display: block; animation: fadeSlide 0.3s ease; }
+    @keyframes fadeSlide { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .card.accent-nile { border-inline-start-color: var(--nile); }
+    .card.accent-amber { border-inline-start-color: var(--amber); }
+    .card.accent-rust { border-inline-start-color: var(--rust); }
+    .card h3 { margin: 0 0 14px; font-size: 16px; }
+
+    .mini-back { background: none; border: none; color: var(--asphalt); font-size: 13.5px; font-weight: 700; cursor: pointer; padding: 0; margin-bottom: 14px; }
+
+    #reader, #reader2 { width: 100%; margin: 12px auto; border-radius: 10px; overflow: hidden; }
+    .qr-status { font-size: 13.5px; font-weight: 700; color: var(--asphalt); margin-bottom: 8px; }
+
+    button.action-btn {
+      width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 15px; font-weight: 700;
+      font-family: inherit; cursor: pointer; margin-top: 10px; color: white;
+    }
+    button.action-btn:disabled { background: #C9C2B2 !important; }
+    .btn-nile { background: var(--nile); }
+    .btn-amber { background: var(--amber); }
+    .btn-rust { background: var(--rust); }
+    .btn-photo { background: var(--asphalt); color: white; font-size: 13.5px; padding: 11px; }
+
+    .photo-preview { max-width: 130px; margin: 10px auto; display: block; border-radius: 10px; }
+    .required-label { color: var(--rust); font-weight: 700; font-size: 12px; margin-top: 4px; }
+
+    .result { margin-top: 12px; font-size: 13.5px; background: var(--sand); padding: 10px 12px; border-radius: 8px; min-height: 14px; color: #6B6455; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/driver.html" class="back-link">→ الرئيسية</a>
+    <img src="/logo.png" alt="Ginger">
+    <h1>الحضور والانصراف</h1>
+  </div>
+
+  <div class="wrap">
+
+    <!-- شاشة الاختيار -->
+    <div id="selectionScreen" class="modules-grid">
+      <div class="module-card" onclick="showCard('checkinCard')">
+        <div class="icon-box">✅</div>
+        <div class="txt"><h3>تسجيل حضور</h3><p>ابدأ ورديتك بمسح كود التوكتوك</p></div>
+      </div>
+      <div class="module-card" onclick="showCard('changeCard')">
+        <div class="icon-box">🔄</div>
+        <div class="txt"><h3>تغيير التوكتوك</h3><p>لو فيه عطل، غيّر التوكتوك من غير ما تقفل الوردية</p></div>
+      </div>
+      <div class="module-card" onclick="showCard('checkoutCard')">
+        <div class="icon-box">🚪</div>
+        <div class="txt"><h3>تسجيل انصراف</h3><p>اقفل ورديتك وسلّم التوكتوك</p></div>
+      </div>
+    </div>
+
+    <!-- كارت تسجيل حضور -->
+    <div class="card accent-nile" id="checkinCard">
+      <button class="mini-back" onclick="backToSelection()">→ رجوع</button>
+      <h3>تسجيل حضور</h3>
+      <div class="qr-status" id="qrStatus">امسح كود QR بتاع التوكتوك</div>
+      <div id="reader"></div>
+
+      <button class="btn-photo" onclick="capturePhoto('photoInputCheckIn')">📷 صورة التوكتوك</button>
+      <input type="file" id="photoInputCheckIn" accept="image/*" capture="environment" style="display:none">
+      <img id="photoPreviewCheckIn" class="photo-preview" style="display:none">
+      <div class="required-label">الصورة إجبارية لاستلام التوكتوك</div>
+
+      <button class="action-btn btn-nile" id="checkInBtn" onclick="checkIn()" disabled>تسجيل الحضور</button>
+      <div class="result" id="resultCheckin">جاهز</div>
+    </div>
+
+    <!-- كارت تغيير التوكتوك -->
+    <div class="card accent-amber" id="changeCard">
+      <button class="mini-back" onclick="backToSelection()">→ رجوع</button>
+      <h3>تغيير التوكتوك</h3>
+      <div class="qr-status" id="qrStatus2">امسح كود QR بتاع التوكتوك الجديد</div>
+      <div id="reader2"></div>
+      <button class="action-btn btn-amber" id="changeBtn" onclick="changeTuktuk()" disabled>تأكيد تغيير التوكتوك</button>
+      <div class="result" id="resultChange">جاهز</div>
+    </div>
+
+    <!-- كارت تسجيل انصراف -->
+    <div class="card accent-rust" id="checkoutCard">
+      <button class="mini-back" onclick="backToSelection()">→ رجوع</button>
+      <h3>تسجيل انصراف</h3>
+      <button class="btn-photo" onclick="capturePhoto('photoInputCheckOut')">📷 صورة تسليم التوكتوك</button>
+      <input type="file" id="photoInputCheckOut" accept="image/*" capture="environment" style="display:none">
+      <img id="photoPreviewCheckOut" class="photo-preview" style="display:none">
+      <div class="required-label">الصورة إجبارية لتسليم التوكتوك</div>
+      <button class="action-btn btn-rust" onclick="checkOut()">تسجيل الانصراف</button>
+      <div class="result" id="resultCheckout">جاهز</div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentDriverId = null;
+    let scannedQrCode = null;
+    let scannedQrCode2 = null;
+    let html5QrCode = null;
+    let html5QrCode2 = null;
+
+    fetch('/api/driver-session').then(res => res.json()).then(data => {
+      if (!data.loggedIn) { window.location.href = '/driver-login.html'; return; }
+      currentDriverId = data.driverId;
+    });
+
+    function showCard(cardId) {
+      document.getElementById('selectionScreen').style.display = 'none';
+      document.getElementById(cardId).classList.add('active');
+
+      if (cardId === 'checkinCard' && !html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (decodedText) => {
+          scannedQrCode = decodedText;
+          document.getElementById('qrStatus').textContent = 'تم مسح الكود: ' + decodedText;
+          document.getElementById('checkInBtn').disabled = false;
+          html5QrCode.stop();
+        }).catch(err => {
+          document.getElementById('qrStatus').textContent = 'مش قادر أوصل للكاميرا: ' + err;
+        });
+      }
+
+      if (cardId === 'changeCard' && !html5QrCode2) {
+        html5QrCode2 = new Html5Qrcode("reader2");
+        html5QrCode2.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (decodedText) => {
+          scannedQrCode2 = decodedText;
+          document.getElementById('qrStatus2').textContent = 'تم مسح الكود: ' + decodedText;
+          document.getElementById('changeBtn').disabled = false;
+          html5QrCode2.stop();
+        }).catch(err => {
+          document.getElementById('qrStatus2').textContent = 'مش قادر أوصل للكاميرا: ' + err;
+        });
+      }
+    }
+
+    function backToSelection() {
+      document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+      document.getElementById('selectionScreen').style.display = 'grid';
+    }
+
+    function capturePhoto(inputId) { document.getElementById(inputId).click(); }
+
+    document.getElementById('photoInputCheckIn').addEventListener('change', function(e) {
+      previewPhoto(e.target.files[0], 'photoPreviewCheckIn');
+    });
+    document.getElementById('photoInputCheckOut').addEventListener('change', function(e) {
+      previewPhoto(e.target.files[0], 'photoPreviewCheckOut');
+    });
+
+    function previewPhoto(file, previewId) {
+      if (!file) return;
+      const preview = document.getElementById(previewId);
+      const reader = new FileReader();
+      reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+      reader.readAsDataURL(file);
+    }
+
+    function checkIn() {
+      const resultDiv = document.getElementById('resultCheckin');
+      const btn = document.getElementById('checkInBtn');
+      const photoFile = document.getElementById('photoInputCheckIn').files[0];
+
+      if (!scannedQrCode) { resultDiv.textContent = 'من فضلك امسح كود QR الأول'; return; }
+      if (!photoFile) { resultDiv.textContent = 'من فضلك التقط صورة التوكتوك، الصورة إجبارية'; return; }
+      if (!navigator.geolocation) { resultDiv.textContent = 'المتصفح مش بيدعم تحديد الموقع'; return; }
+
+      btn.disabled = true;
+      resultDiv.textContent = 'جاري تحديد موقعك...';
+
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const formData = new FormData();
+        formData.append('driver_id', currentDriverId);
+        formData.append('tuktuk_qr_code', scannedQrCode);
+        formData.append('lat', position.coords.latitude);
+        formData.append('lng', position.coords.longitude);
+        formData.append('photo', photoFile);
+
+        resultDiv.textContent = 'جاري تسجيل الحضور...';
+
+        fetch('/shifts/check-in', { method: 'POST', body: formData })
+          .then(res => res.json())
+          .then(data => {
+            btn.disabled = false;
+            resultDiv.textContent = data.message || data.error;
+          })
+          .catch(() => { btn.disabled = false; resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
+      }, function(error) {
+        btn.disabled = false;
+        resultDiv.textContent = 'حصل خطأ في تحديد الموقع: ' + error.message;
+      });
+    }
+
+    function changeTuktuk() {
+      const resultDiv = document.getElementById('resultChange');
+      if (!scannedQrCode2) { resultDiv.textContent = 'من فضلك امسح كود QR الأول'; return; }
+
+      resultDiv.textContent = 'جاري تغيير التوكتوك...';
+
+      fetch('/shifts/change-tuktuk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_id: currentDriverId, new_tuktuk_qr_code: scannedQrCode2 })
+      })
+      .then(res => res.json())
+      .then(data => { resultDiv.textContent = data.message || data.error; })
+      .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
+    }
+
+    function checkOut() {
+      const resultDiv = document.getElementById('resultCheckout');
+      const photoFile = document.getElementById('photoInputCheckOut').files[0];
+
+      if (!photoFile) { resultDiv.textContent = 'من فضلك التقط صورة تسليم التوكتوك، الصورة إجبارية'; return; }
+
+      resultDiv.textContent = 'جاري البحث عن الوردية المفتوحة...';
+
+      fetch('/shifts/open/' + currentDriverId)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) { resultDiv.textContent = 'خطأ: ' + data.error; return; }
+
+          const formData = new FormData();
+          formData.append('shift_id', data.id);
+          formData.append('photo', photoFile);
+
+          resultDiv.textContent = 'جاري تسجيل الانصراف...';
+
+          fetch('/shifts/check-out', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => { resultDiv.textContent = data.message || data.error; })
+            .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
+        })
+        .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
+    }
+  </script>
+</body>
+</html>
