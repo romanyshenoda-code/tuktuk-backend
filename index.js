@@ -978,6 +978,23 @@ app.put('/drivers/:id', (req, res) => {
     res.json({ message: 'تم تحديث بيانات السائق بنجاح' });
   });
 });
+// حذف وردية نهائياً
+app.delete('/shifts/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM shifts WHERE id = ?', [id], (err, result) => {
+    if (err) {
+      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+        return res.status(400).json({ error: 'مينفعش تمسح الوردية دي لأن فيها أوردرات مسجلة عليها. احذف الأوردرات الأول من صفحة الأوردرات.' });
+      }
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في حذف الوردية' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'الوردية غير موجودة' });
+    }
+    res.json({ message: 'تم حذف الوردية نهائياً' });
+  });
+});
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
