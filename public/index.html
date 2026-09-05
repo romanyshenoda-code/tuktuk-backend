@@ -26,7 +26,14 @@
     .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
     .container h2 { font-size: 20px; margin-bottom: 22px; }
 
-    .modules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+  .modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+@media (min-width: 700px) {
+  .modules-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.module-card { padding: 34px 16px; }
+.module-card .icon { font-size: 38px; }
+.module-card .count { font-size: 32px; }
+.module-card .label { font-size: 14px; }
 
     .module-card {
       background: var(--paper); border-radius: 16px; padding: 26px 16px; text-align: center;
