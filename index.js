@@ -1074,16 +1074,6 @@ app.get('/api/finance-session', (req, res) => {
 });
 
 // ==================== إعدادات الرواتب العامة ====================
-app.get('/payroll-settings', (req, res) => {
-  db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' });
-    }
-    res.json(results[0] || {});
-  });
-});
-
 app.put('/payroll-settings', (req, res) => {
   const { income_type, monthly_salary, commission_pct, monthly_leave_balance } = req.body;
   db.query(
@@ -1097,6 +1087,17 @@ app.put('/payroll-settings', (req, res) => {
       res.json({ message: 'تم تحديث الإعدادات العامة بنجاح' });
     }
   );
+});
+
+// ==================== تخصيص سائق معين ====================
+app.get('/payroll-settings', (req, res) => {
+  db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' });
+    }
+    res.json(results[0] || {});
+  });
 });
 
 // ==================== تخصيص سائق معين ====================
