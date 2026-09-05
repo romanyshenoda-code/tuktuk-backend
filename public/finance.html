@@ -96,11 +96,14 @@
     </form>
     <div id="settingsMsg" class="form-msg"></div>
 
-    <div class="section-head"><h2>كشف مرتبات السواقين (الشهر الحالي)</h2></div>
+    <div class="section-head">
+      <h2>كشف مرتبات السواقين (الشهر الحالي)</h2>
+      <button class="row-btn btn-edit" onclick="loadDriversAndPayroll()">تحديث الجدول يدوياً</button>
+    </div>
     <div class="panel table-scroll">
       <table id="payrollTable">
         <thead><tr><th>السائق</th><th>نوع الدخل</th><th>أيام الحضور</th><th>المرتب</th><th>العمولة</th><th>الإجمالي</th><th>خصومات وسلف</th><th>الصافي</th><th>تخصيص</th></tr></thead>
-        <tbody></tbody>
+        <tbody><tr class="empty-row"><td colspan="9">جاري التحميل...</td></tr></tbody>
       </table>
     </div>
 
@@ -127,7 +130,6 @@
 
   </div>
 
-  <!-- مودال تخصيص سائق -->
   <div class="modal-backdrop" id="customizeModal">
     <div class="modal-box">
       <h3>تخصيص إعدادات السائق</h3>
@@ -175,7 +177,6 @@
     function openModal() { document.getElementById('customizeModal').classList.add('open'); }
     function closeModal() { document.getElementById('customizeModal').classList.remove('open'); }
 
-    // الإعدادات العامة
     function loadSettings() {
       fetch('/payroll-settings').then(res => res.json()).then(data => {
         document.getElementById('incomeType').value = data.income_type || 'commission';
@@ -185,26 +186,32 @@
       });
     }
 
-   document.getElementById('settingsForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  fetch('/payroll-settings', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      income_type: document.getElementById('incomeType').value,
-      monthly_salary: document.getElementById('monthlySalary').value,
-      commission_pct: document.getElementById('commissionPct').value,
-      monthly_leave_balance: document.getElementById('leaveBalance').value
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById('settingsMsg').textContent = data.message || data.error;
-    loadPayroll();
-  });
-});
+    document.getElementById('settingsForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const payload = {
+        income_type: document.getElementById('incomeType').value,
+        monthly_salary: document.getElementById('monthlySalary').value,
+        commission_pct: document.getElementById('commissionPct').value,
+        monthly_leave_balance: document.getElementById('leaveBalance').value
+      };
 
-    // كشف المرتبات
+      fetch('/payroll-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('settingsMsg').textContent = data.message || data.error;
+        showToast(data.message || data.error);
+        loadDriversAndPayroll();
+      })
+      .catch(err => {
+        document.getElementById('settingsMsg').textContent = 'حصل خطأ في الاتصال بالسيرفر';
+        console.error(err);
+      });
+    });
+
     function loadDriversAndPayroll() {
       fetch('/drivers').then(res => res.json()).then(data => {
         allDrivers = data;
@@ -218,14 +225,15 @@
         tbody.innerHTML = `<tr class="empty-row"><td colspan="9">مفيش سواقين لسه</td></tr>`;
         return;
       }
-      tbody.innerHTML = '';
+
       let totalNet = 0;
       let totalRevenue = 0;
       let promises = allDrivers.map(d =>
-        fetch(`/payroll/calculate/${d.id}/${currentYear}/${currentMonth}`).then(res => res.json())
+        fetch(`/payroll/calculate/${d.id}/${currentYear}/${currentMonth}?t=${Date.now()}`).then(res => res.json())
       );
 
       Promise.all(promises).then(results => {
+        tbody.innerHTML = '';
         results.forEach(p => {
           totalNet += parseFloat(p.net_pay);
           totalRevenue += parseFloat(p.total_revenue);
@@ -233,7 +241,7 @@
           const row = document.createElement('tr');
           row.innerHTML = `
             <td>${p.driver_name}</td>
-            <td>${incomeLabel[p.income_type]}</td>
+            <td>${incomeLabel[p.income_type] || p.income_type}</td>
             <td>${p.days_present} / ${p.days_in_month}</td>
             <td>${p.salary_part}</td>
             <td>${p.commission_part}</td>
@@ -246,8 +254,6 @@
         });
 
         document.getElementById('statRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
-        document.getElementById('statExpenses').textContent = '-';
-        document.getElementById('statNet').textContent = '-';
         loadFinancialSummary(totalRevenue, totalNet);
       });
     }
@@ -304,7 +310,6 @@
       });
     }
 
-    // صيانة التوكتوكات
     function loadTuktuksDropdown() {
       fetch('/tuktuks').then(res => res.json()).then(data => {
         allTuktuks = data;
