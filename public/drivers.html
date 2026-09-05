@@ -14,21 +14,18 @@
     * { box-sizing: border-box; }
     body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
 
-    .topbar {
-      background: var(--asphalt); color: var(--sand); padding: 16px 24px;
-      display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange);
-    }
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
     .topbar img { height: 36px; }
     .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
     .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; margin-inline-end: auto; }
 
-    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
 
     .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
     .section-head h2 { font-size: 18px; margin: 0; }
     .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
-    input, select { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
+    input { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
     input:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
     .search-input { width: 240px; }
 
@@ -46,7 +43,10 @@
 
     .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; color: white; background: var(--nile); }
 
+    .actions-cell { display: flex; gap: 6px; flex-wrap: wrap; }
     .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; }
+    .btn-edit { background: var(--amber); }
+    .btn-password { background: var(--asphalt); }
     .btn-delete { background: var(--rust); }
 
     .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
@@ -85,12 +85,13 @@
     </div>
     <div class="panel table-scroll">
       <table id="driversTable">
-        <thead><tr><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الرقم القومي</th><th>تاريخ التعيين</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <thead><tr><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الرقم القومي</th><th>تاريخ التعيين</th><th>الحالة</th><th>إجراءات</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
   </div>
 
+  <!-- مودال إضافة سائق -->
   <div class="modal-backdrop" id="driverModal">
     <div class="modal-box">
       <h3>إضافة سائق جديد</h3>
@@ -107,6 +108,42 @@
         </div>
       </form>
       <div id="addDriverMsg" class="form-msg"></div>
+    </div>
+  </div>
+
+  <!-- مودال تعديل بيانات سائق -->
+  <div class="modal-backdrop" id="editModal">
+    <div class="modal-box">
+      <h3>تعديل بيانات السائق</h3>
+      <div class="modal-sub">حدّث بيانات السائق واحفظ</div>
+      <form id="editDriverForm">
+        <input type="hidden" id="editDriverId">
+        <input type="text" id="editName" placeholder="الاسم" required>
+        <input type="text" id="editPhone" placeholder="رقم التليفون" required>
+        <input type="text" id="editNationalId" placeholder="الرقم القومي">
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" onclick="closeModal('editModal')">إلغاء</button>
+          <button type="submit" class="btn-modal-save">حفظ التعديلات</button>
+        </div>
+      </form>
+      <div id="editDriverMsg" class="form-msg"></div>
+    </div>
+  </div>
+
+  <!-- مودال تغيير الباسورد -->
+  <div class="modal-backdrop" id="passwordModal">
+    <div class="modal-box">
+      <h3>تغيير كلمة المرور</h3>
+      <div class="modal-sub">هيتغيّر باسورد دخول السائق لصفحته الشخصية</div>
+      <form id="passwordForm">
+        <input type="hidden" id="passwordDriverId">
+        <input type="password" id="newDriverPassword" placeholder="كلمة المرور الجديدة" required>
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" onclick="closeModal('passwordModal')">إلغاء</button>
+          <button type="submit" class="btn-modal-save">حفظ الباسورد</button>
+        </div>
+      </form>
+      <div id="passwordMsg" class="form-msg"></div>
     </div>
   </div>
 
@@ -132,7 +169,7 @@
         tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش سواقين لسه</td></tr>`;
         return;
       }
-           tbody.innerHTML = data.map(d => `
+      tbody.innerHTML = data.map(d => `
         <tr>
           <td>${d.id}</td>
           <td>${d.name}</td>
@@ -141,8 +178,11 @@
           <td>${formatDate(d.created_at)}</td>
           <td><span class="badge">${d.status === 'active' ? 'نشط' : 'غير نشط'}</span></td>
           <td>
-            <button class="row-btn btn-active" onclick="changePassword(${d.id})">تغيير الباسورد</button>
-            <button class="row-btn btn-delete" onclick="deleteDriver(${d.id})">حذف نهائي</button>
+            <div class="actions-cell">
+              <button class="row-btn btn-edit" onclick='openEditModal(${JSON.stringify(d)})'>تعديل</button>
+              <button class="row-btn btn-password" onclick="openPasswordModal(${d.id})">الباسورد</button>
+              <button class="row-btn btn-delete" onclick="deleteDriver(${d.id})">حذف نهائي</button>
+            </div>
           </td>
         </tr>
       `).join('');
@@ -163,19 +203,21 @@
           loadDrivers();
         });
     }
-        function changePassword(id) {
-      const newPassword = prompt('اكتب الباسورد الجديد للسائق:');
-      if (!newPassword) return;
 
-      fetch(`/drivers/${id}/password`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: newPassword })
-      })
-      .then(res => res.json())
-      .then(data => {
-        alert(data.message || data.error);
-      });
+    function openEditModal(driver) {
+      document.getElementById('editDriverId').value = driver.id;
+      document.getElementById('editName').value = driver.name;
+      document.getElementById('editPhone').value = driver.phone;
+      document.getElementById('editNationalId').value = driver.national_id || '';
+      document.getElementById('editDriverMsg').textContent = '';
+      openModal('editModal');
+    }
+
+    function openPasswordModal(id) {
+      document.getElementById('passwordDriverId').value = id;
+      document.getElementById('newDriverPassword').value = '';
+      document.getElementById('passwordMsg').textContent = '';
+      openModal('passwordModal');
     }
 
     document.getElementById('addDriverForm').addEventListener('submit', function(e) {
@@ -197,6 +239,47 @@
           document.getElementById('addDriverForm').reset();
           loadDrivers();
           setTimeout(() => closeModal('driverModal'), 700);
+        }
+      });
+    });
+
+    document.getElementById('editDriverForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const id = document.getElementById('editDriverId').value;
+      const name = document.getElementById('editName').value;
+      const phone = document.getElementById('editPhone').value;
+      const national_id = document.getElementById('editNationalId').value;
+
+      fetch(`/drivers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, national_id })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('editDriverMsg').textContent = data.message || data.error;
+        if (data.message) {
+          loadDrivers();
+          setTimeout(() => closeModal('editModal'), 700);
+        }
+      });
+    });
+
+    document.getElementById('passwordForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const id = document.getElementById('passwordDriverId').value;
+      const password = document.getElementById('newDriverPassword').value;
+
+      fetch(`/drivers/${id}/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('passwordMsg').textContent = data.message || data.error;
+        if (data.message) {
+          setTimeout(() => closeModal('passwordModal'), 700);
         }
       });
     });
