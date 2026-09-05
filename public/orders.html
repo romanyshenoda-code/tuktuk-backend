@@ -34,18 +34,18 @@
     .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; color: white; }
     .badge-open { background: var(--nile); }
     .badge-closed { background: var(--muted); }
-    .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; }
-    .btn-delete { background: var(--rust); }
+    .badge-cancelled { background: var(--rust); }
+    .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
+    .btn-cancel { background: var(--rust); }
+    .btn-delete { background: var(--ink); }
     .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
 
-    .confirm-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.7); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; animation: fadeIn 0.18s ease; }
+    .confirm-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; animation: fadeIn 0.18s ease; }
     .confirm-backdrop.open { display: flex; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .confirm-box { background: var(--paper); border-radius: 16px; padding: 26px; width: 100%; max-width: 380px; border: 3px solid var(--rust); text-align: center; animation: popIn 0.22s cubic-bezier(.2,.9,.3,1.2); }
+    .confirm-box { background: var(--paper); border-radius: 16px; padding: 24px; width: 100%; max-width: 340px; border-top: 5px solid var(--rust); text-align: center; animation: popIn 0.22s cubic-bezier(.2,.9,.3,1.2); }
     @keyframes popIn { from { opacity: 0; transform: scale(0.92) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-    .confirm-box .warn-icon { font-size: 30px; margin-bottom: 6px; }
-    .confirm-box h4 { margin: 0 0 8px; color: var(--rust); font-size: 16px; }
-    .confirm-box p { font-size: 13.5px; margin: 0 0 18px; line-height: 1.6; color: #5A5348; }
+    .confirm-box p { font-size: 14.5px; margin: 0 0 18px; line-height: 1.6; }
     .confirm-actions { display: flex; gap: 8px; }
     .confirm-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
     .btn-confirm-yes { background: var(--rust); color: white; }
@@ -65,6 +65,24 @@
   </div>
 
   <div class="container">
+    <div class="section-head"><h2>الأوردرات الشغالة الآن</h2></div>
+    <div class="panel table-scroll">
+      <table id="activeOrdersTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>وقت الفتح</th><th>إجراء</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-head">
+      <h2>سجل كل الأوردرات</h2>
+      <input type="text" id="orderSearch" class="search-input" placeholder="بحث باسم السائق..." oninput="filterOrders()">
+    </div>
+    <div class="panel table-scroll">
+      <table id="ordersTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>المسافة (كم)</th><th>السعر</th><th>مستحقات السائق</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
     <div class="section-head"><h2>ملخصات الورديات</h2></div>
     <div class="panel table-scroll">
@@ -73,43 +91,21 @@
         <tbody></tbody>
       </table>
     </div>
-
-    <div class="section-head"><h2>الورديات المفتوحة حالياً</h2></div>
-    <div class="panel table-scroll">
-      <table id="openShiftsTable">
-        <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <div class="section-head">
-      <h2>سجل الورديات (لحذف وردية عشان تقدر تحذف سائق مرتبط بيها)</h2>
-      <input type="text" id="shiftSearch" class="search-input" placeholder="بحث باسم السائق..." oninput="filterShifts()">
-    </div>
-    <div class="panel table-scroll">
-      <table id="shiftsTable">
-        <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th><th>وقت الانصراف</th><th>الحالة</th><th>إجراء</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
   </div>
 
   <div class="confirm-backdrop" id="confirmBackdrop">
     <div class="confirm-box">
-      <div class="warn-icon">⚠️</div>
-      <h4>تحذير: حذف نهائي لا رجعة فيه</h4>
       <p id="confirmMessage"></p>
       <div class="confirm-actions">
         <button class="btn-confirm-no" onclick="closeConfirm(false)">إلغاء</button>
-        <button class="btn-confirm-yes" onclick="closeConfirm(true)">أيوه، احذف نهائياً</button>
+        <button class="btn-confirm-yes" onclick="closeConfirm(true)">تأكيد</button>
       </div>
     </div>
   </div>
   <div class="toast" id="toast"></div>
 
   <script>
-    let allShifts = [];
+    let allOrders = [];
     let confirmResolve = null;
 
     function showConfirm(message) {
@@ -125,10 +121,88 @@
       const t = document.getElementById('toast');
       t.textContent = message;
       t.className = 'toast show' + (isError ? ' error' : '');
-      setTimeout(() => { t.className = 'toast'; }, 3500);
+      setTimeout(() => { t.className = 'toast'; }, 2500);
     }
 
     function formatDateTime(d) { return d ? new Date(d).toLocaleString('ar-EG') : '-'; }
+
+    function loadActiveOrders() {
+      fetch('/orders/active').then(res => res.json()).then(data => {
+        const tbody = document.querySelector('#activeOrdersTable tbody');
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش أوردرات شغالة دلوقتي</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = data.map(o => `
+          <tr>
+            <td>${o.id}</td>
+            <td>${o.driver_name}</td>
+            <td>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'}</td>
+            <td>${formatDateTime(o.start_time)}</td>
+            <td><button class="row-btn btn-cancel" onclick="cancelOrder(${o.id})">إلغاء الأوردر</button></td>
+          </tr>
+        `).join('');
+      });
+    }
+
+    function loadOrders() {
+      fetch('/orders').then(res => res.json()).then(data => {
+        allOrders = data;
+        renderOrders(data);
+      });
+    }
+
+    function renderOrders(data) {
+      const tbody = document.querySelector('#ordersTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">مفيش أوردرات مسجلة</td></tr>`;
+        return;
+      }
+      const statusLabel = { open: 'مفتوح', closed: 'مقفول', cancelled: 'ملغي' };
+      tbody.innerHTML = data.map(o => `
+        <tr>
+          <td>${o.id}</td>
+          <td>${o.driver_name}</td>
+          <td>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'}</td>
+          <td>${o.distance_km || '-'}</td>
+          <td>${o.price || '-'}</td>
+          <td>${o.driver_earning || '-'}</td>
+          <td><span class="badge badge-${o.status}">${statusLabel[o.status]}</span></td>
+          <td><button class="row-btn btn-delete" onclick="deleteOrder(${o.id})">حذف نهائي</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function filterOrders() {
+      const q = document.getElementById('orderSearch').value.trim();
+      if (!q) { renderOrders(allOrders); return; }
+      renderOrders(allOrders.filter(o => o.driver_name.includes(q)));
+    }
+
+    async function cancelOrder(id) {
+      const confirmed = await showConfirm('متأكد إنك عايز تلغي الأوردر ده؟');
+      if (!confirmed) return;
+
+      fetch(`/orders/${id}/cancel`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          showToast(data.message || data.error, !data.message);
+          loadActiveOrders();
+          loadOrders();
+        });
+    }
+
+    async function deleteOrder(id) {
+      const confirmed = await showConfirm('متأكد إنك عايز تمسح الأوردر ده نهائياً؟ الإجراء ده مينفعش يترجع فيه.');
+      if (!confirmed) return;
+
+      fetch(`/orders/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          showToast(data.message || data.error, !data.message);
+          loadOrders();
+        });
+    }
 
     function loadSummaries() {
       fetch('/shift-summaries').then(res => res.json()).then(data => {
@@ -152,71 +226,9 @@
       });
     }
 
-    function loadShifts() {
-      fetch('/shifts').then(res => res.json()).then(data => {
-        allShifts = data;
-        renderShifts(data);
-        renderOpenShifts(data.filter(s => s.status === 'open'));
-      });
-    }
-
-    function renderOpenShifts(data) {
-      const tbody = document.querySelector('#openShiftsTable tbody');
-      if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="4">مفيش ورديات مفتوحة دلوقتي</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = data.map(s => `
-        <tr>
-          <td>${s.id}</td>
-          <td>${s.driver_name}</td>
-          <td>${s.tuktuk_number}</td>
-          <td>${formatDateTime(s.check_in_time)}</td>
-        </tr>
-      `).join('');
-    }
-
-    function renderShifts(data) {
-      const tbody = document.querySelector('#shiftsTable tbody');
-      if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش ورديات مسجلة</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = data.map(s => `
-        <tr>
-          <td>${s.id}</td>
-          <td>${s.driver_name}</td>
-          <td>${s.tuktuk_number}</td>
-          <td>${formatDateTime(s.check_in_time)}</td>
-          <td>${formatDateTime(s.check_out_time)}</td>
-          <td><span class="badge badge-${s.status}">${s.status === 'open' ? 'مفتوحة' : 'مقفولة'}</span></td>
-          <td><button class="row-btn btn-delete" onclick="deleteShift(${s.id})">حذف نهائي</button></td>
-        </tr>
-      `).join('');
-    }
-
-    function filterShifts() {
-      const q = document.getElementById('shiftSearch').value.trim();
-      if (!q) { renderShifts(allShifts); return; }
-      renderShifts(allShifts.filter(s => s.driver_name.includes(q)));
-    }
-
-    async function deleteShift(id) {
-      const confirmed = await showConfirm(
-        `أنت على وشك حذف الوردية رقم ${id} نهائياً من قاعدة البيانات. البيانات دي مش هترجع تاني. لو الوردية فيها أوردرات مسجلة، الحذف هيترفض ولازم تحذف الأوردرات دي الأول.`
-      );
-      if (!confirmed) return;
-
-      fetch(`/shifts/${id}`, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(data => {
-          showToast(data.message || data.error, !data.message);
-          loadShifts();
-        });
-    }
-
+    loadActiveOrders();
+    loadOrders();
     loadSummaries();
-    loadShifts();
   </script>
 </body>
 </html>
