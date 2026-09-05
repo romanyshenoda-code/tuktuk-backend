@@ -1146,6 +1146,119 @@ app.get('/tuktuk-maintenance', (req, res) => {
     res.json(results);
   });
 });
+// ==================== حساب راتب سائق لشهر معين ====================
+app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
+  const { driver_id, year, month } = req.params;
+
+  // نجيب بيانات السائق (فيها التخصيص لو موجود)
+  db.query('SELECT * FROM drivers WHERE id = ?', [driver_id], (err, driverResults) => {
+    if (err || driverResults.length === 0) {
+      return res.status(404).json({ error: 'السائق غير موجود' });
+    }
+    const driver = driverResults[0];
+
+    // نجيب الإعدادات العامة
+    db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' });
+      }
+      const settings = settingsResults[0];
+
+      // نحدد القيم الفعلية: مخصص للسائق ده، أو الإعداد العام
+      const income_type = driver.is_customized ? driver.custom_income_type : settings.income_type;
+      const monthly_salary = driver.is_customized ? driver.custom_monthly_salary : settings.monthly_salary;
+      const commission_pct = driver.is_customized ? driver.custom_commission_pct : settings.commission_pct;
+
+      // نحسب عدد أيام الحضور الفعلية في الشهر ده
+      const attendanceQuery = `
+        SELECT COUNT(DISTINCT DATE(check_in_time)) AS days_present
+        FROM shifts
+        WHERE driver_id = ? AND YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
+      `;
+      db.query(attendanceQuery, [driver_id, year, month], (err, attendanceResults) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' });
+        }
+        const days_present = attendanceResults[0].days_present || 0;
+
+        // نجيب إجمالي أرباح الأوردرات في الشهر ده (للعمولة)
+        const earningsQuery = `
+          SELECT COALESCE(SUM(price), 0) AS total_revenue
+          FROM orders
+          WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
+        `;
+        db.query(earningsQuery, [driver_id, year, month], (err, earningsResults) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'حصل خطأ في حساب الإيرادات' });
+          }
+          const total_revenue = parseFloat(earningsResults[0].total_revenue);
+
+          // نجيب إجمالي الخصومات في الشهر ده
+          const deductionsQuery = `
+            SELECT COALESCE(SUM(amount), 0) AS total_deductions
+            FROM deductions
+            WHERE driver_id = ? AND YEAR(created_at) = ? AND MONTH(created_at) = ?
+          `;
+          db.query(deductionsQuery, [driver_id, year, month], (err, deductionsResults) => {
+            if (err) {
+              console.error(err);
+              return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' });
+            }
+            const total_deductions = parseFloat(deductionsResults[0].total_deductions);
+
+            // نجيب إجمالي السلف الموافق عليها في الشهر ده
+            const advancesQuery = `
+              SELECT COALESCE(SUM(amount), 0) AS total_advances
+              FROM advances
+              WHERE driver_id = ? AND status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ?
+            `;
+            db.query(advancesQuery, [driver_id, year, month], (err, advancesResults) => {
+              if (err) {
+                console.error(err);
+                return res.status(500).json({ error: 'حصل خطأ في حساب السلف' });
+              }
+              const total_advances = parseFloat(advancesResults[0].total_advances);
+
+              // الحساب النهائي
+              const daysInMonth = new Date(year, month, 0).getDate();
+              let salaryPart = 0;
+              let commissionPart = 0;
+
+              if (income_type === 'salary' || income_type === 'both') {
+                const dailyRate = monthly_salary / daysInMonth;
+                salaryPart = dailyRate * days_present;
+              }
+              if (income_type === 'commission' || income_type === 'both') {
+                commissionPart = total_revenue * (commission_pct / 100);
+              }
+
+              const grossPay = salaryPart + commissionPart;
+              const netPay = grossPay - total_deductions - total_advances;
+
+              res.json({
+                driver_id: parseInt(driver_id),
+                driver_name: driver.name,
+                income_type,
+                days_present,
+                days_in_month: daysInMonth,
+                total_revenue: total_revenue.toFixed(2),
+                salary_part: salaryPart.toFixed(2),
+                commission_part: commissionPart.toFixed(2),
+                gross_pay: grossPay.toFixed(2),
+                total_deductions: total_deductions.toFixed(2),
+                total_advances: total_advances.toFixed(2),
+                net_pay: netPay.toFixed(2)
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+});
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
