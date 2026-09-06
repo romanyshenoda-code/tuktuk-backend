@@ -3,6 +3,7 @@ const session = require('express-session');
 const multer = require('multer');
 const path = require('path');
 const db = require('./db');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const PORT = 3000;
@@ -1113,6 +1114,51 @@ app.delete('/advances/:id', (req, res) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف طلب السلفة' }); }
     if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
     res.json({ message: 'تم حذف طلب السلفة نهائياً' });
+  });
+});
+// ==================== سكريبت ترحيل الباسوردات (مؤقت - يُمسح بعد الاستخدام) ====================
+app.get('/migrate-passwords-once-2026', (req, res) => {
+  const results = { admins: 0, drivers: 0, finance: 0, errors: [] };
+
+  db.query('SELECT id, password FROM admins', (err, admins) => {
+    if (err) return res.status(500).json({ error: 'خطأ في جلب الأدمنية' });
+
+    admins.forEach(a => {
+      if (a.password && a.password.startsWith('$2')) return;
+      const hashed = bcrypt.hashSync(a.password, 10);
+      db.query('UPDATE admins SET password = ? WHERE id = ?', [hashed, a.id]);
+      results.admins++;
+    });
+
+    db.query('SELECT id, password FROM drivers', (err, drivers) => {
+      if (err) return res.status(500).json({ error: 'خطأ في جلب السواقين' });
+
+      drivers.forEach(d => {
+        if (!d.password || d.password.startsWith('$2')) return;
+        const hashed = bcrypt.hashSync(d.password, 10);
+        db.query('UPDATE drivers SET password = ? WHERE id = ?', [hashed, d.id]);
+        results.drivers++;
+      });
+
+      db.query('SELECT id, password FROM finance_admin', (err, finance) => {
+        if (err) return res.status(500).json({ error: 'خطأ في جلب حسابات المالية' });
+
+        finance.forEach(f => {
+          if (!f.password || f.password.startsWith('$2')) return;
+          const hashed = bcrypt.hashSync(f.password, 10);
+          db.query('UPDATE finance_admin SET password = ? WHERE id = ?', [hashed, f.id]);
+          results.finance++;
+        });
+
+        setTimeout(() => {
+          res.json({
+            message: 'تم تشفير كل الباسوردات بنجاح',
+            details: `أدمنية: ${results.admins} | سواقين: ${results.drivers} | مالية: ${results.finance}`,
+            warning: 'امسح الـ endpoint ده من index.js فوراً بعد ما تتأكد إن كل حاجة شغالة'
+          });
+        }, 1500);
+      });
+    });
   });
 });
 
