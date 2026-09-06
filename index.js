@@ -34,51 +34,7 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 8 }
 }));
 
-// ==================== سكريبت ترحيل الباسوردات (مؤقت - امسحه بعد الاستخدام) ====================
-app.get('/migrate-passwords-once-2026', (req, res) => {
-  const results = { admins: 0, drivers: 0, finance: 0 };
 
-  db.query('SELECT id, password FROM admins', (err, admins) => {
-    if (err) return res.status(500).json({ error: 'خطأ في جلب الأدمنية' });
-
-    admins.forEach(a => {
-      if (!a.password || a.password.startsWith('$2')) return;
-      const hashed = bcrypt.hashSync(a.password, 10);
-      db.query('UPDATE admins SET password = ? WHERE id = ?', [hashed, a.id]);
-      results.admins++;
-    });
-
-    db.query('SELECT id, password FROM drivers', (err, drivers) => {
-      if (err) return res.status(500).json({ error: 'خطأ في جلب السواقين' });
-
-      drivers.forEach(d => {
-        if (!d.password || d.password.startsWith('$2')) return;
-        const hashed = bcrypt.hashSync(d.password, 10);
-        db.query('UPDATE drivers SET password = ? WHERE id = ?', [hashed, d.id]);
-        results.drivers++;
-      });
-
-      db.query('SELECT id, password FROM finance_admin', (err, finance) => {
-        if (err) return res.status(500).json({ error: 'خطأ في جلب حسابات المالية' });
-
-        finance.forEach(f => {
-          if (!f.password || f.password.startsWith('$2')) return;
-          const hashed = bcrypt.hashSync(f.password, 10);
-          db.query('UPDATE finance_admin SET password = ? WHERE id = ?', [hashed, f.id]);
-          results.finance++;
-        });
-
-        setTimeout(() => {
-          res.json({
-            message: 'تم تشفير كل الباسوردات بنجاح',
-            details: `أدمنية: ${results.admins} | سواقين: ${results.drivers} | مالية: ${results.finance}`,
-            warning: 'امسح الـ endpoint ده من index.js فوراً بعد ما تتأكد إن كل حاجة شغالة'
-          });
-        }, 1500);
-      });
-    });
-  });
-});
 
 // ==================== تسجيل دخول الأدمن (مشفّر) ====================
 function requireLogin(req, res, next) {
