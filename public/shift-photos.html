@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>صور الورديات - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
+    .topbar img { height: 38px; }
+    .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; }
+    .logout-link { margin-inline-start: auto; color: var(--sand); opacity: 0.75; font-size: 13px; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); padding: 6px 12px; border-radius: 20px; }
+    .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
+
+    .filters-bar { display: flex; align-items: center; gap: 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 22px; flex-wrap: wrap; }
+    .filters-bar label { font-size: 13px; font-weight: 700; color: var(--muted); }
+    select, input { padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
+    select:focus, input:focus { outline: 2px solid var(--nile); }
+    .search-input { min-width: 200px; }
+
+    .shifts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .shift-card {
+      background: var(--paper); border-radius: 14px; border: 1px solid var(--line); overflow: hidden;
+      animation: riseIn 0.35s ease backwards;
+    }
+    @keyframes riseIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .shift-card .card-head { padding: 14px 16px; background: #FAF7F0; border-bottom: 1px solid var(--line); }
+    .shift-card .card-head h3 { margin: 0 0 3px; font-size: 15px; }
+    .shift-card .card-head .meta { font-size: 12px; color: var(--muted); }
+    .photos-row { display: grid; grid-template-columns: 1fr 1fr; }
+    .photo-box { padding: 12px; text-align: center; }
+    .photo-box:first-child { border-inline-end: 1px solid var(--line); }
+    .photo-box .photo-label { font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+    .photo-box img { width: 100%; height: 130px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: transform 0.15s; }
+    .photo-box img:hover { transform: scale(1.03); }
+    .photo-box .no-photo { height: 130px; display: flex; align-items: center; justify-content: center; background: var(--sand); border-radius: 8px; font-size: 12px; color: var(--muted); }
+    .photo-box .time { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+    .empty-note { text-align: center; padding: 50px 20px; color: var(--muted); background: var(--paper); border-radius: 12px; border: 1px solid var(--line); }
+
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 300; padding: 20px; cursor: zoom-out; }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 100%; max-height: 90vh; border-radius: 10px; }
+    .lightbox .close-hint { position: absolute; top: 20px; right: 24px; color: white; font-size: 14px; opacity: 0.7; }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/index.html" class="back-link">→ الرئيسية</a>
+    <img src="/logo.png" alt="Ginger">
+    <h1>صور الحضور والانصراف</h1>
+    <a href="/api/logout" class="logout-link">خروج</a>
+  </div>
+
+  <div class="container">
+
+    <div class="filters-bar">
+      <label>الشهر:</label>
+      <select id="monthSelect"></select>
+      <select id="yearSelect"></select>
+      <input type="text" id="searchInput" class="search-input" placeholder="بحث باسم السائق أو رقم التوكتوك..." oninput="filterShifts()">
+    </div>
+
+    <div class="shifts-grid" id="shiftsGrid">
+      <div class="empty-note">جاري التحميل...</div>
+    </div>
+
+  </div>
+
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <div class="close-hint">اضغط في أي مكان للإغلاق</div>
+    <img id="lightboxImg" src="" alt="">
+  </div>
+
+  <script>
+    let allShifts = [];
+    const now = new Date();
+    const realYear = now.getFullYear();
+    const realMonth = now.getMonth() + 1;
+    let selectedYear = realYear;
+    let selectedMonth = realMonth;
+
+    const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+    function initFilters() {
+      const monthSelect = document.getElementById('monthSelect');
+      monthSelect.innerHTML = monthNames.map((n, i) => `<option value="${i + 1}">${n}</option>`).join('');
+      monthSelect.value = selectedMonth;
+
+      const yearSelect = document.getElementById('yearSelect');
+      const years = [];
+      for (let y = realYear - 2; y <= realYear + 1; y++) years.push(y);
+      yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+      yearSelect.value = selectedYear;
+
+      monthSelect.addEventListener('change', () => {
+        selectedMonth = parseInt(monthSelect.value);
+        loadShifts();
+      });
+      yearSelect.addEventListener('change', () => {
+        selectedYear = parseInt(yearSelect.value);
+        loadShifts();
+      });
+    }
+
+    function formatDateTime(dt) {
+      if (!dt) return '-';
+      const d = new Date(dt);
+      return d.toLocaleString('ar-EG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function loadShifts() {
+      document.getElementById('shiftsGrid').innerHTML = '<div class="empty-note">جاري التحميل...</div>';
+      fetch(`/shifts/photos/${selectedYear}/${selectedMonth}`)
+        .then(res => res.json())
+        .then(data => {
+          allShifts = data;
+          renderShifts(data);
+        })
+        .catch(() => {
+          document.getElementById('shiftsGrid').innerHTML = '<div class="empty-note">حصل خطأ في الاتصال بالسيرفر</div>';
+        });
+    }
+
+    function renderShifts(data) {
+      const grid = document.getElementById('shiftsGrid');
+      if (data.length === 0) {
+        grid.innerHTML = '<div class="empty-note">مفيش ورديات مسجلة في الشهر ده</div>';
+        return;
+      }
+
+      grid.innerHTML = data.map((s, i) => `
+        <div class="shift-card" style="animation-delay: ${i * 0.03}s">
+          <div class="card-head">
+            <h3>${s.driver_name}</h3>
+            <div class="meta">توكتوك ${s.tuktuk_number} — ${formatDateTime(s.check_in_time)}</div>
+          </div>
+          <div class="photos-row">
+            <div class="photo-box">
+              <div class="photo-label">صورة الحضور</div>
+              ${s.check_in_photo
+                ? `<img src="/uploads/${s.check_in_photo}" onclick="openLightbox('/uploads/${s.check_in_photo}')" alt="حضور">`
+                : `<div class="no-photo">مفيش صورة</div>`}
+              <div class="time">${formatDateTime(s.check_in_time)}</div>
+            </div>
+            <div class="photo-box">
+              <div class="photo-label">صورة الانصراف</div>
+              ${s.check_out_photo
+                ? `<img src="/uploads/${s.check_out_photo}" onclick="openLightbox('/uploads/${s.check_out_photo}')" alt="انصراف">`
+                : `<div class="no-photo">${s.check_out_time ? 'مفيش صورة' : 'لسه شغال'}</div>`}
+              <div class="time">${formatDateTime(s.check_out_time)}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterShifts() {
+      const q = document.getElementById('searchInput').value.trim();
+      if (!q) { renderShifts(allShifts); return; }
+      renderShifts(allShifts.filter(s =>
+        s.driver_name.includes(q) || String(s.tuktuk_number).includes(q)
+      ));
+    }
+
+    function openLightbox(src) {
+      document.getElementById('lightboxImg').src = src;
+      document.getElementById('lightbox').classList.add('open');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+    }
+
+    initFilters();
+    loadShifts();
+  </script>
+</body>
+</html>
