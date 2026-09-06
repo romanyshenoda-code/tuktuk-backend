@@ -485,13 +485,19 @@ app.post('/orders/close', upload.single('photo'), (req, res) => {
 
       db.query('SELECT * FROM pricing_rules WHERE order_type = ? ORDER BY effective_from DESC LIMIT 1', [order.order_type], (err, pricingResults) => {
         if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب التسعيرة' }); }
-        const pricing = pricingResults[0];
+                const pricing = pricingResults[0];
+        if (!pricing) {
+          return res.status(400).json({ error: 'مفيش تسعيرة محددة لنوع الرحلة ده' });
+        }
+
         let price = 0;
-        if (order.order_type === 'delivery') price = distance_km * pricing.price_per_km;
-        else if (order.order_type === 'full_trip') price = pricing.price_per_day;
+        if (order.order_type === 'delivery') {
+          price = distance_km * parseFloat(pricing.price_per_km || 0);
+        } else if (order.order_type === 'full_trip') {
+          price = parseFloat(pricing.price_per_day || 0);
+        }
 
-        const driver_earning = price * (order.driver_commission_pct / 100);
-
+        const driver_earning = price * (parseFloat(order.driver_commission_pct || 0) / 100);
         db.query(
           `UPDATE orders SET end_lat = ?, end_lng = ?, end_time = NOW(), distance_km = ?, price = ?, driver_earning = ?, status = 'closed', delivery_photo = ? WHERE id = ?`,
           [end_lat, end_lng, distance_km.toFixed(2), price.toFixed(2), driver_earning.toFixed(2), photo, order_id],
