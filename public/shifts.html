@@ -38,19 +38,28 @@
     .btn-delete { background: var(--rust); }
     .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
 
-    /* بوب أب التحذير القوي */
-    .confirm-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.7); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; animation: fadeIn 0.18s ease; }
+    .photos-cell { display: flex; gap: 6px; align-items: center; }
+    .thumb-wrap { text-align: center; }
+    .thumb-wrap .thumb-label { font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+    .thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 7px; cursor: pointer; border: 1px solid var(--line); transition: transform 0.15s; display: block; }
+    .thumb:hover { transform: scale(1.15); }
+    .no-thumb { width: 44px; height: 44px; background: var(--sand); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 9.5px; color: var(--muted); border: 1px dashed var(--line); }
+
+    .confirm-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; animation: fadeIn 0.18s ease; }
     .confirm-backdrop.open { display: flex; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .confirm-box { background: var(--paper); border-radius: 16px; padding: 26px; width: 100%; max-width: 380px; border: 3px solid var(--rust); text-align: center; animation: popIn 0.22s cubic-bezier(.2,.9,.3,1.2); }
+    .confirm-box { background: var(--paper); border-radius: 16px; padding: 24px; width: 100%; max-width: 360px; border-top: 5px solid var(--rust); text-align: center; animation: popIn 0.22s cubic-bezier(.2,.9,.3,1.2); }
     @keyframes popIn { from { opacity: 0; transform: scale(0.92) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-    .confirm-box .warn-icon { font-size: 34px; margin-bottom: 8px; }
-    .confirm-box h4 { margin: 0 0 8px; color: var(--rust); font-size: 16.5px; }
-    .confirm-box p { font-size: 14px; margin: 0 0 20px; line-height: 1.7; color: #5A5348; }
+    .confirm-box p { font-size: 14.5px; margin: 0 0 18px; line-height: 1.6; }
     .confirm-actions { display: flex; gap: 8px; }
-    .confirm-actions button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
+    .confirm-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
     .btn-confirm-yes { background: var(--rust); color: white; }
     .btn-confirm-no { background: var(--line); color: var(--ink); }
+
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 400; padding: 20px; cursor: zoom-out; }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 100%; max-height: 90vh; border-radius: 10px; }
+    .lightbox .close-hint { position: absolute; top: 20px; right: 24px; color: white; font-size: 14px; opacity: 0.7; }
 
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; max-width: 90%; text-align: center; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
@@ -66,23 +75,21 @@
   </div>
 
   <div class="container">
-    <div class="section-head">
-      <h2>الورديات المفتوحة حالياً</h2>
-    </div>
+    <div class="section-head"><h2>الورديات المفتوحة حالياً</h2></div>
     <div class="panel table-scroll">
       <table id="openShiftsTable">
-        <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th></tr></thead>
+        <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th><th>الصور</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
 
     <div class="section-head">
       <h2>سجل كل الورديات</h2>
-      <input type="text" id="shiftSearch" class="search-input" placeholder="بحث باسم السائق..." oninput="filterShifts()">
+      <input type="text" id="shiftSearch" class="search-input" placeholder="بحث باسم السائق أو التوكتوك..." oninput="filterShifts()">
     </div>
     <div class="panel table-scroll">
       <table id="shiftsTable">
-        <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>وقت الحضور</th><th>وقت الانصراف</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>الحضور</th><th>الانصراف</th><th>الصور</th><th>الحالة</th><th>إجراء</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -90,15 +97,19 @@
 
   <div class="confirm-backdrop" id="confirmBackdrop">
     <div class="confirm-box">
-      <div class="warn-icon">⚠️</div>
-      <h4>تحذير: حذف نهائي لا رجعة فيه</h4>
       <p id="confirmMessage"></p>
       <div class="confirm-actions">
         <button class="btn-confirm-no" onclick="closeConfirm(false)">إلغاء</button>
-        <button class="btn-confirm-yes" onclick="closeConfirm(true)">أيوه، احذف نهائياً</button>
+        <button class="btn-confirm-yes" onclick="closeConfirm(true)">تأكيد</button>
       </div>
     </div>
   </div>
+
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <div class="close-hint">اضغط في أي مكان للإغلاق</div>
+    <img id="lightboxImg" src="" alt="">
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
@@ -118,41 +129,70 @@
       const t = document.getElementById('toast');
       t.textContent = message;
       t.className = 'toast show' + (isError ? ' error' : '');
-      setTimeout(() => { t.className = 'toast'; }, 3500);
+      setTimeout(() => { t.className = 'toast'; }, 2500);
+    }
+
+    function openLightbox(src) {
+      document.getElementById('lightboxImg').src = src;
+      document.getElementById('lightbox').classList.add('open');
+    }
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
     }
 
     function formatDateTime(d) { return d ? new Date(d).toLocaleString('ar-EG') : '-'; }
 
-    function loadShifts() {
+    function photosCell(s) {
+      const checkIn = s.check_in_photo
+        ? `<img src="/uploads/${s.check_in_photo}" class="thumb" onclick="openLightbox('/uploads/${s.check_in_photo}')" alt="حضور">`
+        : `<div class="no-thumb">لا يوجد</div>`;
+
+      const checkOut = s.check_out_photo
+        ? `<img src="/uploads/${s.check_out_photo}" class="thumb" onclick="openLightbox('/uploads/${s.check_out_photo}')" alt="انصراف">`
+        : `<div class="no-thumb">${s.check_out_time ? 'لا يوجد' : 'شغال'}</div>`;
+
+      return `
+        <div class="photos-cell">
+          <div class="thumb-wrap"><div class="thumb-label">حضور</div>${checkIn}</div>
+          <div class="thumb-wrap"><div class="thumb-label">انصراف</div>${checkOut}</div>
+        </div>
+      `;
+    }
+
+    function loadOpenShifts() {
       fetch('/shifts').then(res => res.json()).then(data => {
-        allShifts = data;
-        renderShifts(data);
-        renderOpenShifts(data.filter(s => s.status === 'open'));
+        const openShifts = data.filter(s => s.status === 'open');
+        const tbody = document.querySelector('#openShiftsTable tbody');
+        if (openShifts.length === 0) {
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش ورديات مفتوحة دلوقتي</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = openShifts.map(s => `
+          <tr>
+            <td>${s.id}</td>
+            <td>${s.driver_name}</td>
+            <td>${s.tuktuk_number}</td>
+            <td>${formatDateTime(s.check_in_time)}</td>
+            <td>${photosCell(s)}</td>
+          </tr>
+        `).join('');
       });
     }
 
-    function renderOpenShifts(data) {
-      const tbody = document.querySelector('#openShiftsTable tbody');
-      if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="4">مفيش ورديات مفتوحة دلوقتي</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = data.map(s => `
-        <tr>
-          <td>${s.id}</td>
-          <td>${s.driver_name}</td>
-          <td>${s.tuktuk_number}</td>
-          <td>${formatDateTime(s.check_in_time)}</td>
-        </tr>
-      `).join('');
+    function loadAllShifts() {
+      fetch('/shifts').then(res => res.json()).then(data => {
+        allShifts = data;
+        renderShifts(data);
+      });
     }
 
     function renderShifts(data) {
       const tbody = document.querySelector('#shiftsTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش ورديات مسجلة</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">مفيش ورديات مسجلة</td></tr>`;
         return;
       }
+      const statusLabel = { open: 'مفتوحة', closed: 'مقفولة' };
       tbody.innerHTML = data.map(s => `
         <tr>
           <td>${s.id}</td>
@@ -160,7 +200,8 @@
           <td>${s.tuktuk_number}</td>
           <td>${formatDateTime(s.check_in_time)}</td>
           <td>${formatDateTime(s.check_out_time)}</td>
-          <td><span class="badge badge-${s.status}">${s.status === 'open' ? 'مفتوحة' : 'مقفولة'}</span></td>
+          <td>${photosCell(s)}</td>
+          <td><span class="badge badge-${s.status}">${statusLabel[s.status]}</span></td>
           <td><button class="row-btn btn-delete" onclick="deleteShift(${s.id})">حذف نهائي</button></td>
         </tr>
       `).join('');
@@ -169,24 +210,26 @@
     function filterShifts() {
       const q = document.getElementById('shiftSearch').value.trim();
       if (!q) { renderShifts(allShifts); return; }
-      renderShifts(allShifts.filter(s => s.driver_name.includes(q)));
+      renderShifts(allShifts.filter(s =>
+        s.driver_name.includes(q) || String(s.tuktuk_number).includes(q)
+      ));
     }
 
     async function deleteShift(id) {
-      const confirmed = await showConfirm(
-        `أنت على وشك حذف الوردية رقم ${id} نهائياً من قاعدة البيانات. البيانات دي مش هترجع تاني. لو الوردية فيها أوردرات مسجلة، الحذف هيترفض ولازم تحذف الأوردرات دي الأول من صفحة الأوردرات.`
-      );
+      const confirmed = await showConfirm('⚠️ متأكد إنك عايز تمسح الوردية دي نهائياً؟ الإجراء ده مينفعش يترجع فيه، ولو فيها أوردرات هيرفض الحذف.');
       if (!confirmed) return;
 
       fetch(`/shifts/${id}`, { method: 'DELETE' })
         .then(res => res.json())
         .then(data => {
           showToast(data.message || data.error, !data.message);
-          loadShifts();
+          loadOpenShifts();
+          loadAllShifts();
         });
     }
 
-    loadShifts();
+    loadOpenShifts();
+    loadAllShifts();
   </script>
 </body>
 </html>
