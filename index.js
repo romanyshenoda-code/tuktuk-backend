@@ -2,8 +2,8 @@ const express = require('express');
 const session = require('express-session');
 const multer = require('multer');
 const path = require('path');
-const db = require('./db');
 const bcrypt = require('bcryptjs');
+const db = require('./db');
 
 const app = express();
 const PORT = 3000;
@@ -34,7 +34,53 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 8 }
 }));
 
-// ==================== تسجيل دخول الأدمن ====================
+// ==================== سكريبت ترحيل الباسوردات (مؤقت - امسحه بعد الاستخدام) ====================
+app.get('/migrate-passwords-once-2026', (req, res) => {
+  const results = { admins: 0, drivers: 0, finance: 0 };
+
+  db.query('SELECT id, password FROM admins', (err, admins) => {
+    if (err) return res.status(500).json({ error: 'خطأ في جلب الأدمنية' });
+
+    admins.forEach(a => {
+      if (!a.password || a.password.startsWith('$2')) return;
+      const hashed = bcrypt.hashSync(a.password, 10);
+      db.query('UPDATE admins SET password = ? WHERE id = ?', [hashed, a.id]);
+      results.admins++;
+    });
+
+    db.query('SELECT id, password FROM drivers', (err, drivers) => {
+      if (err) return res.status(500).json({ error: 'خطأ في جلب السواقين' });
+
+      drivers.forEach(d => {
+        if (!d.password || d.password.startsWith('$2')) return;
+        const hashed = bcrypt.hashSync(d.password, 10);
+        db.query('UPDATE drivers SET password = ? WHERE id = ?', [hashed, d.id]);
+        results.drivers++;
+      });
+
+      db.query('SELECT id, password FROM finance_admin', (err, finance) => {
+        if (err) return res.status(500).json({ error: 'خطأ في جلب حسابات المالية' });
+
+        finance.forEach(f => {
+          if (!f.password || f.password.startsWith('$2')) return;
+          const hashed = bcrypt.hashSync(f.password, 10);
+          db.query('UPDATE finance_admin SET password = ? WHERE id = ?', [hashed, f.id]);
+          results.finance++;
+        });
+
+        setTimeout(() => {
+          res.json({
+            message: 'تم تشفير كل الباسوردات بنجاح',
+            details: `أدمنية: ${results.admins} | سواقين: ${results.drivers} | مالية: ${results.finance}`,
+            warning: 'امسح الـ endpoint ده من index.js فوراً بعد ما تتأكد إن كل حاجة شغالة'
+          });
+        }, 1500);
+      });
+    });
+  });
+});
+
+// ==================== تسجيل دخول الأدمن (مشفّر) ====================
 function requireLogin(req, res, next) {
   if (req.session && req.session.loggedIn) return next();
   return res.redirect('/login.html');
@@ -42,12 +88,17 @@ function requireLogin(req, res, next) {
 
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-  db.query('SELECT * FROM admins WHERE username = ? AND password = ?', [username, password], (err, results) => {
+  db.query('SELECT * FROM admins WHERE username = ?', [username], (err, results) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' }); }
     if (results.length === 0) return res.status(401).json({ error: 'اسم المستخدم أو الباسورد غلط' });
+
+    const admin = results[0];
+    const isMatch = bcrypt.compareSync(password, admin.password || '');
+    if (!isMatch) return res.status(401).json({ error: 'اسم المستخدم أو الباسورد غلط' });
+
     req.session.loggedIn = true;
-    req.session.adminId = results[0].id;
-    req.session.adminName = results[0].name;
+    req.session.adminId = admin.id;
+    req.session.adminName = admin.name;
     res.json({ message: 'تم تسجيل الدخول بنجاح' });
   });
 });
@@ -57,7 +108,7 @@ app.get('/api/logout', (req, res) => {
   res.redirect('/login.html');
 });
 
-// ==================== إدارة الأدمنية ====================
+// ==================== إدارة الأدمنية (مع تشفير) ====================
 app.get('/admins', (req, res) => {
   db.query('SELECT id, name, username, created_at FROM admins', (err, results) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الأدمنية' }); }
@@ -67,7 +118,8 @@ app.get('/admins', (req, res) => {
 
 app.post('/admins', (req, res) => {
   const { name, username, password } = req.body;
-  db.query('INSERT INTO admins (name, username, password) VALUES (?, ?, ?)', [name, username, password], (err, result) => {
+  const hashed = bcrypt.hashSync(password, 10);
+  db.query('INSERT INTO admins (name, username, password) VALUES (?, ?, ?)', [name, username, hashed], (err, result) => {
     if (err) {
       if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'اسم المستخدم ده مستخدم بالفعل' });
       console.error(err); return res.status(500).json({ error: 'حصل خطأ في إضافة الأدمن' });
@@ -91,7 +143,9 @@ app.put('/admins/:id', (req, res) => {
 app.put('/admins/:id/password', (req, res) => {
   const { id } = req.params;
   const { password } = req.body;
-  db.query('UPDATE admins SET password = ? WHERE id = ?', [password, id], (err) => {
+  if (!password) return res.status(400).json({ error: 'من فضلك ابعت الباسورد الجديد' });
+  const hashed = bcrypt.hashSync(password, 10);
+  db.query('UPDATE admins SET password = ? WHERE id = ?', [hashed, id], (err) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' }); }
     res.json({ message: 'تم تغيير الباسورد بنجاح' });
   });
@@ -109,15 +163,20 @@ app.delete('/admins/:id', (req, res) => {
   });
 });
 
-// ==================== تسجيل دخول السائق ====================
+// ==================== تسجيل دخول السائق (مشفّر) ====================
 app.post('/api/driver-login', (req, res) => {
   const { driver_id, password } = req.body;
-  db.query('SELECT * FROM drivers WHERE id = ? AND password = ?', [driver_id, password], (err, results) => {
+  db.query('SELECT * FROM drivers WHERE id = ?', [driver_id], (err, results) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' }); }
     if (results.length === 0) return res.status(401).json({ error: 'رقم السائق أو الباسورد غلط' });
-    req.session.driverId = results[0].id;
-    req.session.driverName = results[0].name;
-    res.json({ message: 'تم تسجيل الدخول بنجاح', driver: results[0] });
+
+    const driver = results[0];
+    const isMatch = bcrypt.compareSync(password, driver.password || '');
+    if (!isMatch) return res.status(401).json({ error: 'رقم السائق أو الباسورد غلط' });
+
+    req.session.driverId = driver.id;
+    req.session.driverName = driver.name;
+    res.json({ message: 'تم تسجيل الدخول بنجاح', driver });
   });
 });
 
@@ -135,7 +194,7 @@ app.get('/api/driver-session', (req, res) => {
   }
 });
 
-// ==================== تسجيل دخول قسم المالية ====================
+// ==================== تسجيل دخول قسم المالية (مشفّر) ====================
 function requireFinanceLogin(req, res, next) {
   if (req.session && req.session.financeLoggedIn) return next();
   return res.redirect('/finance-login.html');
@@ -143,9 +202,13 @@ function requireFinanceLogin(req, res, next) {
 
 app.post('/api/finance-login', (req, res) => {
   const { password } = req.body;
-  db.query('SELECT * FROM finance_admin WHERE password = ?', [password], (err, results) => {
+  db.query('SELECT * FROM finance_admin', (err, results) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' }); }
-    if (results.length === 0) return res.status(401).json({ error: 'الباسورد غلط' });
+    if (results.length === 0) return res.status(401).json({ error: 'مفيش حساب مالية مسجل' });
+
+    const isMatch = results.some(f => bcrypt.compareSync(password, f.password || ''));
+    if (!isMatch) return res.status(401).json({ error: 'الباسورد غلط' });
+
     req.session.financeLoggedIn = true;
     res.json({ message: 'تم تسجيل الدخول بنجاح' });
   });
@@ -189,10 +252,11 @@ app.put('/settings/:key', (req, res) => {
   });
 });
 
-// ==================== السواقين ====================
+// ==================== السواقين (مع تشفير) ====================
 app.post('/drivers', (req, res) => {
   const { name, phone, national_id, password } = req.body;
-  db.query('INSERT INTO drivers (name, phone, national_id, password) VALUES (?, ?, ?, ?)', [name, phone, national_id, password], (err, result) => {
+  const hashed = bcrypt.hashSync(password, 10);
+  db.query('INSERT INTO drivers (name, phone, national_id, password) VALUES (?, ?, ?, ?)', [name, phone, national_id, hashed], (err, result) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حفظ السائق' }); }
     res.status(201).json({ message: 'تم تسجيل السائق بنجاح', driver_id: result.insertId });
   });
@@ -219,14 +283,14 @@ app.put('/drivers/:id/password', (req, res) => {
   const { id } = req.params;
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: 'من فضلك ابعت الباسورد الجديد' });
-  db.query('UPDATE drivers SET password = ? WHERE id = ?', [password, id], (err, result) => {
+  const hashed = bcrypt.hashSync(password, 10);
+  db.query('UPDATE drivers SET password = ? WHERE id = ?', [hashed, id], (err, result) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' }); }
     if (result.affectedRows === 0) return res.status(404).json({ error: 'السائق غير موجود' });
     res.json({ message: 'تم تغيير الباسورد بنجاح' });
   });
 });
 
-// ==================== تخصيص سائق (الإصدار الجديد بنسبتي عمولة منفصلتين) ====================
 app.put('/drivers/:id/customize', (req, res) => {
   const { id } = req.params;
   const {
@@ -674,6 +738,15 @@ app.put('/leave-requests/:id', (req, res) => {
   });
 });
 
+app.delete('/leave-requests/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM leave_requests WHERE id = ?', [id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف طلب الإجازة' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+    res.json({ message: 'تم حذف طلب الإجازة نهائياً' });
+  });
+});
+
 // ==================== طلبات السلف ====================
 app.post('/advances', (req, res) => {
   const { driver_id, amount, reason } = req.body;
@@ -721,6 +794,15 @@ app.put('/advances/:id', (req, res) => {
   });
 });
 
+app.delete('/advances/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM advances WHERE id = ?', [id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف طلب السلفة' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+    res.json({ message: 'تم حذف طلب السلفة نهائياً' });
+  });
+});
+
 // ==================== الخصومات ====================
 app.post('/deductions', (req, res) => {
   const { driver_id, amount, reason } = req.body;
@@ -759,7 +841,7 @@ app.put('/notifications/:id/read', (req, res) => {
   });
 });
 
-// ==================== إعدادات الرواتب العامة (بنسبتي عمولة منفصلتين) ====================
+// ==================== إعدادات الرواتب العامة ====================
 app.get('/payroll-settings', (req, res) => {
   db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, results) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
@@ -772,7 +854,7 @@ app.put('/payroll-settings', (req, res) => {
   db.query(
     'UPDATE payroll_settings SET income_type = ?, monthly_salary = ?, delivery_commission_pct = ?, full_trip_commission_pct = ?, delivery_base_price = ?, full_trip_base_price = ? WHERE id = 1',
     [income_type, monthly_salary, delivery_commission_pct, full_trip_commission_pct, delivery_base_price, full_trip_base_price],
-    (err, result) => {
+    (err) => {
       if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الإعدادات' }); }
       res.json({ message: 'تم تحديث الإعدادات العامة بنجاح' });
     }
@@ -886,7 +968,7 @@ function getHolidayDaysForDriver(driver_id, year, month, callback) {
   });
 }
 
-// ==================== حساب راتب سائق لشهر معين (بنسبتي عمولة منفصلتين) ====================
+// ==================== حساب راتب سائق لشهر معين ====================
 app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
   const { driver_id, year, month } = req.params;
 
@@ -1096,69 +1178,6 @@ app.delete('/general-expenses/:id', (req, res) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف المصروف' }); }
     if (result.affectedRows === 0) return res.status(404).json({ error: 'المصروف غير موجود' });
     res.json({ message: 'تم حذف المصروف نهائياً' });
-  });
-});
-// ==================== حذف طلبات الإجازة والسلف نهائياً ====================
-app.delete('/leave-requests/:id', (req, res) => {
-  const { id } = req.params;
-  db.query('DELETE FROM leave_requests WHERE id = ?', [id], (err, result) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف طلب الإجازة' }); }
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
-    res.json({ message: 'تم حذف طلب الإجازة نهائياً' });
-  });
-});
-
-app.delete('/advances/:id', (req, res) => {
-  const { id } = req.params;
-  db.query('DELETE FROM advances WHERE id = ?', [id], (err, result) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف طلب السلفة' }); }
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
-    res.json({ message: 'تم حذف طلب السلفة نهائياً' });
-  });
-});
-// ==================== سكريبت ترحيل الباسوردات (مؤقت - يُمسح بعد الاستخدام) ====================
-app.get('/migrate-passwords-once-2026', (req, res) => {
-  const results = { admins: 0, drivers: 0, finance: 0, errors: [] };
-
-  db.query('SELECT id, password FROM admins', (err, admins) => {
-    if (err) return res.status(500).json({ error: 'خطأ في جلب الأدمنية' });
-
-    admins.forEach(a => {
-      if (a.password && a.password.startsWith('$2')) return;
-      const hashed = bcrypt.hashSync(a.password, 10);
-      db.query('UPDATE admins SET password = ? WHERE id = ?', [hashed, a.id]);
-      results.admins++;
-    });
-
-    db.query('SELECT id, password FROM drivers', (err, drivers) => {
-      if (err) return res.status(500).json({ error: 'خطأ في جلب السواقين' });
-
-      drivers.forEach(d => {
-        if (!d.password || d.password.startsWith('$2')) return;
-        const hashed = bcrypt.hashSync(d.password, 10);
-        db.query('UPDATE drivers SET password = ? WHERE id = ?', [hashed, d.id]);
-        results.drivers++;
-      });
-
-      db.query('SELECT id, password FROM finance_admin', (err, finance) => {
-        if (err) return res.status(500).json({ error: 'خطأ في جلب حسابات المالية' });
-
-        finance.forEach(f => {
-          if (!f.password || f.password.startsWith('$2')) return;
-          const hashed = bcrypt.hashSync(f.password, 10);
-          db.query('UPDATE finance_admin SET password = ? WHERE id = ?', [hashed, f.id]);
-          results.finance++;
-        });
-
-        setTimeout(() => {
-          res.json({
-            message: 'تم تشفير كل الباسوردات بنجاح',
-            details: `أدمنية: ${results.admins} | سواقين: ${results.drivers} | مالية: ${results.finance}`,
-            warning: 'امسح الـ endpoint ده من index.js فوراً بعد ما تتأكد إن كل حاجة شغالة'
-          });
-        }, 1500);
-      });
-    });
   });
 });
 
