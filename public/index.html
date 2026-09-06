@@ -9,52 +9,61 @@
   <style>
     :root {
       --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
-      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --muted: #8A8272;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --muted: #8A8272; --line: #E4DCCB;
     }
     * { box-sizing: border-box; }
     body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
 
-    .topbar {
-      background: var(--asphalt); color: var(--sand); padding: 16px 24px;
-      display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange);
-    }
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
     .topbar img { height: 40px; }
     .topbar h1 { margin: 0; font-size: 17px; font-weight: 700; }
     .topbar .sub { font-size: 11px; opacity: 0.7; letter-spacing: 0.3px; }
     .logout-link { margin-inline-start: auto; color: var(--sand); opacity: 0.75; font-size: 13px; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); padding: 6px 12px; border-radius: 20px; }
 
-    .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
-    .container h2 { font-size: 20px; margin-bottom: 22px; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 22px 24px 40px; }
 
-  .modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-@media (min-width: 700px) {
-  .modules-grid { grid-template-columns: repeat(3, 1fr); }
-}
-.module-card { padding: 34px 16px; }
-.module-card .icon { font-size: 38px; }
-.module-card .count { font-size: 32px; }
-.module-card .label { font-size: 14px; }
+    /* شريط الإحصائيات السريعة */
+    .quick-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .qs-card { background: var(--paper); border-radius: 10px; padding: 11px 10px; text-align: center; border-top: 3px solid var(--line); }
+    .qs-card.top { border-top-color: var(--nile); }
+    .qs-card.maint { border-top-color: var(--rust); }
+    .qs-card.avg { border-top-color: var(--amber); }
+    .qs-card .qs-value { font-size: 16px; font-weight: 800; line-height: 1.3; }
+    .qs-card .qs-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    /* التنبيهات */
+    .alerts-wrap { margin-bottom: 18px; display: flex; flex-direction: column; gap: 7px; }
+    .alert-item { border-radius: 8px; padding: 9px 13px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; animation: slideIn 0.3s ease backwards; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+    .alert-item.warning { background: #FBF3E3; border-inline-start: 3px solid var(--amber); color: #8A5F12; }
+    .alert-item.danger { background: #FBEEEA; border-inline-start: 3px solid var(--rust); color: #8B2A15; }
+    .alerts-toggle { background: none; border: none; font-family: inherit; font-size: 12px; color: var(--muted); cursor: pointer; padding: 4px 0; text-align: start; font-weight: 700; }
+
+    .container h2 { font-size: 19px; margin: 0 0 16px; }
+
+    .modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    @media (min-width: 700px) { .modules-grid { grid-template-columns: repeat(3, 1fr); } }
 
     .module-card {
-      background: var(--paper); border-radius: 16px; padding: 26px 16px; text-align: center;
-      text-decoration: none; color: var(--ink); border: 1px solid #E4DCCB;
+      background: var(--paper); border-radius: 16px; padding: 34px 16px; text-align: center;
+      text-decoration: none; color: var(--ink); border: 1px solid var(--line);
       transition: transform 0.18s ease, box-shadow 0.18s ease;
       animation: riseIn 0.4s ease backwards; display: block; position: relative;
     }
     .module-card:hover { transform: translateY(-5px); box-shadow: 0 12px 26px rgba(22,48,92,0.16); }
-    .module-card .icon { font-size: 30px; margin-bottom: 10px; }
-    .module-card .count { font-size: 28px; font-weight: 800; }
-    .module-card .label { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+    .module-card .icon { font-size: 38px; margin-bottom: 10px; }
+    .module-card .count { font-size: 32px; font-weight: 800; }
+    .module-card .label { font-size: 14px; color: var(--muted); margin-top: 4px; }
     .module-card:nth-child(1) { border-top: 5px solid var(--orange); animation-delay: 0.02s; }
     .module-card:nth-child(2) { border-top: 5px solid var(--asphalt); animation-delay: 0.08s; }
     .module-card:nth-child(3) { border-top: 5px solid var(--nile); animation-delay: 0.14s; }
     .module-card:nth-child(4) { border-top: 5px solid var(--amber); animation-delay: 0.20s; }
     .module-card:nth-child(5) { border-top: 5px solid var(--rust); animation-delay: 0.26s; }
     .module-card:nth-child(6) { border-top: 5px solid var(--asphalt); animation-delay: 0.32s; }
+    .module-card:nth-child(7) { border-top: 5px solid var(--nile); animation-delay: 0.38s; }
 
     @keyframes riseIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* دائرة التنبيه الحمرا */
     .alert-dot {
       position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
       background: var(--rust); color: white; font-size: 14px; font-weight: 800;
@@ -82,6 +91,24 @@
   </div>
 
   <div class="container">
+
+    <div class="quick-stats">
+      <div class="qs-card top">
+        <div class="qs-value" id="qsTopDriver">-</div>
+        <div class="qs-label">أعلى سائق إيراداً</div>
+      </div>
+      <div class="qs-card maint">
+        <div class="qs-value" id="qsTopMaint">-</div>
+        <div class="qs-label">أكتر توكتوك صيانة</div>
+      </div>
+      <div class="qs-card avg">
+        <div class="qs-value" id="qsAvgOrders">-</div>
+        <div class="qs-label">متوسط أوردر/يوم</div>
+      </div>
+    </div>
+
+    <div class="alerts-wrap" id="alertsWrap"></div>
+
     <h2>اختار القسم اللي عايز تديره</h2>
     <div class="modules-grid">
       <a href="/drivers.html" class="module-card">
@@ -110,16 +137,16 @@
         <div class="count" id="countPendingRequests">-</div>
         <div class="label">طلبات معلّقة</div>
       </a>
+      <a href="/finance-login.html" class="module-card">
+        <div class="icon">💰</div>
+        <div class="count">🔐</div>
+        <div class="label">المالية والرواتب</div>
+      </a>
       <a href="/admins.html" class="module-card">
         <div class="icon">🛡️</div>
         <div class="count" id="countAdmins">-</div>
         <div class="label">مشرفين</div>
       </a>
-      <a href="/finance-login.html" class="module-card">
-  <div class="icon">💰</div>
-  <div class="count">🔐</div>
-  <div class="label">المالية والرواتب</div>
-</a>
     </div>
   </div>
 
@@ -135,7 +162,8 @@
       fetch('/advances').then(r => r.json())
     ]).then(([leaves, advances]) => {
       const pending = leaves.filter(l => l.status === 'pending').length + advances.filter(a => a.status === 'pending').length;
-      document.getElementById('countPendingRequests').textContent = pending;
+      const el = document.getElementById('countPendingRequests');
+      el.textContent = pending;
 
       if (pending > 0) {
         const dot = document.createElement('div');
@@ -144,6 +172,57 @@
         document.getElementById('hrAlertDot').appendChild(dot);
       }
     });
+
+    // الإحصائيات السريعة
+    fetch('/dashboard/stats')
+      .then(r => r.json())
+      .then(s => {
+        document.getElementById('qsTopDriver').textContent = s.top_driver ? s.top_driver.name : 'لا يوجد';
+        document.getElementById('qsTopMaint').textContent = s.top_maintenance
+          ? `${s.top_maintenance.tuktuk_number} (${s.top_maintenance.times}×)`
+          : 'لا يوجد';
+        document.getElementById('qsAvgOrders').textContent = s.avg_orders_per_day;
+      })
+      .catch(() => {
+        document.getElementById('qsTopDriver').textContent = '-';
+        document.getElementById('qsTopMaint').textContent = '-';
+        document.getElementById('qsAvgOrders').textContent = '-';
+      });
+
+    // التنبيهات
+    fetch('/dashboard/alerts')
+      .then(r => r.json())
+      .then(alerts => {
+        const wrap = document.getElementById('alertsWrap');
+        if (!alerts || alerts.length === 0) { wrap.innerHTML = ''; return; }
+
+        const visible = alerts.slice(0, 2);
+        const hidden = alerts.slice(2);
+
+        wrap.innerHTML = visible.map((a, i) => `
+          <div class="alert-item ${a.type}" style="animation-delay:${i * 0.05}s">
+            ${a.type === 'danger' ? '🔴' : '⚠️'} ${a.message}
+          </div>
+        `).join('');
+
+        if (hidden.length > 0) {
+          const btn = document.createElement('button');
+          btn.className = 'alerts-toggle';
+          btn.textContent = `+ عرض ${hidden.length} تنبيه إضافي`;
+          btn.onclick = () => {
+            btn.remove();
+            hidden.forEach((a, i) => {
+              const div = document.createElement('div');
+              div.className = `alert-item ${a.type}`;
+              div.style.animationDelay = `${i * 0.05}s`;
+              div.innerHTML = `${a.type === 'danger' ? '🔴' : '⚠️'} ${a.message}`;
+              wrap.appendChild(div);
+            });
+          };
+          wrap.appendChild(btn);
+        }
+      })
+      .catch(() => {});
   </script>
 </body>
 </html>

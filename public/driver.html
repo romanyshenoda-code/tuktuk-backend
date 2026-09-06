@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>صفحة السائق - Ginger</title>
+  <title>Ginger - السائق</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -15,108 +15,127 @@
     body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
 
     .topbar {
-      background: var(--asphalt); color: var(--sand); padding: 16px 20px;
-      display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange);
+      background: var(--asphalt); color: var(--sand); padding: 14px 18px;
+      display: flex; align-items: center; gap: 11px; border-bottom: 4px solid var(--orange);
       position: sticky; top: 0; z-index: 50;
     }
-    .topbar img { height: 38px; }
-    .topbar h2 { margin: 0; font-size: 16px; font-weight: 700; }
-    .topbar .sub { font-size: 10.5px; opacity: 0.7; }
-    .bell-wrap { margin-inline-start: auto; position: relative; cursor: pointer; }
-    .bell-btn { background: rgba(255,255,255,0.12); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+    .topbar img { height: 32px; }
+    .topbar .greeting { font-size: 13.5px; font-weight: 700; }
+    .topbar .greeting .name { opacity: 0.8; font-size: 11.5px; font-weight: 400; display: block; }
+    .bell-btn {
+      margin-inline-start: auto; background: none; border: none; color: var(--sand);
+      font-size: 21px; cursor: pointer; position: relative; padding: 4px;
+    }
     .bell-badge {
-      position: absolute; top: -4px; left: -4px; background: var(--orange); color: white;
-      font-size: 10.5px; font-weight: 800; min-width: 18px; height: 18px; border-radius: 50%;
+      position: absolute; top: 0; inset-inline-end: 0; background: var(--rust); color: white;
+      font-size: 10px; font-weight: 800; min-width: 17px; height: 17px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center; padding: 0 3px;
     }
-    .logout-link { color: rgba(255,255,255,0.75); font-size: 12px; text-decoration: none; }
 
-    .wrap { max-width: 480px; margin: 0 auto; padding: 20px 16px; }
-    .greeting { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-    .greeting-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+    .wrap { max-width: 480px; margin: 0 auto; padding: 14px 16px 26px; }
 
-    .modules-grid { display: grid; gap: 14px; }
+    /* شريط الإحصائيات المصغّر */
+    .mini-stats { display: flex; gap: 8px; margin-bottom: 14px; }
+    .mini-stat {
+      flex: 1; background: var(--paper); border-radius: 10px; padding: 9px 7px;
+      text-align: center; border: 1px solid var(--line);
+    }
+    .mini-stat .ms-value { font-size: 17px; font-weight: 800; line-height: 1.2; }
+    .mini-stat.orders .ms-value { color: var(--nile); }
+    .mini-stat.earnings .ms-value { color: var(--orange); }
+    .mini-stat .ms-label { font-size: 9.5px; color: var(--muted); margin-top: 2px; }
+
+    .modules-grid { display: grid; gap: 12px; }
     .module-card {
-      background: var(--paper); border-radius: 16px; padding: 22px 18px;
-      display: flex; align-items: center; gap: 16px;
-      text-decoration: none; color: var(--ink); border: 1px solid var(--line);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-      animation: riseIn 0.4s ease backwards; cursor: pointer;
+      background: var(--paper); border-radius: 15px; padding: 20px 17px;
+      display: flex; align-items: center; gap: 15px; border: 1px solid var(--line);
+      cursor: pointer; text-decoration: none; color: var(--ink);
+      transition: transform 0.15s ease;
+      animation: riseIn 0.4s ease backwards;
     }
     .module-card:active { transform: scale(0.98); }
-    .module-card:hover { box-shadow: 0 10px 24px rgba(22,48,92,0.12); }
+    .module-card:nth-child(1) { animation-delay: 0.04s; }
+    .module-card:nth-child(2) { animation-delay: 0.1s; }
+    .module-card:nth-child(3) { animation-delay: 0.16s; }
     .module-card .icon-box {
-      width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
-      font-size: 24px; flex-shrink: 0;
+      width: 50px; height: 50px; border-radius: 14px; display: flex;
+      align-items: center; justify-content: center; font-size: 23px; flex-shrink: 0;
     }
-    .module-card .txt h3 { margin: 0 0 3px; font-size: 16px; }
-    .module-card .txt p { margin: 0; font-size: 12px; color: var(--muted); }
-    .module-card:nth-child(1) .icon-box { background: #FDEBE3; color: var(--orange); }
-    .module-card:nth-child(1) { animation-delay: 0.03s; }
-    .module-card:nth-child(2) .icon-box { background: #E3EEEC; color: var(--nile); }
-    .module-card:nth-child(2) { animation-delay: 0.09s; }
-    .module-card:nth-child(3) .icon-box { background: #FBF0DF; color: var(--amber); }
-    .module-card:nth-child(3) { animation-delay: 0.15s; }
-
+    .module-card .txt h3 { margin: 0 0 2px; font-size: 15px; }
+    .module-card .txt p { margin: 0; font-size: 11.5px; color: var(--muted); }
+    .module-card.card-attend .icon-box { background: #E3EEEC; color: var(--nile); }
+    .module-card.card-orders .icon-box { background: #FBF0DF; color: var(--amber); }
+    .module-card.card-requests .icon-box { background: #F6E1DC; color: var(--rust); }
+    .module-card .status-on { color: var(--nile); font-weight: 700; }
     @keyframes riseIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+    .logout-row { margin-top: 20px; text-align: center; }
+    .logout-row a { color: var(--muted); font-size: 12.5px; text-decoration: none; }
+
     /* لوحة الإشعارات */
-    .notif-backdrop {
-      position: fixed; inset: 0; background: rgba(22,19,15,0.5); display: none;
-      z-index: 100; justify-content: flex-end;
-    }
-    .notif-backdrop.open { display: flex; animation: fadeIn 0.2s ease; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .notif-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.5); display: none; z-index: 100; }
+    .notif-backdrop.open { display: block; }
     .notif-panel {
-      background: var(--paper); width: 100%; max-width: 340px; height: 100%;
-      padding: 20px; overflow-y: auto; animation: slideIn 0.25s ease;
+      position: fixed; top: 0; inset-inline-end: 0; height: 100%; width: 90%; max-width: 340px;
+      background: var(--paper); z-index: 101; transform: translateX(100%);
+      transition: transform 0.28s ease; display: flex; flex-direction: column;
     }
-    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-    .notif-panel h3 { margin: 0 0 16px; font-size: 17px; }
-    .notif-close { float: left; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); }
-    .notification-item { padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; line-height: 1.6; }
-    .notification-item:last-child { border-bottom: none; }
-    .notification-unread { font-weight: 700; }
-    .notif-date { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 400; }
-    .empty-note { color: var(--muted); font-size: 13.5px; text-align: center; padding: 30px 0; }
+    html[dir="rtl"] .notif-panel { transform: translateX(-100%); }
+    .notif-panel.open { transform: translateX(0) !important; }
+    .notif-head { padding: 16px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+    .notif-head h3 { margin: 0; font-size: 15.5px; }
+    .notif-close { background: none; border: none; font-size: 21px; cursor: pointer; color: var(--muted); }
+    .notif-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
+    .notif-item { padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 1.6; }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item.unread { font-weight: 700; }
+    .notif-item .notif-time { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+    .notif-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 40px 0; }
   </style>
 </head>
 <body>
 
   <div class="topbar">
     <img src="/logo.png" alt="Ginger">
-    <div>
-      <h2 id="driverNameDisplay">جاري التحميل...</h2>
-      <div class="sub">GINGER — SPICE UP THE ORDINARY</div>
+    <div class="greeting">
+      <span id="greetingText">أهلاً</span>
+      <span class="name" id="driverName">-</span>
     </div>
-    <div class="bell-wrap" onclick="openNotifications()">
-      <button class="bell-btn">🔔</button>
-      <span class="bell-badge" id="notifBadge" style="display:none;">0</span>
-    </div>
+    <button class="bell-btn" onclick="openNotifs()">
+      🔔
+      <span class="bell-badge" id="bellBadge" style="display:none;">0</span>
+    </button>
   </div>
 
   <div class="wrap">
-    <div class="greeting" id="greetingText">أهلاً بيك</div>
-    <div class="greeting-sub">اختار اللي عايز تعمله دلوقتي</div>
+
+    <div class="mini-stats">
+      <div class="mini-stat orders">
+        <div class="ms-value" id="statOrders">-</div>
+        <div class="ms-label">أوردر الشهر</div>
+      </div>
+      <div class="mini-stat earnings">
+        <div class="ms-value" id="statEarnings">-</div>
+        <div class="ms-label">مستحقاتك (ج)</div>
+      </div>
+    </div>
 
     <div class="modules-grid">
-      <a href="/driver-attendance.html" class="module-card">
-        <div class="icon-box">🕐</div>
+      <a href="/driver-attendance.html" class="module-card card-attend">
+        <div class="icon-box">✅</div>
         <div class="txt">
           <h3>الحضور والانصراف</h3>
-          <p id="shiftStatusText">سجل حضورك وابدأ يومك</p>
+          <p id="shiftStatusText">سجّل حضورك وابدأ ورديتك</p>
         </div>
       </a>
-
-      <a href="/driver-orders.html" class="module-card">
+      <a href="/driver-orders.html" class="module-card card-orders">
         <div class="icon-box">📦</div>
         <div class="txt">
           <h3>الأوردرات</h3>
-          <p>فتح وقفل رحلاتك اليومية</p>
+          <p>افتح واقفل أوردراتك</p>
         </div>
       </a>
-
-      <a href="/driver-requests.html" class="module-card">
+      <a href="/driver-requests.html" class="module-card card-requests">
         <div class="icon-box">📋</div>
         <div class="txt">
           <h3>الطلبات</h3>
@@ -124,39 +143,64 @@
         </div>
       </a>
     </div>
+
+    <div class="logout-row">
+      <a href="/api/driver-logout">تسجيل الخروج</a>
+    </div>
+
   </div>
 
-  <div class="notif-backdrop" id="notifBackdrop" onclick="if(event.target===this) closeNotifications()">
-    <div class="notif-panel">
-      <button class="notif-close" onclick="closeNotifications()">×</button>
-      <h3>🔔 الإشعارات</h3>
-      <div id="notificationsList"><div class="empty-note">مفيش إشعارات جديدة</div></div>
+  <div class="notif-backdrop" id="notifBackdrop" onclick="closeNotifs()"></div>
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-head">
+      <h3>الإشعارات</h3>
+      <button class="notif-close" onclick="closeNotifs()">✕</button>
+    </div>
+    <div class="notif-list" id="notifList">
+      <div class="notif-empty">جاري التحميل...</div>
     </div>
   </div>
 
   <script>
     let currentDriverId = null;
 
-    fetch('/api/driver-session')
-      .then(res => res.json())
-      .then(data => {
-        if (!data.loggedIn) {
-          window.location.href = '/driver-login.html';
-          return;
-        }
-        currentDriverId = data.driverId;
-        document.getElementById('driverNameDisplay').textContent = data.driverName;
-        document.getElementById('greetingText').textContent = 'أهلاً بيك يا ' + data.driverName;
-        loadNotifications();
-        checkShiftStatus();
-      });
+    function getGreeting() {
+      const h = new Date().getHours();
+      if (h < 12) return 'صباح الخير';
+      if (h < 17) return 'مساء الخير';
+      if (h < 21) return 'مساء الخير';
+      return 'مساء الخير';
+    }
 
-    function checkShiftStatus() {
+    fetch('/api/driver-session').then(res => res.json()).then(data => {
+      if (!data.loggedIn) { window.location.href = '/driver-login.html'; return; }
+      currentDriverId = data.driverId;
+      document.getElementById('greetingText').textContent = getGreeting();
+      document.getElementById('driverName').textContent = data.driverName;
+      loadShiftStatus();
+      loadNotifications();
+      loadDriverStats();
+    });
+
+    function loadDriverStats() {
+      fetch(`/driver/stats/${currentDriverId}`)
+        .then(res => res.json())
+        .then(s => {
+          document.getElementById('statOrders').textContent = s.orders_count;
+          document.getElementById('statEarnings').textContent = s.earnings;
+        })
+        .catch(() => {
+          document.getElementById('statOrders').textContent = '0';
+          document.getElementById('statEarnings').textContent = '0';
+        });
+    }
+
+    function loadShiftStatus() {
       fetch('/shifts/open/' + currentDriverId)
         .then(res => res.json())
         .then(data => {
           if (data.id) {
-            document.getElementById('shiftStatusText').textContent = 'وردية شغالة دلوقتي ✓';
+            document.getElementById('shiftStatusText').innerHTML = '<span class="status-on">وردية شغالة دلوقتي ✓</span>';
           }
         });
     }
@@ -165,39 +209,50 @@
       fetch('/notifications/driver/' + currentDriverId)
         .then(res => res.json())
         .then(data => {
-          const list = document.getElementById('notificationsList');
-          const unreadCount = data.filter(n => !n.is_read).length;
-          const badge = document.getElementById('notifBadge');
-          if (unreadCount > 0) {
+          const list = document.getElementById('notifList');
+          const unread = data.filter(n => !n.is_read).length;
+
+          const badge = document.getElementById('bellBadge');
+          if (unread > 0) {
+            badge.textContent = unread;
             badge.style.display = 'flex';
-            badge.textContent = unreadCount;
           } else {
             badge.style.display = 'none';
           }
 
           if (data.length === 0) {
-            list.innerHTML = '<div class="empty-note">مفيش إشعارات جديدة</div>';
+            list.innerHTML = '<div class="notif-empty">مفيش إشعارات</div>';
             return;
           }
+
           list.innerHTML = data.map(n => `
-            <div class="notification-item ${n.is_read ? '' : 'notification-unread'}" onclick="markRead(${n.id}, this)">
-              <div>${n.message}</div>
-              <div class="notif-date">${new Date(n.created_at).toLocaleString('ar-EG')}</div>
+            <div class="notif-item ${n.is_read ? '' : 'unread'}">
+              ${n.message}
+              <div class="notif-time">${new Date(n.created_at).toLocaleString('ar-EG')}</div>
             </div>
           `).join('');
         });
     }
 
-    function markRead(id, el) {
-      el.classList.remove('notification-unread');
-      fetch(`/notifications/${id}/read`, { method: 'PUT' }).then(() => loadNotifications());
+    function openNotifs() {
+      document.getElementById('notifBackdrop').classList.add('open');
+      document.getElementById('notifPanel').classList.add('open');
+
+      fetch('/notifications/driver/' + currentDriverId)
+        .then(res => res.json())
+        .then(data => {
+          data.filter(n => !n.is_read).forEach(n => {
+            fetch(`/notifications/${n.id}/read`, { method: 'PUT' });
+          });
+          setTimeout(() => {
+            document.getElementById('bellBadge').style.display = 'none';
+          }, 400);
+        });
     }
 
-    function openNotifications() {
-      document.getElementById('notifBackdrop').classList.add('open');
-    }
-    function closeNotifications() {
+    function closeNotifs() {
       document.getElementById('notifBackdrop').classList.remove('open');
+      document.getElementById('notifPanel').classList.remove('open');
     }
   </script>
 </body>
