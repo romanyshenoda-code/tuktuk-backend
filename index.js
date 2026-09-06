@@ -1217,6 +1217,164 @@ app.get('/reports/yearly-chart/:year', (req, res) => {
     }
   );
 });
+// ==================== إحصائيات وتنبيهات الأدمن ====================
+app.get('/dashboard/stats', (req, res) => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  // أعلى سائق إيراداً هذا الشهر
+  const topDriverQuery = `
+    SELECT d.name, COALESCE(SUM(o.price), 0) AS revenue
+    FROM drivers d
+    LEFT JOIN orders o ON d.id = o.driver_id AND o.status = 'closed'
+      AND YEAR(o.start_time) = ? AND MONTH(o.start_time) = ?
+    GROUP BY d.id, d.name
+    ORDER BY revenue DESC
+    LIMIT 1
+  `;
+
+  db.query(topDriverQuery, [year, month], (err, topDriver) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في الإحصائيات' }); }
+
+    // أكتر توكتوك دخل صيانة هذا الشهر
+    const topMaintQuery = `
+      SELECT t.tuktuk_number, COUNT(*) AS times
+      FROM tuktuk_maintenance m
+      JOIN tuktuks t ON m.tuktuk_id = t.id
+      WHERE YEAR(m.maintenance_date) = ? AND MONTH(m.maintenance_date) = ?
+      GROUP BY t.id, t.tuktuk_number
+      ORDER BY times DESC
+      LIMIT 1
+    `;
+
+    db.query(topMaintQuery, [year, month], (err, topMaint) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في الإحصائيات' }); }
+
+      // متوسط الأوردرات اليومية هذا الشهر
+      const avgQuery = `
+        SELECT COUNT(*) AS total_orders, COUNT(DISTINCT DATE(start_time)) AS active_days
+        FROM orders
+        WHERE status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
+      `;
+
+      db.query(avgQuery, [year, month], (err, avgResult) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في الإحصائيات' }); }
+
+        const totalOrders = avgResult[0].total_orders || 0;
+        const activeDays = avgResult[0].active_days || 0;
+        const avgPerDay = activeDays > 0 ? (totalOrders / activeDays).toFixed(1) : '0';
+
+        res.json({
+          top_driver: topDriver.length > 0 && parseFloat(topDriver[0].revenue) > 0
+            ? { name: topDriver[0].name, revenue: parseFloat(topDriver[0].revenue).toFixed(0) }
+            : null,
+          top_maintenance: topMaint.length > 0
+            ? { tuktuk_number: topMaint[0].tuktuk_number, times: topMaint[0].times }
+            : null,
+          avg_orders_per_day: avgPerDay
+        });
+      });
+    });
+  });
+});
+
+// ==================== تنبيهات الأدمن ====================
+app.get('/dashboard/alerts', (req, res) => {
+  const alerts = [];
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  // سواقين ماسجلوش حضور من 3 أيام أو أكتر
+  const absentQuery = `
+    SELECT d.name, MAX(s.check_in_time) AS last_shift
+    FROM drivers d
+    LEFT JOIN shifts s ON d.id = s.driver_id
+    GROUP BY d.id, d.name
+    HAVING last_shift IS NULL OR last_shift < DATE_SUB(NOW(), INTERVAL 3 DAY)
+  `;
+
+  db.query(absentQuery, (err, absentDrivers) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
+
+    absentDrivers.forEach(d => {
+      if (!d.last_shift) {
+        alerts.push({ type: 'warning', message: `${d.name} ماسجّلش أي حضور لحد دلوقتي` });
+      } else {
+        const days = Math.floor((now - new Date(d.last_shift)) / (1000 * 60 * 60 * 24));
+        alerts.push({ type: 'warning', message: `${d.name} ماسجّلش حضور من ${days} يوم` });
+      }
+    });
+
+    // توكتوكات دخلت صيانة 3 مرات أو أكتر هذا الشهر
+    const repeatMaintQuery = `
+      SELECT t.tuktuk_number, COUNT(*) AS times
+      FROM tuktuk_maintenance m
+      JOIN tuktuks t ON m.tuktuk_id = t.id
+      WHERE YEAR(m.maintenance_date) = ? AND MONTH(m.maintenance_date) = ?
+      GROUP BY t.id, t.tuktuk_number
+      HAVING times >= 3
+    `;
+
+    db.query(repeatMaintQuery, [year, month], (err, repeatMaint) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
+
+      repeatMaint.forEach(t => {
+        alerts.push({ type: 'danger', message: `توكتوك ${t.tuktuk_number} دخل الصيانة ${t.times} مرات الشهر ده` });
+      });
+
+      // ورديات مفتوحة من أكتر من 24 ساعة
+      const longShiftQuery = `
+        SELECT d.name, s.check_in_time
+        FROM shifts s
+        JOIN drivers d ON s.driver_id = d.id
+        WHERE s.status = 'open' AND s.check_in_time < DATE_SUB(NOW(), INTERVAL 24 HOUR)
+      `;
+
+      db.query(longShiftQuery, (err, longShifts) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
+
+        longShifts.forEach(s => {
+          alerts.push({ type: 'danger', message: `${s.name} عنده وردية مفتوحة من أكتر من 24 ساعة` });
+        });
+
+        res.json(alerts);
+      });
+    });
+  });
+});
+
+// ==================== إحصائيات السائق ====================
+app.get('/driver/stats/:driver_id', (req, res) => {
+  const { driver_id } = req.params;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  db.query(
+    `SELECT COUNT(*) AS orders_count FROM orders
+     WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?`,
+    [driver_id, year, month],
+    (err, ordersResult) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في الإحصائيات' }); }
+
+      db.query(
+        `SELECT COALESCE(SUM(driver_earning), 0) AS earnings FROM orders
+         WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?`,
+        [driver_id, year, month],
+        (err, earningsResult) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في الإحصائيات' }); }
+
+          res.json({
+            orders_count: ordersResult[0].orders_count || 0,
+            earnings: parseFloat(earningsResult[0].earnings || 0).toFixed(0)
+          });
+        }
+      );
+    }
+  );
+});
 
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
