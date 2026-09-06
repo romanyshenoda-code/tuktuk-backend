@@ -20,11 +20,7 @@
     .logout-link { margin-inline-start: auto; color: var(--sand); opacity: 0.75; font-size: 13px; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); padding: 6px 12px; border-radius: 20px; }
     .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
 
-    .month-picker {
-      display: flex; align-items: center; gap: 10px; background: var(--paper);
-      border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin-bottom: 18px;
-      flex-wrap: wrap;
-    }
+    .month-picker { display: flex; align-items: center; gap: 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; flex-wrap: wrap; }
     .month-picker label { font-size: 13px; font-weight: 700; color: var(--muted); }
     .month-picker select { width: auto; min-width: 110px; }
     .month-picker .current-badge { font-size: 12px; background: var(--nile); color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
@@ -38,11 +34,7 @@
     .stat-card .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
     .tabs-bar { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 22px; border-bottom: 2px solid var(--line); padding-bottom: 0; }
-    .tab-btn {
-      background: none; border: none; padding: 12px 18px; font-family: inherit; font-size: 14px; font-weight: 700;
-      color: var(--muted); cursor: pointer; white-space: nowrap; position: relative; top: 2px;
-      border-bottom: 3px solid transparent; transition: color 0.2s, border-color 0.2s;
-    }
+    .tab-btn { background: none; border: none; padding: 12px 18px; font-family: inherit; font-size: 14px; font-weight: 700; color: var(--muted); cursor: pointer; white-space: nowrap; position: relative; top: 2px; border-bottom: 3px solid transparent; transition: color 0.2s, border-color 0.2s; }
     .tab-btn:hover { color: var(--ink); }
     .tab-btn.active { color: var(--tab-color, var(--nile)); border-bottom-color: var(--tab-color, var(--nile)); }
     .tab-btn[data-tab="payroll"] { --tab-color: var(--nile); }
@@ -77,6 +69,7 @@
     .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
     .btn-edit { background: var(--amber); }
     .btn-delete { background: var(--rust); }
+    .btn-payslip { background: var(--asphalt); }
     .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
     .form-msg { padding: 10px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
     .form-msg.error-msg { color: var(--rust); }
@@ -118,6 +111,25 @@
     .breakdown-card h4 { margin: 0 0 10px; font-size: 14px; }
     .breakdown-item { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--line); }
     .breakdown-item:last-child { border-bottom: none; font-weight: 700; }
+
+    .payslip-box { background: var(--paper); border-radius: 12px; padding: 20px; }
+    .payslip-header { text-align: center; border-bottom: 2px solid var(--line); padding-bottom: 14px; margin-bottom: 14px; }
+    .payslip-header img { height: 40px; margin-bottom: 8px; }
+    .payslip-header h3 { margin: 0; font-size: 16px; }
+    .payslip-header .period { font-size: 12.5px; color: var(--muted); }
+    .payslip-row { display: flex; justify-content: space-between; font-size: 13.5px; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+    .payslip-row.total { font-weight: 800; font-size: 15px; border-bottom: none; border-top: 2px solid var(--ink); margin-top: 6px; padding-top: 10px; }
+    .payslip-actions { display: flex; gap: 8px; margin-top: 18px; }
+    .payslip-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; color: white; }
+    .btn-print { background: var(--asphalt); }
+    .btn-whatsapp { background: #25D366; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #payslipModal, #payslipModal * { visibility: visible; }
+      #payslipModal { position: absolute; inset: 0; background: white; }
+      .payslip-actions { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -162,8 +174,8 @@
       </div>
       <div class="panel table-scroll" style="padding:0;">
         <table id="payrollTable">
-          <thead><tr><th>السائق</th><th>نوع الدخل</th><th>أيام العمل المطلوبة</th><th>حضور فعلي</th><th>أيام أعياد</th><th>المرتب</th><th>العمولة</th><th>الإجمالي</th><th>خصومات وسلف</th><th>الصافي</th><th>تخصيص</th></tr></thead>
-          <tbody><tr class="empty-row"><td colspan="11">جاري التحميل...</td></tr></tbody>
+          <thead><tr><th>السائق</th><th>نوع الدخل</th><th>أيام العمل المطلوبة</th><th>حضور فعلي</th><th>أيام أعياد</th><th>المرتب</th><th>العمولة</th><th>الإجمالي</th><th>خصومات وسلف</th><th>الصافي</th><th>تخصيص</th><th>مفردات المرتب</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="12">جاري التحميل...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -185,8 +197,12 @@
             <input type="number" id="monthlySalary" placeholder="مثال: 2000">
           </div>
           <div class="field-group">
-            <label>نسبة العمولة %</label>
-            <input type="number" id="commissionPct" placeholder="مثال: 70">
+            <label>نسبة عمولة التوصيل %</label>
+            <input type="number" id="deliveryCommissionPct" placeholder="مثال: 70">
+          </div>
+          <div class="field-group">
+            <label>نسبة عمولة الرحلة الكاملة %</label>
+            <input type="number" id="fullTripCommissionPct" placeholder="مثال: 60">
           </div>
           <div class="field-group">
             <label>سعر أوردر التوصيل الثابت</label>
@@ -391,8 +407,11 @@
       <label class="field-label">المرتب الشهري المخصص</label>
       <input type="number" id="customSalary" placeholder="مثال: 2000">
 
-      <label class="field-label">نسبة العمولة المخصصة %</label>
-      <input type="number" id="customCommission" placeholder="مثال: 70">
+      <label class="field-label">نسبة عمولة التوصيل المخصصة %</label>
+      <input type="number" id="customDeliveryCommission" placeholder="مثال: 70">
+
+      <label class="field-label">نسبة عمولة الرحلة الكاملة المخصصة %</label>
+      <input type="number" id="customFullTripCommission" placeholder="مثال: 60">
 
       <label class="field-label">سعر أوردر التوصيل المخصص</label>
       <input type="number" id="customDeliveryPrice" placeholder="مثال: 30">
@@ -425,6 +444,33 @@
       <div id="customizeMsg" class="form-msg-inline" style="margin-top:10px;"></div>
     </div>
   </div>
+
+  <div class="modal-backdrop" id="payslipModal">
+    <div class="modal-box" style="max-width: 420px;">
+      <div class="payslip-box">
+        <div class="payslip-header">
+          <img src="/logo.png" alt="Ginger">
+          <h3 id="payslipDriverName">-</h3>
+          <div class="period" id="payslipPeriod">-</div>
+        </div>
+        <div class="payslip-row"><span>أيام العمل المطلوبة</span><span id="payslipRequiredDays">-</span></div>
+        <div class="payslip-row"><span>أيام الحضور الفعلي</span><span id="payslipPresentDays">-</span></div>
+        <div class="payslip-row"><span>أيام الأعياد المعتمدة</span><span id="payslipHolidayDays">-</span></div>
+        <div class="payslip-row"><span>قيمة المرتب</span><span id="payslipSalary">-</span></div>
+        <div class="payslip-row"><span>عمولة التوصيل (<span id="payslipDeliveryCount">-</span> أوردر)</span><span id="payslipDeliveryCommission">-</span></div>
+        <div class="payslip-row"><span>عمولة الرحلات (<span id="payslipTripCount">-</span> رحلة)</span><span id="payslipTripCommission">-</span></div>
+        <div class="payslip-row"><span>إجمالي الاستحقاق</span><span id="payslipGross">-</span></div>
+        <div class="payslip-row"><span>خصومات وسلف</span><span id="payslipDeductions">-</span></div>
+        <div class="payslip-row total"><span>الصافي المستحق</span><span id="payslipNet">-</span></div>
+      </div>
+      <div class="payslip-actions">
+        <button class="btn-print" onclick="window.print()">🖨 طباعة</button>
+        <button class="btn-whatsapp" onclick="sendPayslipWhatsapp()">📱 إرسال واتساب</button>
+      </div>
+      <button type="button" class="btn-modal-cancel" style="width:100%; margin-top:8px; padding:10px; border:none; border-radius:8px; cursor:pointer;" onclick="closePayslip()">إغلاق</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
@@ -434,6 +480,7 @@
     let allGeneralExpenses = [];
     let selectedRestDays = [];
     let selectedCustomRestDays = [];
+    let currentPayslipDriver = null;
 
     const now = new Date();
     const realCurrentYear = now.getFullYear();
@@ -539,7 +586,8 @@
       fetch('/payroll-settings').then(res => res.json()).then(data => {
         document.getElementById('incomeType').value = data.income_type || 'commission';
         document.getElementById('monthlySalary').value = data.monthly_salary || 0;
-        document.getElementById('commissionPct').value = data.commission_pct || 0;
+        document.getElementById('deliveryCommissionPct').value = data.delivery_commission_pct || 0;
+        document.getElementById('fullTripCommissionPct').value = data.full_trip_commission_pct || 0;
         document.getElementById('deliveryBasePrice').value = data.delivery_base_price || 0;
         document.getElementById('fullTripBasePrice').value = data.full_trip_base_price || 0;
       });
@@ -553,7 +601,8 @@
         body: JSON.stringify({
           income_type: document.getElementById('incomeType').value,
           monthly_salary: document.getElementById('monthlySalary').value,
-          commission_pct: document.getElementById('commissionPct').value,
+          delivery_commission_pct: document.getElementById('deliveryCommissionPct').value,
+          full_trip_commission_pct: document.getElementById('fullTripCommissionPct').value,
           delivery_base_price: document.getElementById('deliveryBasePrice').value,
           full_trip_base_price: document.getElementById('fullTripBasePrice').value
         })
@@ -707,7 +756,7 @@
     function runPayrollCalculation() {
       const tbody = document.querySelector('#payrollTable tbody');
       if (allDrivers.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="11">مفيش سواقين لسه</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="12">مفيش سواقين لسه</td></tr>`;
         return;
       }
 
@@ -735,7 +784,7 @@
     function renderPayrollTable(rows) {
       const tbody = document.querySelector('#payrollTable tbody');
       if (rows.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="11">مفيش نتائج</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="12">مفيش نتائج</td></tr>`;
         return;
       }
       const incomeLabel = { salary: 'مرتب', commission: 'عمولة', both: 'مرتب+عمولة' };
@@ -752,6 +801,7 @@
           <td>${(parseFloat(p.total_deductions) + parseFloat(p.total_advances)).toFixed(2)}</td>
           <td><strong>${p.net_pay}</strong></td>
           <td><button class="row-btn btn-edit" onclick='openCustomizeModal(${p.driver_id})'>تخصيص</button></td>
+          <td><button class="row-btn btn-payslip" onclick='openPayslip(${JSON.stringify(p)})'>مفردات</button></td>
         </tr>
       `).join('');
     }
@@ -791,6 +841,53 @@
       });
     }
 
+    function openPayslip(p) {
+      currentPayslipDriver = p;
+      document.getElementById('payslipDriverName').textContent = p.driver_name;
+      document.getElementById('payslipPeriod').textContent = `${monthNames[selectedMonth - 1]} ${selectedYear}`;
+      document.getElementById('payslipRequiredDays').textContent = p.required_working_days;
+      document.getElementById('payslipPresentDays').textContent = p.days_present;
+      document.getElementById('payslipHolidayDays').textContent = p.holiday_days;
+      document.getElementById('payslipSalary').textContent = p.salary_part + ' ج';
+      document.getElementById('payslipDeliveryCount').textContent = p.delivery_count;
+      document.getElementById('payslipDeliveryCommission').textContent = p.delivery_commission + ' ج';
+      document.getElementById('payslipTripCount').textContent = p.full_trip_count;
+      document.getElementById('payslipTripCommission').textContent = p.full_trip_commission + ' ج';
+      document.getElementById('payslipGross').textContent = p.gross_pay + ' ج';
+      document.getElementById('payslipDeductions').textContent = (parseFloat(p.total_deductions) + parseFloat(p.total_advances)).toFixed(2) + ' ج';
+      document.getElementById('payslipNet').textContent = p.net_pay + ' ج';
+      document.getElementById('payslipModal').classList.add('open');
+    }
+
+    function closePayslip() {
+      document.getElementById('payslipModal').classList.remove('open');
+    }
+
+    function sendPayslipWhatsapp() {
+      const p = currentPayslipDriver;
+      if (!p) return;
+      const driver = allDrivers.find(d => d.id === p.driver_id);
+      const phone = driver ? driver.phone.replace(/\D/g, '') : '';
+
+      if (!phone) {
+        showToast('رقم تليفون السائق غير مسجل', true);
+        return;
+      }
+
+      const message = `مفردات مرتب ${p.driver_name} - ${monthNames[selectedMonth - 1]} ${selectedYear}
+أيام الحضور: ${p.days_present} / ${p.required_working_days}
+المرتب: ${p.salary_part} ج
+عمولة التوصيل: ${p.delivery_commission} ج
+عمولة الرحلات: ${p.full_trip_commission} ج
+الإجمالي: ${p.gross_pay} ج
+خصومات وسلف: ${(parseFloat(p.total_deductions) + parseFloat(p.total_advances)).toFixed(2)} ج
+الصافي المستحق: ${p.net_pay} ج`;
+
+      const waPhone = phone.startsWith('0') ? '2' + phone : phone;
+      const url = `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
+    }
+
     function openCustomizeModal(driverId) {
       const driver = allDrivers.find(d => d.id === driverId);
       document.getElementById('customizeDriverId').value = driverId;
@@ -798,7 +895,8 @@
       document.getElementById('isCustomized').checked = !!driver.is_customized;
       document.getElementById('customIncomeType').value = driver.custom_income_type || 'commission';
       document.getElementById('customSalary').value = driver.custom_monthly_salary || 0;
-      document.getElementById('customCommission').value = driver.custom_commission_pct || 0;
+      document.getElementById('customDeliveryCommission').value = driver.custom_delivery_commission_pct || 0;
+      document.getElementById('customFullTripCommission').value = driver.custom_full_trip_commission_pct || 0;
       document.getElementById('customDeliveryPrice').value = driver.custom_delivery_base_price || 0;
       document.getElementById('customFullTripPrice').value = driver.custom_full_trip_base_price || 0;
       document.getElementById('customWorkingDays').value = driver.custom_working_days || 26;
@@ -820,7 +918,8 @@
           is_customized: document.getElementById('isCustomized').checked,
           custom_income_type: document.getElementById('customIncomeType').value,
           custom_monthly_salary: document.getElementById('customSalary').value,
-          custom_commission_pct: document.getElementById('customCommission').value,
+          custom_delivery_commission_pct: document.getElementById('customDeliveryCommission').value,
+          custom_full_trip_commission_pct: document.getElementById('customFullTripCommission').value,
           custom_delivery_base_price: document.getElementById('customDeliveryPrice').value,
           custom_full_trip_base_price: document.getElementById('customFullTripPrice').value,
           custom_working_days: document.getElementById('customWorkingDays').value,
