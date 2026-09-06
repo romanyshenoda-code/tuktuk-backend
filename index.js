@@ -1134,6 +1134,83 @@ app.delete('/general-expenses/:id', (req, res) => {
     res.json({ message: 'تم حذف المصروف نهائياً' });
   });
 });
+// ==================== تقرير أداء السواقين ====================
+app.get('/reports/driver-performance/:year/:month', (req, res) => {
+  const { year, month } = req.params;
+
+  const query = `
+    SELECT 
+      d.id AS driver_id,
+      d.name AS driver_name,
+      COUNT(DISTINCT DATE(s.check_in_time)) AS days_worked,
+      COUNT(DISTINCT o.id) AS total_orders,
+      COALESCE(SUM(o.price), 0) AS total_revenue,
+      COALESCE(SUM(CASE WHEN o.order_type = 'delivery' THEN 1 ELSE 0 END), 0) AS delivery_count,
+      COALESCE(SUM(CASE WHEN o.order_type = 'full_trip' THEN 1 ELSE 0 END), 0) AS full_trip_count
+    FROM drivers d
+    LEFT JOIN shifts s ON d.id = s.driver_id 
+      AND YEAR(s.check_in_time) = ? AND MONTH(s.check_in_time) = ?
+    LEFT JOIN orders o ON d.id = o.driver_id AND o.status = 'closed'
+      AND YEAR(o.start_time) = ? AND MONTH(o.start_time) = ?
+    GROUP BY d.id, d.name
+    ORDER BY total_revenue DESC
+  `;
+
+  db.query(query, [year, month, year, month], (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب تقرير الأداء' }); }
+    res.json(results);
+  });
+});
+
+// ==================== بيانات الرسم البياني السنوي ====================
+app.get('/reports/yearly-chart/:year', (req, res) => {
+  const { year } = req.params;
+
+  db.query(
+    `SELECT MONTH(start_time) AS month, COALESCE(SUM(price), 0) AS revenue
+     FROM orders WHERE status = 'closed' AND YEAR(start_time) = ?
+     GROUP BY MONTH(start_time)`,
+    [year],
+    (err, revenueResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإيرادات' }); }
+
+      db.query(
+        `SELECT MONTH(maintenance_date) AS month, COALESCE(SUM(cost), 0) AS total
+         FROM tuktuk_maintenance WHERE YEAR(maintenance_date) = ?
+         GROUP BY MONTH(maintenance_date)`,
+        [year],
+        (err, maintResults) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الصيانة' }); }
+
+          db.query(
+            `SELECT MONTH(expense_date) AS month, COALESCE(SUM(amount), 0) AS total
+             FROM general_expenses WHERE YEAR(expense_date) = ?
+             GROUP BY MONTH(expense_date)`,
+            [year],
+            (err, genResults) => {
+              if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب المصروفات' }); }
+
+              const months = Array.from({ length: 12 }, (_, i) => i + 1);
+              const data = months.map(m => {
+                const rev = revenueResults.find(r => r.month === m);
+                const maint = maintResults.find(r => r.month === m);
+                const gen = genResults.find(r => r.month === m);
+                return {
+                  month: m,
+                  revenue: parseFloat(rev ? rev.revenue : 0),
+                  maintenance: parseFloat(maint ? maint.total : 0),
+                  general: parseFloat(gen ? gen.total : 0)
+                };
+              });
+
+              res.json(data);
+            }
+          );
+        }
+      );
+    }
+  );
+});
 
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
