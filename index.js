@@ -120,18 +120,29 @@ app.delete('/admins/:id', (req, res) => {
 // ==================== تسجيل دخول السائق (مشفّر) ====================
 app.post('/api/driver-login', (req, res) => {
   const { driver_id, password } = req.body;
-  db.query('SELECT * FROM drivers WHERE id = ?', [driver_id], (err, results) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' }); }
-    if (results.length === 0) return res.status(401).json({ error: 'رقم السائق أو الباسورد غلط' });
+  const identifier = String(driver_id || '').trim();
 
-    const driver = results[0];
-    const isMatch = bcrypt.compareSync(password, driver.password || '');
-    if (!isMatch) return res.status(401).json({ error: 'رقم السائق أو الباسورد غلط' });
+  if (!identifier || !password) {
+    return res.status(400).json({ error: 'اكتب رقم السائق أو الموبايل والباسورد' });
+  }
 
-    req.session.driverId = driver.id;
-    req.session.driverName = driver.name;
-    res.json({ message: 'تم تسجيل الدخول بنجاح', driver });
-  });
+  // نبحث بالرقم التسلسلي أو برقم الموبايل
+  db.query(
+    'SELECT * FROM drivers WHERE id = ? OR phone = ? OR REPLACE(phone, " ", "") = ?',
+    [identifier, identifier, identifier],
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' }); }
+      if (results.length === 0) return res.status(401).json({ error: 'البيانات غلط، تأكد من رقمك والباسورد' });
+
+      // لو فيه أكتر من نتيجة (نادر)، ندوّر على أول واحد الباسورد بتاعه صح
+      const matched = results.find(d => bcrypt.compareSync(password, d.password || ''));
+      if (!matched) return res.status(401).json({ error: 'البيانات غلط، تأكد من رقمك والباسورد' });
+
+      req.session.driverId = matched.id;
+      req.session.driverName = matched.name;
+      res.json({ message: 'تم تسجيل الدخول بنجاح', driver: matched });
+    }
+  );
 });
 
 app.get('/api/driver-logout', (req, res) => {
