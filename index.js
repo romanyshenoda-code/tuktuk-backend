@@ -1097,6 +1097,24 @@ app.delete('/general-expenses/:id', (req, res) => {
     res.json({ message: 'تم حذف المصروف نهائياً' });
   });
 });
+// ==================== حذف طلبات الإجازة والسلف نهائياً ====================
+app.delete('/leave-requests/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM leave_requests WHERE id = ?', [id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف طلب الإجازة' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+    res.json({ message: 'تم حذف طلب الإجازة نهائياً' });
+  });
+});
+
+app.delete('/advances/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM advances WHERE id = ?', [id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف طلب السلفة' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+    res.json({ message: 'تم حذف طلب السلفة نهائياً' });
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
