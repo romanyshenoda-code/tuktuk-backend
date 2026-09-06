@@ -769,7 +769,7 @@
       Promise.all(promises).then(results => {
         allPayrollRows = results;
         results.forEach(p => {
-          totalNet += parseFloat(p.net_pay || 0);
+          totalNet += parseFloat(p.gross_pay || 0);
           totalRevenue += parseFloat(p.total_revenue || 0);
         });
         document.getElementById('statRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
