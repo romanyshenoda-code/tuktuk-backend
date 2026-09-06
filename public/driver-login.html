@@ -3,71 +3,123 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تسجيل دخول السائق - Ginger</title>
+  <title>دخول السائق - Ginger</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root { --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF; --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; }
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --line: #E4DCCB; --muted: #8A8272;
+    }
     * { box-sizing: border-box; }
     body {
-      font-family: 'Cairo', sans-serif;
-      margin: 0; min-height: 100vh;
+      font-family: 'Cairo', sans-serif; margin: 0; min-height: 100vh;
       background: linear-gradient(160deg, var(--asphalt) 0%, #0F2244 100%);
-      display: flex; justify-content: center; align-items: center;
-      padding: 20px;
+      display: flex; justify-content: center; align-items: center; padding: 20px 20px 110px;
     }
     .box {
-      background: var(--paper); padding: 36px 30px; border-radius: 20px;
-      width: 100%; max-width: 360px; text-align: center;
-      border-top: 6px solid var(--orange);
-      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-      animation: riseIn 0.5s ease;
+      background: var(--paper); padding: 32px 26px; border-radius: 20px;
+      width: 100%; max-width: 350px; text-align: center;
+      border-top: 6px solid var(--orange); box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+      animation: riseIn 0.45s cubic-bezier(.2,.9,.3,1.1);
     }
-    @keyframes riseIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-    .box img { height: 60px; margin-bottom: 14px; }
-    .welcome { font-size: 20px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
-    .wish { font-size: 13.5px; color: var(--nile); font-weight: 600; margin-bottom: 22px; }
+    @keyframes riseIn { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+    .box img { height: 52px; margin-bottom: 12px; }
+    .greeting { font-size: 18px; font-weight: 800; color: var(--ink); margin-bottom: 3px; }
+    .greeting-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 24px; }
+
+    .field-wrap { text-align: start; margin-bottom: 12px; }
+    .field-wrap label { display: block; font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 5px; }
     input {
-      width: 100%; padding: 13px 14px; margin: 7px 0; border: 1px solid #E4DCCB;
+      width: 100%; padding: 13px 15px; border: 1px solid var(--line);
       border-radius: 10px; box-sizing: border-box; font-size: 15px; font-family: inherit; background: var(--sand);
     }
     input:focus { outline: 2px solid var(--orange); background: var(--paper); }
+    .hint { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+
     button {
-      width: 100%; padding: 13px; background: var(--orange); color: white; border: none;
-      border-radius: 10px; font-size: 15.5px; font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 14px;
+      width: 100%; padding: 14px; background: var(--orange); color: white; border: none;
+      border-radius: 10px; font-size: 15.5px; font-weight: 800; font-family: inherit; cursor: pointer; margin-top: 8px;
+      transition: filter 0.15s;
     }
-    button:hover { filter: brightness(0.95); }
-    #msg { color: var(--rust); margin-top: 10px; font-size: 13.5px; min-height: 14px; }
+    button:hover { filter: brightness(0.94); }
+    button:active { transform: scale(0.99); }
+    button:disabled { background: #C9C2B2; }
+
+    #msg { color: var(--rust); margin-top: 12px; font-size: 13px; min-height: 16px; font-weight: 600; }
+
+    .dev-footer {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 13px 20px; background: rgba(255,255,255,0.07);
+      backdrop-filter: blur(6px); border-top: 1px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center;
+    }
+    .dev-brand { display: flex; align-items: center; gap: 11px; }
+    .dev-mark { width: 34px; height: 34px; flex-shrink: 0; }
+    .dev-brand-text { line-height: 1.25; }
+    .dev-brand-name { font-size: 14px; font-weight: 800; color: #F3EEE3; letter-spacing: 1.5px; }
+    .dev-brand-sub { font-size: 8px; color: rgba(243,238,227,0.6); letter-spacing: 1px; font-weight: 600; }
+    .dev-divider { width: 1px; height: 30px; background: rgba(255,255,255,0.15); }
+    .dev-info { text-align: center; }
+    .dev-name { font-size: 12.5px; font-weight: 800; color: #F3EEE3; }
+    .dev-role { font-size: 10px; color: rgba(243,238,227,0.6); margin-top: 1px; }
+    .dev-contact {
+      display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+      background: #25D366; color: white; padding: 7px 14px; border-radius: 20px;
+      font-size: 12px; font-weight: 700; transition: filter 0.15s;
+    }
+    .dev-contact:hover { filter: brightness(0.93); }
+    @media (max-width: 560px) {
+      .dev-footer { flex-direction: column; gap: 13px; padding: 22px 16px; }
+      .dev-divider { display: none; }
+    }
   </style>
 </head>
 <body>
   <div class="box">
     <img src="/logo.png" alt="Ginger">
-    <div class="welcome">أهلاً بيك يا كابتن 🚕</div>
-    <div class="wish" id="wishText">نتمنالك يوم شغل جميل ومليان رزق</div>
-    <input type="number" id="driverId" placeholder="رقم السائق">
-    <input type="password" id="password" placeholder="كلمة المرور">
-    <button onclick="login()">دخول</button>
+    <div class="greeting" id="greetingText">أهلاً بيك</div>
+    <div class="greeting-sub">سجّل دخولك وابدأ يومك</div>
+
+    <div class="field-wrap">
+      <label for="driverId">رقم السائق أو رقم الموبايل</label>
+      <input type="text" id="driverId" inputmode="numeric" placeholder="مثال: 5 أو 01012345678">
+      <div class="hint">تقدر تدخل برقمك التسلسلي أو رقم موبايلك</div>
+    </div>
+
+    <div class="field-wrap">
+      <label for="password">كلمة المرور</label>
+      <input type="password" id="password" placeholder="كلمة المرور">
+    </div>
+
+    <button id="loginBtn" onclick="login()">دخول</button>
     <div id="msg"></div>
   </div>
 
   <script>
-    const hour = new Date().getHours();
-    let greeting = 'نتمنالك يوم شغل جميل ومليان رزق';
-    if (hour >= 5 && hour < 12) greeting = 'صباح الخير يا كابتن، يوم مليان رزق إن شاء الله';
-    else if (hour >= 12 && hour < 17) greeting = 'نهارك سعيد، نتمنالك باقي يوم شغل موفق';
-    else if (hour >= 17 && hour < 21) greeting = 'مساء الخير، نتمنالك وردية آمنة';
-    else greeting = 'مساء النور، خد بالك من نفسك في الطريق';
-    document.getElementById('wishText').textContent = greeting;
+    function getGreeting() {
+      const h = new Date().getHours();
+      if (h < 12) return 'صباح الخير';
+      if (h < 17) return 'نهارك سعيد';
+      return 'مساء الخير';
+    }
+    document.getElementById('greetingText').textContent = getGreeting();
 
     function login() {
-      const driver_id = document.getElementById('driverId').value;
+      const driver_id = document.getElementById('driverId').value.trim();
       const password = document.getElementById('password').value;
+      const msg = document.getElementById('msg');
+      const btn = document.getElementById('loginBtn');
 
       if (!driver_id || !password) {
-        document.getElementById('msg').textContent = 'من فضلك اكتب رقم السائق والباسورد';
+        msg.textContent = 'من فضلك اكتب رقمك وكلمة المرور';
         return;
       }
+
+      btn.disabled = true;
+      btn.textContent = 'جاري الدخول...';
+      msg.textContent = '';
 
       fetch('/api/driver-login', {
         method: 'POST',
@@ -79,14 +131,45 @@
         if (data.message) {
           window.location.href = '/driver.html';
         } else {
-          document.getElementById('msg').textContent = data.error;
+          btn.disabled = false;
+          btn.textContent = 'دخول';
+          msg.textContent = data.error;
         }
+      })
+      .catch(() => {
+        btn.disabled = false;
+        btn.textContent = 'دخول';
+        msg.textContent = 'حصل خطأ في الاتصال بالسيرفر';
       });
     }
 
-    document.getElementById('password').addEventListener('keypress', function(e) {
+    document.getElementById('password').addEventListener('keypress', e => {
       if (e.key === 'Enter') login();
     });
+    document.getElementById('driverId').addEventListener('keypress', e => {
+      if (e.key === 'Enter') document.getElementById('password').focus();
+    });
   </script>
+  <footer class="dev-footer">
+    <div class="dev-brand">
+      <svg class="dev-mark" viewBox="0 0 68 68" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 34 6 L 58 20 L 58 48 L 34 62 L 10 48 L 10 20 Z" fill="none" stroke="#EA4F1E" stroke-width="3"/>
+        <path d="M 26 22 L 26 46 M 26 22 L 44 22 M 26 33 L 40 33" stroke="#EA4F1E" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div class="dev-brand-text">
+        <div class="dev-brand-name">FUTURE</div>
+        <div class="dev-brand-sub">COMPANY FOR SOLUTIONS</div>
+      </div>
+    </div>
+    <div class="dev-divider"></div>
+    <div class="dev-info">
+      <div class="dev-name">Dr. Romany Shenoda</div>
+      <div class="dev-role">تطوير وصيانة الأنظمة</div>
+    </div>
+    <a href="https://wa.me/201066696216" target="_blank" class="dev-contact">
+      <span>📱</span> 01066696216
+    </a>
+  </footer>
+
 </body>
 </html>

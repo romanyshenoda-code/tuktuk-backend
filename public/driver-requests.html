@@ -37,6 +37,31 @@
     .history-item:last-child { border-bottom: none; }
     .empty-note { color: var(--muted); font-size: 13px; text-align: center; padding: 10px 0; }
     .section-label { font-size: 13px; font-weight: 700; margin: 18px 0 8px; color: var(--ink); }
+
+    .dev-footer {
+      margin-top: 40px; padding: 20px 24px; background: #FFFFFF;
+      border-top: 1px solid #E4DCCB;
+      display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center;
+    }
+    .dev-brand { display: flex; align-items: center; gap: 11px; }
+    .dev-mark { width: 40px; height: 40px; flex-shrink: 0; }
+    .dev-brand-text { line-height: 1.25; }
+    .dev-brand-name { font-size: 15px; font-weight: 800; color: #16305C; letter-spacing: 1.5px; }
+    .dev-brand-sub { font-size: 8.5px; color: #8A8272; letter-spacing: 1px; font-weight: 600; }
+    .dev-divider { width: 1px; height: 34px; background: #E4DCCB; }
+    .dev-info { text-align: center; }
+    .dev-name { font-size: 13px; font-weight: 800; color: #16305C; }
+    .dev-role { font-size: 10.5px; color: #8A8272; margin-top: 1px; }
+    .dev-contact {
+      display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+      background: #25D366; color: white; padding: 8px 16px; border-radius: 22px;
+      font-size: 13px; font-weight: 700; transition: filter 0.15s;
+    }
+    .dev-contact:hover { filter: brightness(0.93); }
+    @media (max-width: 560px) {
+      .dev-footer { flex-direction: column; gap: 13px; padding: 22px 16px; }
+      .dev-divider { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -163,5 +188,26 @@
       });
     }
   </script>
+  <footer class="dev-footer">
+    <div class="dev-brand">
+      <svg class="dev-mark" viewBox="0 0 68 68" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 34 6 L 58 20 L 58 48 L 34 62 L 10 48 L 10 20 Z" fill="none" stroke="#EA4F1E" stroke-width="3"/>
+        <path d="M 26 22 L 26 46 M 26 22 L 44 22 M 26 33 L 40 33" stroke="#EA4F1E" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div class="dev-brand-text">
+        <div class="dev-brand-name">FUTURE</div>
+        <div class="dev-brand-sub">COMPANY FOR SOLUTIONS</div>
+      </div>
+    </div>
+    <div class="dev-divider"></div>
+    <div class="dev-info">
+      <div class="dev-name">Dr. Romany Shenoda</div>
+      <div class="dev-role">تطوير وصيانة الأنظمة</div>
+    </div>
+    <a href="https://wa.me/201066696216" target="_blank" class="dev-contact">
+      <span>📱</span> 01066696216
+    </a>
+  </footer>
+
 </body>
 </html>
