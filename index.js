@@ -3,11 +3,13 @@ const session = require('express-session');
 const multer = require('multer');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const compression = require('compression');
 const db = require('./db');
 
 const app = express();
 const PORT = 3000;
 
+app.use(compression());
 app.use(express.json());
 
 const storage = multer.diskStorage({
