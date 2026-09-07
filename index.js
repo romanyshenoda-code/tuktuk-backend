@@ -120,29 +120,18 @@ app.delete('/admins/:id', (req, res) => {
 // ==================== تسجيل دخول السائق (مشفّر) ====================
 app.post('/api/driver-login', (req, res) => {
   const { driver_id, password } = req.body;
-  const identifier = String(driver_id || '').trim();
+  db.query('SELECT * FROM drivers WHERE id = ?', [driver_id], (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' }); }
+    if (results.length === 0) return res.status(401).json({ error: 'رقم السائق أو الباسورد غلط' });
 
-  if (!identifier || !password) {
-    return res.status(400).json({ error: 'اكتب رقم السائق أو الموبايل والباسورد' });
-  }
+    const driver = results[0];
+    const isMatch = bcrypt.compareSync(password, driver.password || '');
+    if (!isMatch) return res.status(401).json({ error: 'رقم السائق أو الباسورد غلط' });
 
-  // نبحث بالرقم التسلسلي أو برقم الموبايل
-  db.query(
-    'SELECT * FROM drivers WHERE id = ? OR phone = ? OR REPLACE(phone, " ", "") = ?',
-    [identifier, identifier, identifier],
-    (err, results) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' }); }
-      if (results.length === 0) return res.status(401).json({ error: 'البيانات غلط، تأكد من رقمك والباسورد' });
-
-      // لو فيه أكتر من نتيجة (نادر)، ندوّر على أول واحد الباسورد بتاعه صح
-      const matched = results.find(d => bcrypt.compareSync(password, d.password || ''));
-      if (!matched) return res.status(401).json({ error: 'البيانات غلط، تأكد من رقمك والباسورد' });
-
-      req.session.driverId = matched.id;
-      req.session.driverName = matched.name;
-      res.json({ message: 'تم تسجيل الدخول بنجاح', driver: matched });
-    }
-  );
+    req.session.driverId = driver.id;
+    req.session.driverName = driver.name;
+    res.json({ message: 'تم تسجيل الدخول بنجاح', driver });
+  });
 });
 
 app.get('/api/driver-logout', (req, res) => {
@@ -454,11 +443,16 @@ app.post('/orders/open', (req, res) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحقق من الأوردرات' }); }
     if (openResults.length > 0) return res.status(400).json({ error: 'السائق عنده أوردر مفتوح بالفعل، لازم يقفله الأول' });
 
-    db.query('SELECT driver_commission_pct FROM pricing_rules WHERE order_type = ? ORDER BY effective_from DESC LIMIT 1', [order_type], (err, pricingResults) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب التسعيرة' }); }
-      if (pricingResults.length === 0) return res.status(400).json({ error: 'مفيش تسعيرة محددة لنوع الرحلة ده' });
+    // نجيب نسبة العمولة من إعدادات الدخل (مصدر واحد للأسعار)
+    db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
+      const settings = settingsResults[0];
+      if (!settings) return res.status(400).json({ error: 'مفيش إعدادات أسعار، اضبطها من قسم المالية الأول' });
 
-      const commission_pct = pricingResults[0].driver_commission_pct;
+      let commission_pct = 0;
+      if (order_type === 'delivery') commission_pct = parseFloat(settings.delivery_commission_pct || 0);
+      else if (order_type === 'full_trip') commission_pct = parseFloat(settings.full_trip_commission_pct || 0);
+
       db.query(
         `INSERT INTO orders (shift_id, driver_id, order_type, start_lat, start_lng, start_time, driver_commission_pct, status) VALUES (?, ?, ?, ?, ?, NOW(), ?, 'open')`,
         [shift_id, driver_id, order_type, start_lat, start_lng, commission_pct],
@@ -494,21 +488,23 @@ app.post('/orders/close', upload.single('photo'), (req, res) => {
       const order = orderResults[0];
       const distance_km = calculateDistance(order.start_lat, order.start_lng, end_lat, end_lng);
 
-      db.query('SELECT * FROM pricing_rules WHERE order_type = ? ORDER BY effective_from DESC LIMIT 1', [order.order_type], (err, pricingResults) => {
-        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب التسعيرة' }); }
-                const pricing = pricingResults[0];
-        if (!pricing) {
-          return res.status(400).json({ error: 'مفيش تسعيرة محددة لنوع الرحلة ده' });
-        }
+      db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
+        const settings = settingsResults[0];
+        if (!settings) return res.status(400).json({ error: 'مفيش إعدادات أسعار، اضبطها من قسم المالية' });
 
+        // سعر ثابت حسب نوع الأوردر (مفيش حساب بالكيلومتر)
         let price = 0;
-        if (order.order_type === 'delivery') {
-          price = distance_km * parseFloat(pricing.price_per_km || 0);
-        } else if (order.order_type === 'full_trip') {
-          price = parseFloat(pricing.price_per_day || 0);
-        }
+        if (order.order_type === 'delivery') price = parseFloat(settings.delivery_base_price || 0);
+        else if (order.order_type === 'full_trip') price = parseFloat(settings.full_trip_base_price || 0);
 
-        const driver_earning = price * (parseFloat(order.driver_commission_pct || 0) / 100);
+        // نسبة العمولة حسب نوع الأوردر
+        let commissionPct = 0;
+        if (order.order_type === 'delivery') commissionPct = parseFloat(settings.delivery_commission_pct || 0);
+        else if (order.order_type === 'full_trip') commissionPct = parseFloat(settings.full_trip_commission_pct || 0);
+
+        const driver_earning = price * (commissionPct / 100);
+
         db.query(
           `UPDATE orders SET end_lat = ?, end_lng = ?, end_time = NOW(), distance_km = ?, price = ?, driver_earning = ?, status = 'closed', delivery_photo = ? WHERE id = ?`,
           [end_lat, end_lng, distance_km.toFixed(2), price.toFixed(2), driver_earning.toFixed(2), photo, order_id],
@@ -1150,241 +1146,6 @@ app.delete('/general-expenses/:id', (req, res) => {
     if (result.affectedRows === 0) return res.status(404).json({ error: 'المصروف غير موجود' });
     res.json({ message: 'تم حذف المصروف نهائياً' });
   });
-});
-// ==================== تقرير أداء السواقين ====================
-app.get('/reports/driver-performance/:year/:month', (req, res) => {
-  const { year, month } = req.params;
-
-  const query = `
-    SELECT 
-      d.id AS driver_id,
-      d.name AS driver_name,
-      COUNT(DISTINCT DATE(s.check_in_time)) AS days_worked,
-      COUNT(DISTINCT o.id) AS total_orders,
-      COALESCE(SUM(o.price), 0) AS total_revenue,
-      COALESCE(SUM(CASE WHEN o.order_type = 'delivery' THEN 1 ELSE 0 END), 0) AS delivery_count,
-      COALESCE(SUM(CASE WHEN o.order_type = 'full_trip' THEN 1 ELSE 0 END), 0) AS full_trip_count
-    FROM drivers d
-    LEFT JOIN shifts s ON d.id = s.driver_id 
-      AND YEAR(s.check_in_time) = ? AND MONTH(s.check_in_time) = ?
-    LEFT JOIN orders o ON d.id = o.driver_id AND o.status = 'closed'
-      AND YEAR(o.start_time) = ? AND MONTH(o.start_time) = ?
-    GROUP BY d.id, d.name
-    ORDER BY total_revenue DESC
-  `;
-
-  db.query(query, [year, month, year, month], (err, results) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب تقرير الأداء' }); }
-    res.json(results);
-  });
-});
-
-// ==================== بيانات الرسم البياني السنوي ====================
-app.get('/reports/yearly-chart/:year', (req, res) => {
-  const { year } = req.params;
-
-  db.query(
-    `SELECT MONTH(start_time) AS month, COALESCE(SUM(price), 0) AS revenue
-     FROM orders WHERE status = 'closed' AND YEAR(start_time) = ?
-     GROUP BY MONTH(start_time)`,
-    [year],
-    (err, revenueResults) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإيرادات' }); }
-
-      db.query(
-        `SELECT MONTH(maintenance_date) AS month, COALESCE(SUM(cost), 0) AS total
-         FROM tuktuk_maintenance WHERE YEAR(maintenance_date) = ?
-         GROUP BY MONTH(maintenance_date)`,
-        [year],
-        (err, maintResults) => {
-          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الصيانة' }); }
-
-          db.query(
-            `SELECT MONTH(expense_date) AS month, COALESCE(SUM(amount), 0) AS total
-             FROM general_expenses WHERE YEAR(expense_date) = ?
-             GROUP BY MONTH(expense_date)`,
-            [year],
-            (err, genResults) => {
-              if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب المصروفات' }); }
-
-              const months = Array.from({ length: 12 }, (_, i) => i + 1);
-              const data = months.map(m => {
-                const rev = revenueResults.find(r => r.month === m);
-                const maint = maintResults.find(r => r.month === m);
-                const gen = genResults.find(r => r.month === m);
-                return {
-                  month: m,
-                  revenue: parseFloat(rev ? rev.revenue : 0),
-                  maintenance: parseFloat(maint ? maint.total : 0),
-                  general: parseFloat(gen ? gen.total : 0)
-                };
-              });
-
-              res.json(data);
-            }
-          );
-        }
-      );
-    }
-  );
-});
-// ==================== إحصائيات وتنبيهات الأدمن ====================
-app.get('/dashboard/stats', (req, res) => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-
-  // أعلى سائق إيراداً هذا الشهر
-  const topDriverQuery = `
-    SELECT d.name, COALESCE(SUM(o.price), 0) AS revenue
-    FROM drivers d
-    LEFT JOIN orders o ON d.id = o.driver_id AND o.status = 'closed'
-      AND YEAR(o.start_time) = ? AND MONTH(o.start_time) = ?
-    GROUP BY d.id, d.name
-    ORDER BY revenue DESC
-    LIMIT 1
-  `;
-
-  db.query(topDriverQuery, [year, month], (err, topDriver) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في الإحصائيات' }); }
-
-    // أكتر توكتوك دخل صيانة هذا الشهر
-    const topMaintQuery = `
-      SELECT t.tuktuk_number, COUNT(*) AS times
-      FROM tuktuk_maintenance m
-      JOIN tuktuks t ON m.tuktuk_id = t.id
-      WHERE YEAR(m.maintenance_date) = ? AND MONTH(m.maintenance_date) = ?
-      GROUP BY t.id, t.tuktuk_number
-      ORDER BY times DESC
-      LIMIT 1
-    `;
-
-    db.query(topMaintQuery, [year, month], (err, topMaint) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في الإحصائيات' }); }
-
-      // متوسط الأوردرات اليومية هذا الشهر
-      const avgQuery = `
-        SELECT COUNT(*) AS total_orders, COUNT(DISTINCT DATE(start_time)) AS active_days
-        FROM orders
-        WHERE status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
-      `;
-
-      db.query(avgQuery, [year, month], (err, avgResult) => {
-        if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في الإحصائيات' }); }
-
-        const totalOrders = avgResult[0].total_orders || 0;
-        const activeDays = avgResult[0].active_days || 0;
-        const avgPerDay = activeDays > 0 ? (totalOrders / activeDays).toFixed(1) : '0';
-
-        res.json({
-          top_driver: topDriver.length > 0 && parseFloat(topDriver[0].revenue) > 0
-            ? { name: topDriver[0].name, revenue: parseFloat(topDriver[0].revenue).toFixed(0) }
-            : null,
-          top_maintenance: topMaint.length > 0
-            ? { tuktuk_number: topMaint[0].tuktuk_number, times: topMaint[0].times }
-            : null,
-          avg_orders_per_day: avgPerDay
-        });
-      });
-    });
-  });
-});
-
-// ==================== تنبيهات الأدمن ====================
-app.get('/dashboard/alerts', (req, res) => {
-  const alerts = [];
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-
-  // سواقين ماسجلوش حضور من 3 أيام أو أكتر
-  const absentQuery = `
-    SELECT d.name, MAX(s.check_in_time) AS last_shift
-    FROM drivers d
-    LEFT JOIN shifts s ON d.id = s.driver_id
-    GROUP BY d.id, d.name
-    HAVING last_shift IS NULL OR last_shift < DATE_SUB(NOW(), INTERVAL 3 DAY)
-  `;
-
-  db.query(absentQuery, (err, absentDrivers) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
-
-    absentDrivers.forEach(d => {
-      if (!d.last_shift) {
-        alerts.push({ type: 'warning', message: `${d.name} ماسجّلش أي حضور لحد دلوقتي` });
-      } else {
-        const days = Math.floor((now - new Date(d.last_shift)) / (1000 * 60 * 60 * 24));
-        alerts.push({ type: 'warning', message: `${d.name} ماسجّلش حضور من ${days} يوم` });
-      }
-    });
-
-    // توكتوكات دخلت صيانة 3 مرات أو أكتر هذا الشهر
-    const repeatMaintQuery = `
-      SELECT t.tuktuk_number, COUNT(*) AS times
-      FROM tuktuk_maintenance m
-      JOIN tuktuks t ON m.tuktuk_id = t.id
-      WHERE YEAR(m.maintenance_date) = ? AND MONTH(m.maintenance_date) = ?
-      GROUP BY t.id, t.tuktuk_number
-      HAVING times >= 3
-    `;
-
-    db.query(repeatMaintQuery, [year, month], (err, repeatMaint) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
-
-      repeatMaint.forEach(t => {
-        alerts.push({ type: 'danger', message: `توكتوك ${t.tuktuk_number} دخل الصيانة ${t.times} مرات الشهر ده` });
-      });
-
-      // ورديات مفتوحة من أكتر من 24 ساعة
-      const longShiftQuery = `
-        SELECT d.name, s.check_in_time
-        FROM shifts s
-        JOIN drivers d ON s.driver_id = d.id
-        WHERE s.status = 'open' AND s.check_in_time < DATE_SUB(NOW(), INTERVAL 24 HOUR)
-      `;
-
-      db.query(longShiftQuery, (err, longShifts) => {
-        if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
-
-        longShifts.forEach(s => {
-          alerts.push({ type: 'danger', message: `${s.name} عنده وردية مفتوحة من أكتر من 24 ساعة` });
-        });
-
-        res.json(alerts);
-      });
-    });
-  });
-});
-
-// ==================== إحصائيات السائق ====================
-app.get('/driver/stats/:driver_id', (req, res) => {
-  const { driver_id } = req.params;
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-
-  db.query(
-    `SELECT COUNT(*) AS orders_count FROM orders
-     WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?`,
-    [driver_id, year, month],
-    (err, ordersResult) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في الإحصائيات' }); }
-
-      db.query(
-        `SELECT COALESCE(SUM(driver_earning), 0) AS earnings FROM orders
-         WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?`,
-        [driver_id, year, month],
-        (err, earningsResult) => {
-          if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في الإحصائيات' }); }
-
-          res.json({
-            orders_count: ordersResult[0].orders_count || 0,
-            earnings: parseFloat(earningsResult[0].earnings || 0).toFixed(0)
-          });
-        }
-      );
-    }
-  );
 });
 
 app.listen(PORT, () => {
