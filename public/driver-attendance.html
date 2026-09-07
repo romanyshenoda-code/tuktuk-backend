@@ -240,18 +240,55 @@
 
     function capturePhoto(inputId) { document.getElementById(inputId).click(); }
 
-    document.getElementById('photoInputCheckIn').addEventListener('change', function(e) {
-      previewPhoto(e.target.files[0], 'photoPreviewCheckIn');
+        document.getElementById('photoInputCheckIn').addEventListener('change', function(e) {
+      previewPhoto(e.target.files[0], 'photoPreviewCheckIn', 'checkin');
     });
     document.getElementById('photoInputCheckOut').addEventListener('change', function(e) {
-      previewPhoto(e.target.files[0], 'photoPreviewCheckOut');
+      previewPhoto(e.target.files[0], 'photoPreviewCheckOut', 'checkout');
     });
 
-    function previewPhoto(file, previewId) {
+        // الصور المضغوطة جاهزة للرفع
+    let compressedPhotos = {};
+
+    function previewPhoto(file, previewId, key) {
       if (!file) return;
       const preview = document.getElementById(previewId);
+
+      compressImage(file, function(compressedBlob, dataUrl) {
+        compressedPhotos[key] = compressedBlob;
+        preview.src = dataUrl;
+        preview.style.display = 'block';
+      });
+    }
+
+    // ضغط الصورة قبل الرفع (بيقلل الحجم ~85% بنفس الوضوح)
+    function compressImage(file, callback) {
       const reader = new FileReader();
-      reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const MAX_SIZE = 1000;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_SIZE) { height = height * (MAX_SIZE / width); width = MAX_SIZE; }
+          } else {
+            if (height > MAX_SIZE) { width = width * (MAX_SIZE / height); height = MAX_SIZE; }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(function(blob) {
+            callback(blob, canvas.toDataURL('image/jpeg', 0.7));
+          }, 'image/jpeg', 0.7);
+        };
+        img.src = e.target.result;
+      };
       reader.readAsDataURL(file);
     }
 
@@ -274,7 +311,7 @@
         formData.append('tuktuk_qr_code', scannedQrCode);
         formData.append('lat', position.coords.latitude);
         formData.append('lng', position.coords.longitude);
-        formData.append('photo', photoFile);
+        formData.append('photo', compressedPhotos['checkin'] || photoFile, 'checkin.jpg');
 
         resultDiv.textContent = 'جاري تسجيل الحضور...';
 
@@ -328,7 +365,7 @@
 
           const formData = new FormData();
           formData.append('shift_id', data.id);
-          formData.append('photo', photoFile);
+          formData.append('photo', compressedPhotos['checkout'] || photoFile, 'checkout.jpg');
 
           resultDiv.textContent = 'جاري تسجيل الانصراف...';
 

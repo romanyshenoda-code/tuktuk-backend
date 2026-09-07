@@ -104,15 +104,51 @@
       });
     });
 
+        let compressedOrderPhoto = null;
+
     function capturePhoto(inputId) { document.getElementById(inputId).click(); }
+
     document.getElementById('photoInputOrderClose').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (!file) return;
       const preview = document.getElementById('photoPreviewOrderClose');
-      const reader = new FileReader();
-      reader.onload = ev => { preview.src = ev.target.result; preview.style.display = 'block'; };
-      reader.readAsDataURL(file);
+
+      compressImage(file, function(blob, dataUrl) {
+        compressedOrderPhoto = blob;
+        preview.src = dataUrl;
+        preview.style.display = 'block';
+      });
     });
+
+    // ضغط الصورة قبل الرفع
+    function compressImage(file, callback) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const MAX_SIZE = 1000;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_SIZE) { height = height * (MAX_SIZE / width); width = MAX_SIZE; }
+          } else {
+            if (height > MAX_SIZE) { width = width * (MAX_SIZE / height); height = MAX_SIZE; }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(function(blob) {
+            callback(blob, canvas.toDataURL('image/jpeg', 0.7));
+          }, 'image/jpeg', 0.7);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
 
     function openOrder() {
       const resultDiv = document.getElementById('resultOrderOpen');
@@ -167,7 +203,8 @@
         formData.append('order_id', order_id);
         formData.append('end_lat', position.coords.latitude);
         formData.append('end_lng', position.coords.longitude);
-        if (photoFile) formData.append('photo', photoFile);
+                if (compressedOrderPhoto) formData.append('photo', compressedOrderPhoto, 'delivery.jpg');
+        else if (photoFile) formData.append('photo', photoFile);
 
         resultDiv.textContent = 'جاري قفل الأوردر...';
 
