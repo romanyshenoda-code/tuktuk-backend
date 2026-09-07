@@ -1546,6 +1546,217 @@ app.get('/payroll/calculate-all/:year/:month', (req, res) => {
   });
 });
 
+// ==================== أدوات الصيانة والتنظيف (محمية) ====================
+const fs = require('fs');
+
+// دالة تتحقق من باسورد المالية قبل أي عملية خطيرة
+function verifyFinancePassword(password, callback) {
+  db.query('SELECT * FROM finance_admin', (err, results) => {
+    if (err) return callback(err, false);
+    if (results.length === 0) return callback(null, false);
+    const isMatch = results.some(f => bcrypt.compareSync(password || '', f.password || ''));
+    callback(null, isMatch);
+  });
+}
+
+// 1) تنظيف الصور القديمة (أقدم من شهرين)
+app.post('/maintenance/clean-old-photos', (req, res) => {
+  const { password, confirmText } = req.body;
+
+  if (confirmText !== 'مسح الصور') {
+    return res.status(400).json({ error: 'كلمة التأكيد غير صحيحة' });
+  }
+
+  verifyFinancePassword(password, (err, valid) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحقق' }); }
+    if (!valid) return res.status(401).json({ error: 'باسورد المالية غلط' });
+
+    // نحدد تاريخ القطع: بداية الشهر اللي قبل الحالي
+    const now = new Date();
+    const cutoff = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+
+    // نجيب أسماء الصور القديمة من الورديات والأوردرات
+    db.query(
+      `SELECT check_in_photo AS photo FROM shifts WHERE check_in_time < ? AND check_in_photo IS NOT NULL
+       UNION ALL
+       SELECT check_out_photo AS photo FROM shifts WHERE check_in_time < ? AND check_out_photo IS NOT NULL
+       UNION ALL
+       SELECT delivery_photo AS photo FROM orders WHERE start_time < ? AND delivery_photo IS NOT NULL`,
+      [cutoffStr, cutoffStr, cutoffStr],
+      (err, rows) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الصور' }); }
+
+        let deleted = 0, failed = 0;
+        rows.forEach(r => {
+          if (!r.photo) return;
+          const filePath = path.join(__dirname, 'uploads', r.photo);
+          try {
+            if (fs.existsSync(filePath)) { fs.unlinkSync(filePath); deleted++; }
+          } catch (e) { failed++; }
+        });
+
+        // نفضي أعمدة الصور في قاعدة البيانات
+        db.query(
+          `UPDATE shifts SET check_in_photo = NULL, check_out_photo = NULL WHERE check_in_time < ?`,
+          [cutoffStr],
+          (err) => {
+            if (err) console.error(err);
+            db.query(
+              `UPDATE orders SET delivery_photo = NULL WHERE start_time < ?`,
+              [cutoffStr],
+              (err) => {
+                if (err) console.error(err);
+                res.json({
+                  message: `تم حذف ${deleted} صورة قديمة بنجاح`,
+                  deleted, failed,
+                  cutoff_date: cutoffStr
+                });
+              }
+            );
+          }
+        );
+      }
+    );
+  });
+});
+
+// 2) مسح البيانات التشغيلية (السواقين والتوكتوكات يفضلوا)
+app.post('/maintenance/reset-operations', (req, res) => {
+  const { password, confirmText } = req.body;
+
+  if (confirmText !== 'مسح البيانات') {
+    return res.status(400).json({ error: 'كلمة التأكيد غير صحيحة' });
+  }
+
+  verifyFinancePassword(password, (err, valid) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحقق' }); }
+    if (!valid) return res.status(401).json({ error: 'باسورد المالية غلط' });
+
+    // نمسح كل ملفات الصور
+    try {
+      const uploadsDir = path.join(__dirname, 'uploads');
+      if (fs.existsSync(uploadsDir)) {
+        fs.readdirSync(uploadsDir).forEach(f => {
+          if (f !== '.gitkeep') {
+            try { fs.unlinkSync(path.join(uploadsDir, f)); } catch (e) {}
+          }
+        });
+      }
+    } catch (e) { console.error(e); }
+
+    // الترتيب مهم: من الأبناء للآباء
+    const queries = [
+      'DELETE FROM shift_summary',
+      'DELETE FROM audit_logs',
+      'DELETE FROM orders',
+      'DELETE FROM shifts',
+      'DELETE FROM notifications',
+      'DELETE FROM leave_requests',
+      'DELETE FROM advances',
+      'DELETE FROM deductions',
+      'DELETE FROM holiday_event_drivers',
+      'DELETE FROM holiday_events',
+      'DELETE FROM tuktuk_maintenance',
+      'DELETE FROM general_expenses'
+    ];
+
+    let i = 0;
+    function runNext() {
+      if (i >= queries.length) {
+        return res.json({ message: 'تم مسح كل البيانات التشغيلية بنجاح. السواقين والتوكتوكات لسه موجودين.' });
+      }
+      db.query(queries[i], (err) => {
+        if (err) console.error('خطأ في: ' + queries[i], err);
+        i++;
+        runNext();
+      });
+    }
+    runNext();
+  });
+});
+
+// 3) إعادة تعيين كاملة (كل حاجة)
+app.post('/maintenance/factory-reset', (req, res) => {
+  const { password, confirmText } = req.body;
+
+  if (confirmText !== 'اعادة تعيين كاملة') {
+    return res.status(400).json({ error: 'كلمة التأكيد غير صحيحة' });
+  }
+
+  verifyFinancePassword(password, (err, valid) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحقق' }); }
+    if (!valid) return res.status(401).json({ error: 'باسورد المالية غلط' });
+
+    try {
+      const uploadsDir = path.join(__dirname, 'uploads');
+      if (fs.existsSync(uploadsDir)) {
+        fs.readdirSync(uploadsDir).forEach(f => {
+          if (f !== '.gitkeep') {
+            try { fs.unlinkSync(path.join(uploadsDir, f)); } catch (e) {}
+          }
+        });
+      }
+    } catch (e) { console.error(e); }
+
+    const queries = [
+      'DELETE FROM shift_summary',
+      'DELETE FROM audit_logs',
+      'DELETE FROM orders',
+      'DELETE FROM shifts',
+      'DELETE FROM notifications',
+      'DELETE FROM leave_requests',
+      'DELETE FROM advances',
+      'DELETE FROM deductions',
+      'DELETE FROM holiday_event_drivers',
+      'DELETE FROM holiday_events',
+      'DELETE FROM tuktuk_maintenance',
+      'DELETE FROM general_expenses',
+      'DELETE FROM drivers',
+      'DELETE FROM tuktuks',
+      'ALTER TABLE drivers AUTO_INCREMENT = 1',
+      'ALTER TABLE tuktuks AUTO_INCREMENT = 1',
+      'ALTER TABLE shifts AUTO_INCREMENT = 1',
+      'ALTER TABLE orders AUTO_INCREMENT = 1'
+    ];
+
+    let i = 0;
+    function runNext() {
+      if (i >= queries.length) {
+        return res.json({ message: 'تم إعادة تعيين النظام بالكامل. النظام رجع جديد تماماً.' });
+      }
+      db.query(queries[i], (err) => {
+        if (err) console.error('خطأ في: ' + queries[i], err);
+        i++;
+        runNext();
+      });
+    }
+    runNext();
+  });
+});
+
+// إحصائيات المساحة المستخدمة
+app.get('/maintenance/storage-info', (req, res) => {
+  try {
+    const uploadsDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)) return res.json({ files: 0, size_mb: '0' });
+
+    const files = fs.readdirSync(uploadsDir).filter(f => f !== '.gitkeep');
+    let totalSize = 0;
+    files.forEach(f => {
+      try { totalSize += fs.statSync(path.join(uploadsDir, f)).size; } catch (e) {}
+    });
+
+    res.json({
+      files: files.length,
+      size_mb: (totalSize / (1024 * 1024)).toFixed(1)
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'حصل خطأ في حساب المساحة' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
