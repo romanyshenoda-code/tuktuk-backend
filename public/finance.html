@@ -46,6 +46,7 @@
     .tab-btn[data-tab="holidays"] { --tab-color: var(--amber); }
     .tab-btn[data-tab="maintenance"] { --tab-color: var(--rust); }
     .tab-btn[data-tab="reports"] { --tab-color: var(--orange); }
+    .tab-btn[data-tab="cleanup"] { --tab-color: #6B4A8A; }
 
     .tab-panel { display: none; animation: fadeSlide 0.28s ease; }
     .tab-panel.active { display: block; }
@@ -185,6 +186,27 @@
       .dev-footer { flex-direction: column; gap: 13px; padding: 22px 16px; }
       .dev-divider { display: none; }
     }
+
+    .danger-card { background: var(--paper); border-radius: 14px; padding: 20px; margin-bottom: 18px; border: 1px solid var(--line); border-inline-start: 5px solid var(--line); }
+    .danger-card.level-low { border-inline-start-color: var(--amber); }
+    .danger-card.level-mid { border-inline-start-color: #D2691E; }
+    .danger-card.level-high { border-inline-start-color: var(--rust); }
+    .danger-card h3 { margin: 0 0 6px; font-size: 16px; }
+    .danger-card .dc-desc { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 14px; }
+    .danger-card .dc-warn { background: #FBEEEA; color: #8B2A15; padding: 10px 13px; border-radius: 8px; font-size: 12.5px; font-weight: 700; margin-bottom: 14px; line-height: 1.6; }
+    .dc-fields { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    .dc-field { display: flex; flex-direction: column; flex: 1; min-width: 160px; }
+    .dc-field label { font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .dc-btn { padding: 11px 20px; border: none; border-radius: 8px; color: white; font-family: inherit; font-weight: 800; font-size: 14px; cursor: pointer; height: 42px; white-space: nowrap; }
+    .dc-btn.low { background: var(--amber); }
+    .dc-btn.mid { background: #D2691E; }
+    .dc-btn.high { background: var(--rust); }
+    .dc-msg { font-size: 13px; font-weight: 700; margin-top: 10px; min-height: 16px; }
+    .dc-msg.ok { color: var(--nile); }
+    .dc-msg.err { color: var(--rust); }
+    .storage-box { background: var(--paper); border-radius: 12px; padding: 18px; border: 1px solid var(--line); margin-bottom: 20px; display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; align-items: center; text-align: center; }
+    .storage-item .si-value { font-size: 22px; font-weight: 800; color: var(--asphalt); }
+    .storage-item .si-label { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -218,6 +240,7 @@
       <button class="tab-btn" data-tab="holidays">المناسبات والأعياد</button>
       <button class="tab-btn" data-tab="maintenance">الصيانة والمصروفات</button>
       <button class="tab-btn" data-tab="reports">صافي الربح والفوترة</button>
+      <button class="tab-btn" data-tab="cleanup">الصيانة والتنظيف</button>
     </div>
 
     <!-- تبويب كشف المرتبات -->
@@ -481,6 +504,98 @@
       </div>
     </div>
 
+    <!-- تبويب الصيانة والتنظيف -->
+    <div class="tab-panel" id="tab-cleanup" style="--tab-color: #6B4A8A;">
+
+      <div class="section-head"><h2><span class="dot"></span>المساحة المستخدمة</h2></div>
+      <div class="storage-box">
+        <div class="storage-item">
+          <div class="si-value" id="storageFiles">-</div>
+          <div class="si-label">عدد الصور المخزّنة</div>
+        </div>
+        <div class="storage-item">
+          <div class="si-value" id="storageSize">-</div>
+          <div class="si-label">الحجم بالميجابايت</div>
+        </div>
+        <div class="storage-item">
+          <button class="dc-btn low" onclick="loadStorageInfo()">تحديث</button>
+        </div>
+      </div>
+
+      <div class="section-head"><h2><span class="dot"></span>أدوات التنظيف</h2></div>
+
+      <div class="danger-card level-low">
+        <h3>تنظيف الصور القديمة</h3>
+        <div class="dc-desc">
+          بيمسح صور الحضور والانصراف والتسليم الأقدم من شهرين، ويسيب الشهر الحالي واللي قبله.
+          كل البيانات (ورديات، أوردرات، حسابات) بتفضل زي ما هي — الصور بس اللي بتتمسح.
+        </div>
+        <div class="dc-warn">
+          الصور المحذوفة مالهاش رجعة. اتأكد إنك مش محتاجها في أي نزاع قديم.
+        </div>
+        <div class="dc-fields">
+          <div class="dc-field">
+            <label>باسورد المالية</label>
+            <input type="password" id="cleanPhotosPass" placeholder="باسورد المالية">
+          </div>
+          <div class="dc-field">
+            <label>اكتب: مسح الصور</label>
+            <input type="text" id="cleanPhotosConfirm" placeholder="مسح الصور">
+          </div>
+          <button class="dc-btn low" onclick="cleanOldPhotos()">تنفيذ التنظيف</button>
+        </div>
+        <div class="dc-msg" id="cleanPhotosMsg"></div>
+      </div>
+
+      <div class="danger-card level-mid">
+        <h3>مسح البيانات التشغيلية</h3>
+        <div class="dc-desc">
+          بيمسح كل الورديات والأوردرات والمصروفات والصيانة والطلبات والإشعارات والصور.
+          <strong>السواقين والتوكتوكات والإعدادات بتفضل موجودة</strong> — يعني تقدر تبدأ موسم جديد بنفس الفريق.
+        </div>
+        <div class="dc-warn">
+          العملية دي مالهاش رجعة خالص. خد نسخة احتياطية من phpMyAdmin قبلها.
+        </div>
+        <div class="dc-fields">
+          <div class="dc-field">
+            <label>باسورد المالية</label>
+            <input type="password" id="resetOpsPass" placeholder="باسورد المالية">
+          </div>
+          <div class="dc-field">
+            <label>اكتب: مسح البيانات</label>
+            <input type="text" id="resetOpsConfirm" placeholder="مسح البيانات">
+          </div>
+          <button class="dc-btn mid" onclick="resetOperations()">تنفيذ المسح</button>
+        </div>
+        <div class="dc-msg" id="resetOpsMsg"></div>
+      </div>
+
+      <div class="danger-card level-high">
+        <h3>إعادة تعيين كاملة</h3>
+        <div class="dc-desc">
+          بيمسح <strong>كل حاجة في النظام</strong>: السواقين، التوكتوكات، الورديات، الأوردرات، المصروفات، الصور، وكل البيانات.
+          النظام بيرجع فاضي تماماً كأنه اتثبت النهاردة.
+        </div>
+        <div class="dc-warn">
+          دي أخطر عملية في النظام. كل حساباتك وبيانات سواقينك هتضيع للأبد.
+          <br>لازم تاخد نسخة احتياطية من phpMyAdmin قبلها بالتأكيد.
+        </div>
+        <div class="dc-fields">
+          <div class="dc-field">
+            <label>باسورد المالية</label>
+            <input type="password" id="factoryPass" placeholder="باسورد المالية">
+          </div>
+          <div class="dc-field">
+            <label>اكتب: اعادة تعيين كاملة</label>
+            <input type="text" id="factoryConfirm" placeholder="اعادة تعيين كاملة">
+          </div>
+          <button class="dc-btn high" onclick="factoryReset()">تنفيذ إعادة التعيين</button>
+        </div>
+        <div class="dc-msg" id="factoryMsg"></div>
+      </div>
+
+    </div>
+
   </div>
 
   <!-- مودال التخصيص -->
@@ -637,6 +752,7 @@
           if (tab === 'reports') loadYearlyChart();
           if (tab === 'holidays') loadHolidayEvents();
           if (tab === 'maintenance') { loadMaintenance(); loadGeneralExpenses(); }
+          if (tab === 'cleanup') loadStorageInfo();
         }
       });
     });
@@ -1362,6 +1478,80 @@
       const g = document.getElementById('donutGeneral');
       g.setAttribute('stroke-dasharray', `${generalLen} ${circumference}`);
       g.setAttribute('stroke-dashoffset', `${-(payrollLen + maintLen)}`);
+    }
+
+    // ==================== أدوات الصيانة والتنظيف ====================
+    function loadStorageInfo() {
+      fetch('/maintenance/storage-info')
+        .then(r => r.json())
+        .then(d => {
+          document.getElementById('storageFiles').textContent = d.files;
+          document.getElementById('storageSize').textContent = d.size_mb;
+        })
+        .catch(() => {
+          document.getElementById('storageFiles').textContent = '-';
+          document.getElementById('storageSize').textContent = '-';
+        });
+    }
+
+    function runMaintenance(url, passId, confirmId, msgId, onSuccess) {
+      const password = document.getElementById(passId).value;
+      const confirmText = document.getElementById(confirmId).value.trim();
+      const msg = document.getElementById(msgId);
+
+      if (!password || !confirmText) {
+        msg.className = 'dc-msg err';
+        msg.textContent = 'لازم تكتب الباسورد وكلمة التأكيد';
+        return;
+      }
+
+      msg.className = 'dc-msg';
+      msg.textContent = 'جاري التنفيذ...';
+
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, confirmText })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.message) {
+          msg.className = 'dc-msg ok';
+          msg.textContent = d.message;
+          document.getElementById(passId).value = '';
+          document.getElementById(confirmId).value = '';
+          showToast(d.message);
+          loadStorageInfo();
+          if (onSuccess) onSuccess();
+        } else {
+          msg.className = 'dc-msg err';
+          msg.textContent = d.error;
+          showToast(d.error, true);
+        }
+      })
+      .catch(() => {
+        msg.className = 'dc-msg err';
+        msg.textContent = 'حصل خطأ في الاتصال بالسيرفر';
+      });
+    }
+
+    function cleanOldPhotos() {
+      runMaintenance('/maintenance/clean-old-photos', 'cleanPhotosPass', 'cleanPhotosConfirm', 'cleanPhotosMsg');
+    }
+
+    function resetOperations() {
+      if (!confirm('تأكيد أخير: هتمسح كل البيانات التشغيلية نهائياً. متأكد؟')) return;
+      runMaintenance('/maintenance/reset-operations', 'resetOpsPass', 'resetOpsConfirm', 'resetOpsMsg', () => {
+        setTimeout(() => location.reload(), 1500);
+      });
+    }
+
+    function factoryReset() {
+      if (!confirm('تحذير أخير: هتمسح كل حاجة في النظام نهائياً، بما فيها السواقين والتوكتوكات. متأكد تماماً؟')) return;
+      if (!confirm('آخر فرصة للتراجع. اضغط إلغاء لو مش متأكد 100 في المية.')) return;
+      runMaintenance('/maintenance/factory-reset', 'factoryPass', 'factoryConfirm', 'factoryMsg', () => {
+        setTimeout(() => location.reload(), 1500);
+      });
     }
 
     initMonthPicker();
