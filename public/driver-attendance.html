@@ -171,18 +171,46 @@
   </div>
 
   <script>
-    let currentDriverId = null;
+        let currentDriverId = null;
     let hasOpenShift = false;
+    let photoSettings = { checkin: true, checkout: true };
     let scannedQrCode = null;
     let scannedQrCode2 = null;
     let html5QrCode = null;
     let html5QrCode2 = null;
 
-    fetch('/api/driver-session').then(res => res.json()).then(data => {
+        fetch('/api/driver-session').then(res => res.json()).then(data => {
       if (!data.loggedIn) { window.location.href = '/driver-login.html'; return; }
       currentDriverId = data.driverId;
       checkShiftStatus();
+      loadPhotoSettings();
     });
+
+    // نقرأ إعدادات الصور من السيرفر
+    function loadPhotoSettings() {
+      fetch('/settings')
+        .then(res => res.json())
+        .then(rows => {
+          const map = {};
+          rows.forEach(s => { map[s.setting_key] = s.setting_value; });
+
+          photoSettings.checkin = String(map['photo_required_checkin']) === 'true';
+          photoSettings.checkout = String(map['photo_required_checkout']) === 'true';
+
+          // نخفي كلمة "إجبارية" لو الصورة بقت اختيارية
+          document.querySelectorAll('.required-label').forEach((el, i) => {
+            const required = i === 0 ? photoSettings.checkin : photoSettings.checkout;
+            if (required) {
+              el.textContent = i === 0 ? 'الصورة إجبارية لاستلام التوكتوك' : 'الصورة إجبارية لتسليم التوكتوك';
+              el.style.color = 'var(--rust)';
+            } else {
+              el.textContent = 'الصورة اختيارية';
+              el.style.color = 'var(--muted)';
+            }
+          });
+        })
+        .catch(err => console.error(err));
+    }
 
     function checkShiftStatus() {
       fetch('/shifts/open/' + currentDriverId)
@@ -299,7 +327,7 @@
 
       if (hasOpenShift) { resultDiv.textContent = 'عندك وردية شغالة بالفعل، اقفلها الأول أو استخدم تغيير التوكتوك'; return; }
       if (!scannedQrCode) { resultDiv.textContent = 'من فضلك امسح كود QR الأول'; return; }
-      if (!photoFile) { resultDiv.textContent = 'من فضلك التقط صورة التوكتوك، الصورة إجبارية'; return; }
+            if (photoSettings.checkin && !photoFile) { resultDiv.textContent = 'من فضلك التقط صورة التوكتوك، الصورة إجبارية'; return; }
       if (!navigator.geolocation) { resultDiv.textContent = 'المتصفح مش بيدعم تحديد الموقع'; return; }
 
       btn.disabled = true;
@@ -311,7 +339,8 @@
         formData.append('tuktuk_qr_code', scannedQrCode);
         formData.append('lat', position.coords.latitude);
         formData.append('lng', position.coords.longitude);
-        formData.append('photo', compressedPhotos['checkin'] || photoFile, 'checkin.jpg');
+                const photoToSend = compressedPhotos['checkin'] || photoFile;
+        if (photoToSend) formData.append('photo', photoToSend, 'checkin.jpg');
 
         resultDiv.textContent = 'جاري تسجيل الحضور...';
 
@@ -354,7 +383,7 @@
       const photoFile = document.getElementById('photoInputCheckOut').files[0];
 
       if (!hasOpenShift) { resultDiv.textContent = 'مفيش وردية مفتوحة أصلاً'; return; }
-      if (!photoFile) { resultDiv.textContent = 'من فضلك التقط صورة تسليم التوكتوك، الصورة إجبارية'; return; }
+            if (photoSettings.checkout && !photoFile) { resultDiv.textContent = 'من فضلك التقط صورة تسليم التوكتوك، الصورة إجبارية'; return; }
 
       resultDiv.textContent = 'جاري البحث عن الوردية المفتوحة...';
 
@@ -365,7 +394,8 @@
 
           const formData = new FormData();
           formData.append('shift_id', data.id);
-          formData.append('photo', compressedPhotos['checkout'] || photoFile, 'checkout.jpg');
+                    const photoToSend = compressedPhotos['checkout'] || photoFile;
+          if (photoToSend) formData.append('photo', photoToSend, 'checkout.jpg');
 
           resultDiv.textContent = 'جاري تسجيل الانصراف...';
 
