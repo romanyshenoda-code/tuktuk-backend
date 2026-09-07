@@ -614,18 +614,29 @@
 
     function refreshAll() {
       loadPayroll();
-      loadMaintenance();
-      loadGeneralExpenses();
-      loadPerformance();
-      loadYearlyChart();
+      if (loadedTabs.maintenance) { loadMaintenance(); loadGeneralExpenses(); }
+      if (loadedTabs.performance) loadPerformance();
+      if (loadedTabs.reports) loadYearlyChart();
     }
+
+    const loadedTabs = { payroll: true };
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
-        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById('tab-' + tab).classList.add('active');
+
+        // نحمّل بيانات التبويب أول مرة يتفتح بس (توفير كبير في السرعة)
+        if (!loadedTabs[tab]) {
+          loadedTabs[tab] = true;
+          if (tab === 'performance') loadPerformance();
+          if (tab === 'reports') loadYearlyChart();
+          if (tab === 'holidays') loadHolidayEvents();
+          if (tab === 'maintenance') { loadMaintenance(); loadGeneralExpenses(); }
+        }
       });
     });
 
@@ -843,11 +854,10 @@
 
       let totalGross = 0;
       let totalRevenue = 0;
-      const promises = allDrivers.map(d =>
-        fetch(`/payroll/calculate/${d.id}/${selectedYear}/${selectedMonth}?t=${Date.now()}`).then(res => res.json())
-      );
 
-      Promise.all(promises).then(results => {
+      fetch(`/payroll/calculate-all/${selectedYear}/${selectedMonth}?t=${Date.now()}`)
+        .then(res => res.json())
+        .then(results => {
         allPayrollRows = results;
         results.forEach(p => {
           totalGross += parseFloat(p.gross_pay || 0);
@@ -859,6 +869,11 @@
         document.getElementById('reportPeriodLabel').textContent = `صافي الربح لشهر ${monthNames[selectedMonth - 1]} ${selectedYear}`;
         loadFinancialSummary(totalRevenue, totalGross);
         renderPayrollTable(allPayrollRows);
+      })
+      .catch(err => {
+        console.error(err);
+        document.querySelector('#payrollTable tbody').innerHTML =
+          `<tr class="empty-row"><td colspan="12">حصل خطأ في تحميل المرتبات</td></tr>`;
       });
     }
 
@@ -1014,19 +1029,11 @@
     }
 
     function loadFinancialSummary(totalRevenue, totalPayroll) {
-      fetch('/tuktuk-maintenance').then(res => res.json()).then(maintData => {
-        const filteredMaint = maintData.filter(m => {
-          const d = new Date(m.maintenance_date);
-          return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
-        });
-        const totalMaintenance = filteredMaint.reduce((sum, m) => sum + parseFloat(m.cost), 0);
+      fetch(`/tuktuk-maintenance?year=${selectedYear}&month=${selectedMonth}`).then(res => res.json()).then(maintData => {
+        const totalMaintenance = maintData.reduce((sum, m) => sum + parseFloat(m.cost), 0);
 
-        fetch('/general-expenses').then(res => res.json()).then(genData => {
-          const filteredGen = genData.filter(g => {
-            const d = new Date(g.expense_date);
-            return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
-          });
-          const totalGeneral = filteredGen.reduce((sum, g) => sum + parseFloat(g.amount), 0);
+        fetch(`/general-expenses?year=${selectedYear}&month=${selectedMonth}`).then(res => res.json()).then(genData => {
+          const totalGeneral = genData.reduce((sum, g) => sum + parseFloat(g.amount), 0);
 
           const totalExpenses = totalPayroll + totalMaintenance + totalGeneral;
           const netProfit = totalRevenue - totalExpenses;
@@ -1149,13 +1156,12 @@
     }
 
     function loadMaintenance() {
-      fetch('/tuktuk-maintenance').then(res => res.json()).then(data => {
-        allMaintenance = data.filter(m => {
-          const d = new Date(m.maintenance_date);
-          return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
+      fetch(`/tuktuk-maintenance?year=${selectedYear}&month=${selectedMonth}`)
+        .then(res => res.json())
+        .then(data => {
+          allMaintenance = data;
+          renderMaintenanceTable(allMaintenance);
         });
-        renderMaintenanceTable(allMaintenance);
-      });
     }
 
     function renderMaintenanceTable(data) {
@@ -1245,13 +1251,12 @@
     });
 
     function loadGeneralExpenses() {
-      fetch('/general-expenses').then(res => res.json()).then(data => {
-        allGeneralExpenses = data.filter(g => {
-          const d = new Date(g.expense_date);
-          return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
+      fetch(`/general-expenses?year=${selectedYear}&month=${selectedMonth}`)
+        .then(res => res.json())
+        .then(data => {
+          allGeneralExpenses = data;
+          renderGeneralExpensesTable(allGeneralExpenses);
         });
-        renderGeneralExpensesTable(allGeneralExpenses);
-      });
     }
 
     function renderGeneralExpensesTable(data) {
@@ -1361,15 +1366,14 @@
     initMonthPicker();
     loadSettings();
     loadLeaveConfig();
-    loadHolidayDriversList();
-    loadHolidayEvents();
     loadDriversAndPayroll();
-    loadTuktuksDropdown();
-    loadDriversDropdown();
-    loadMaintenance();
-    loadGeneralExpenses();
-    loadPerformance();
-    loadYearlyChart();
+
+    // باقي البيانات بتتحمّل لما تفتح تبويبها (أسرع بكتير في الفتح)
+    setTimeout(() => {
+      loadHolidayDriversList();
+      loadTuktuksDropdown();
+      loadDriversDropdown();
+    }, 400);
   </script>
   <footer class="dev-footer">
     <div class="dev-brand">

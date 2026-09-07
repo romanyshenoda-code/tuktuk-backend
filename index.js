@@ -596,8 +596,9 @@ app.put('/shift-summary/:id', (req, res) => {
 
 // ==================== جلب البيانات العامة ====================
 app.get('/shifts', (req, res) => {
+  const rowLimit = parseInt(req.query.limit) || 300;
   db.query(
-    `SELECT shifts.*, drivers.name AS driver_name, tuktuks.tuktuk_number FROM shifts JOIN drivers ON shifts.driver_id = drivers.id JOIN tuktuks ON shifts.tuktuk_id = tuktuks.id ORDER BY shifts.check_in_time DESC`,
+    `SELECT shifts.*, drivers.name AS driver_name, tuktuks.tuktuk_number FROM shifts JOIN drivers ON shifts.driver_id = drivers.id JOIN tuktuks ON shifts.tuktuk_id = tuktuks.id ORDER BY shifts.check_in_time DESC LIMIT ` + rowLimit,
     (err, results) => {
       if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الورديات' }); }
       res.json(results);
@@ -606,8 +607,9 @@ app.get('/shifts', (req, res) => {
 });
 
 app.get('/orders', (req, res) => {
+  const rowLimit = parseInt(req.query.limit) || 300;
   db.query(
-    `SELECT orders.*, drivers.name AS driver_name FROM orders JOIN drivers ON orders.driver_id = drivers.id ORDER BY orders.start_time DESC`,
+    `SELECT orders.*, drivers.name AS driver_name FROM orders JOIN drivers ON orders.driver_id = drivers.id ORDER BY orders.start_time DESC LIMIT ` + rowLimit,
     (err, results) => {
       if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الأوردرات' }); }
       res.json(results);
@@ -617,7 +619,7 @@ app.get('/orders', (req, res) => {
 
 app.get('/shift-summaries', (req, res) => {
   db.query(
-    `SELECT shift_summary.*, drivers.name AS driver_name FROM shift_summary JOIN shifts ON shift_summary.shift_id = shifts.id JOIN drivers ON shifts.driver_id = drivers.id ORDER BY shift_summary.created_at DESC`,
+    `SELECT shift_summary.*, drivers.name AS driver_name FROM shift_summary JOIN shifts ON shift_summary.shift_id = shifts.id JOIN drivers ON shifts.driver_id = drivers.id ORDER BY shift_summary.created_at DESC LIMIT 300`,
     (err, results) => {
       if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الملخصات' }); }
       res.json(results);
@@ -1073,13 +1075,19 @@ app.post('/tuktuk-maintenance', (req, res) => {
 });
 
 app.get('/tuktuk-maintenance', (req, res) => {
-  db.query(
-    `SELECT tuktuk_maintenance.*, tuktuks.tuktuk_number, drivers.name AS driver_name FROM tuktuk_maintenance JOIN tuktuks ON tuktuk_maintenance.tuktuk_id = tuktuks.id LEFT JOIN drivers ON tuktuk_maintenance.driver_id = drivers.id ORDER BY tuktuk_maintenance.maintenance_date DESC`,
-    (err, results) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب سجل الصيانة' }); }
-      res.json(results);
-    }
-  );
+  const { year, month } = req.query;
+  let query = `SELECT tuktuk_maintenance.*, tuktuks.tuktuk_number, drivers.name AS driver_name FROM tuktuk_maintenance JOIN tuktuks ON tuktuk_maintenance.tuktuk_id = tuktuks.id LEFT JOIN drivers ON tuktuk_maintenance.driver_id = drivers.id`;
+  const params = [];
+  if (year && month) {
+    query += ' WHERE YEAR(tuktuk_maintenance.maintenance_date) = ? AND MONTH(tuktuk_maintenance.maintenance_date) = ?';
+    params.push(year, month);
+  }
+  query += ' ORDER BY tuktuk_maintenance.maintenance_date DESC LIMIT 500';
+
+  db.query(query, params, (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب سجل الصيانة' }); }
+    res.json(results);
+  });
 });
 
 app.put('/tuktuk-maintenance/:id', (req, res) => {
@@ -1119,7 +1127,16 @@ app.post('/general-expenses', (req, res) => {
 });
 
 app.get('/general-expenses', (req, res) => {
-  db.query('SELECT * FROM general_expenses ORDER BY expense_date DESC', (err, results) => {
+  const { year, month } = req.query;
+  let query = 'SELECT * FROM general_expenses';
+  const params = [];
+  if (year && month) {
+    query += ' WHERE YEAR(expense_date) = ? AND MONTH(expense_date) = ?';
+    params.push(year, month);
+  }
+  query += ' ORDER BY expense_date DESC LIMIT 500';
+
+  db.query(query, params, (err, results) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب المصروفات' }); }
     res.json(results);
   });
@@ -1147,6 +1164,7 @@ app.delete('/general-expenses/:id', (req, res) => {
     res.json({ message: 'تم حذف المصروف نهائياً' });
   });
 });
+
 // ==================== تقرير أداء السواقين ====================
 app.get('/reports/driver-performance/:year/:month', (req, res) => {
   const { year, month } = req.params;
@@ -1360,6 +1378,170 @@ app.get('/driver/stats/:driver_id', (req, res) => {
       );
     }
   );
+});
+
+// ==================== حساب مرتبات كل السواقين دفعة واحدة (أسرع بكتير) ====================
+app.get('/payroll/calculate-all/:year/:month', (req, res) => {
+  const { year, month } = req.params;
+
+  db.query('SELECT * FROM drivers', (err, drivers) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب السواقين' }); }
+    if (drivers.length === 0) return res.json([]);
+
+    db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
+      const settings = settingsResults[0] || {};
+
+      db.query('SELECT * FROM leave_config ORDER BY id DESC LIMIT 1', (err, leaveResults) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب إعدادات الإجازات' }); }
+        const leaveConfig = leaveResults[0] || {};
+
+        // استعلام واحد للحضور لكل السواقين
+        db.query(
+          `SELECT driver_id, COUNT(DISTINCT DATE(check_in_time)) AS days_present
+           FROM shifts WHERE YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
+           GROUP BY driver_id`,
+          [year, month],
+          (err, attendanceRows) => {
+            if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' }); }
+
+            // استعلام واحد للأوردرات لكل السواقين
+            db.query(
+              `SELECT driver_id, order_type, COUNT(*) AS cnt, COALESCE(SUM(price),0) AS revenue
+               FROM orders WHERE status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
+               GROUP BY driver_id, order_type`,
+              [year, month],
+              (err, orderRows) => {
+                if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الأوردرات' }); }
+
+                // استعلام واحد للخصومات
+                db.query(
+                  `SELECT driver_id, COALESCE(SUM(amount),0) AS total FROM deductions
+                   WHERE YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY driver_id`,
+                  [year, month],
+                  (err, deductionRows) => {
+                    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' }); }
+
+                    // استعلام واحد للسلف
+                    db.query(
+                      `SELECT driver_id, COALESCE(SUM(amount),0) AS total FROM advances
+                       WHERE status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY driver_id`,
+                      [year, month],
+                      (err, advanceRows) => {
+                        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب السلف' }); }
+
+                        // استعلام واحد لأيام الأعياد
+                        db.query(
+                          `SELECT hed.driver_id, he.start_date, he.end_date
+                           FROM holiday_events he
+                           JOIN holiday_event_drivers hed ON he.id = hed.holiday_event_id
+                           WHERE (YEAR(he.start_date) = ? AND MONTH(he.start_date) = ?)
+                              OR (YEAR(he.end_date) = ? AND MONTH(he.end_date) = ?)`,
+                          [year, month, year, month],
+                          (err, holidayRows) => {
+                            if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الأعياد' }); }
+
+                            // تجهيز خرائط سريعة
+                            const attendanceMap = {};
+                            attendanceRows.forEach(r => { attendanceMap[r.driver_id] = r.days_present; });
+
+                            const ordersMap = {};
+                            orderRows.forEach(r => {
+                              if (!ordersMap[r.driver_id]) ordersMap[r.driver_id] = { delivery: 0, full_trip: 0, revenue: 0 };
+                              ordersMap[r.driver_id][r.order_type] = r.cnt;
+                              ordersMap[r.driver_id].revenue += parseFloat(r.revenue);
+                            });
+
+                            const deductionMap = {};
+                            deductionRows.forEach(r => { deductionMap[r.driver_id] = parseFloat(r.total); });
+
+                            const advanceMap = {};
+                            advanceRows.forEach(r => { advanceMap[r.driver_id] = parseFloat(r.total); });
+
+                            const holidayMap = {};
+                            holidayRows.forEach(h => {
+                              const start = new Date(h.start_date);
+                              const end = new Date(h.end_date);
+                              const days = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                              holidayMap[h.driver_id] = (holidayMap[h.driver_id] || 0) + days;
+                            });
+
+                            // حساب كل سائق
+                            const results = drivers.map(driver => {
+                              const income_type = driver.is_customized ? driver.custom_income_type : settings.income_type;
+                              const monthly_salary = driver.is_customized ? driver.custom_monthly_salary : settings.monthly_salary;
+                              const delivery_commission_pct = driver.is_customized ? driver.custom_delivery_commission_pct : settings.delivery_commission_pct;
+                              const full_trip_commission_pct = driver.is_customized ? driver.custom_full_trip_commission_pct : settings.full_trip_commission_pct;
+                              const delivery_base_price = driver.is_customized ? driver.custom_delivery_base_price : settings.delivery_base_price;
+                              const full_trip_base_price = driver.is_customized ? driver.custom_full_trip_base_price : settings.full_trip_base_price;
+                              const baseWorkingDays = driver.is_customized ? driver.custom_working_days : leaveConfig.working_days_per_month;
+
+                              const holidayDaysCount = holidayMap[driver.id] || 0;
+                              const requiredWorkingDays = Math.max((baseWorkingDays || 26) - holidayDaysCount, 0);
+                              const days_present = attendanceMap[driver.id] || 0;
+
+                              const o = ordersMap[driver.id] || { delivery: 0, full_trip: 0, revenue: 0 };
+                              const deliveryCount = o.delivery || 0;
+                              const fullTripCount = o.full_trip || 0;
+                              const total_revenue = o.revenue || 0;
+
+                              const total_deductions = deductionMap[driver.id] || 0;
+                              const total_advances = advanceMap[driver.id] || 0;
+
+                              let salaryPart = 0, deliveryCommission = 0, fullTripCommission = 0;
+
+                              if (income_type === 'salary' || income_type === 'both') {
+                                const dailyRate = requiredWorkingDays > 0 ? (monthly_salary || 0) / requiredWorkingDays : 0;
+                                const cappedPresentDays = Math.min(days_present, requiredWorkingDays);
+                                salaryPart = dailyRate * cappedPresentDays;
+                              }
+
+                              if (income_type === 'commission' || income_type === 'both') {
+                                deliveryCommission = deliveryCount * parseFloat(delivery_base_price || 0) * (parseFloat(delivery_commission_pct || 0) / 100);
+                                fullTripCommission = fullTripCount * parseFloat(full_trip_base_price || 0) * (parseFloat(full_trip_commission_pct || 0) / 100);
+                              }
+
+                              const commissionPart = deliveryCommission + fullTripCommission;
+                              const grossPay = salaryPart + commissionPart;
+                              const netPay = grossPay - total_deductions - total_advances;
+
+                              return {
+                                driver_id: driver.id,
+                                driver_name: driver.name,
+                                driver_phone: driver.phone,
+                                income_type,
+                                days_present,
+                                holiday_days: holidayDaysCount,
+                                base_working_days: baseWorkingDays,
+                                required_working_days: requiredWorkingDays,
+                                delivery_count: deliveryCount,
+                                full_trip_count: fullTripCount,
+                                delivery_commission: deliveryCommission.toFixed(2),
+                                full_trip_commission: fullTripCommission.toFixed(2),
+                                total_revenue: total_revenue.toFixed(2),
+                                salary_part: salaryPart.toFixed(2),
+                                commission_part: commissionPart.toFixed(2),
+                                gross_pay: grossPay.toFixed(2),
+                                total_deductions: total_deductions.toFixed(2),
+                                total_advances: total_advances.toFixed(2),
+                                net_pay: netPay.toFixed(2)
+                              };
+                            });
+
+                            res.json(results);
+                          }
+                        );
+                      }
+                    );
+                  }
+                );
+              }
+            );
+          }
+        );
+      });
+    });
+  });
 });
 
 app.listen(PORT, () => {
