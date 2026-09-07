@@ -207,6 +207,28 @@
     .storage-box { background: var(--paper); border-radius: 12px; padding: 18px; border: 1px solid var(--line); margin-bottom: 20px; display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; align-items: center; text-align: center; }
     .storage-item .si-value { font-size: 22px; font-weight: 800; color: var(--asphalt); }
     .storage-item .si-label { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+    /* مفاتيح تشغيل الإعدادات */
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 15px 4px; border-bottom: 1px solid var(--line); gap: 14px;
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-info h4 { margin: 0 0 3px; font-size: 14.5px; font-weight: 700; }
+    .toggle-info p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .switch { position: relative; display: inline-block; width: 50px; height: 27px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; inset: 0; background: #C9C2B2;
+      transition: 0.28s; border-radius: 27px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 21px; width: 21px; left: 3px; bottom: 3px;
+      background: white; transition: 0.28s; border-radius: 50%;
+    }
+    input:checked + .slider { background: var(--nile); }
+    input:checked + .slider:before { transform: translateX(23px); }
+    .switch-label { font-size: 11px; font-weight: 700; color: var(--muted); min-width: 42px; text-align: center; }
   </style>
 </head>
 <body>
@@ -340,6 +362,46 @@
         </div>
       </form>
       <div id="leaveConfigMsg" class="form-msg"></div>
+
+      <div class="section-head"><h2><span class="dot"></span>إعدادات الصور الإجبارية</h2></div>
+      <div class="panel">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>صورة عند تسجيل الحضور</h4>
+            <p>السائق مايقدرش يبدأ ورديته من غير ما يصوّر التوكتوك وقت الاستلام</p>
+          </div>
+          <span class="switch-label" id="labelCheckin">-</span>
+          <label class="switch">
+            <input type="checkbox" id="togglePhotoCheckin" onchange="updatePhotoSetting('photo_required_checkin', this.checked, 'labelCheckin')">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>صورة عند تسجيل الانصراف</h4>
+            <p>السائق مايقدرش يقفل ورديته من غير ما يصوّر التوكتوك وقت التسليم</p>
+          </div>
+          <span class="switch-label" id="labelCheckout">-</span>
+          <label class="switch">
+            <input type="checkbox" id="togglePhotoCheckout" onchange="updatePhotoSetting('photo_required_checkout', this.checked, 'labelCheckout')">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>صورة عند قفل الأوردر</h4>
+            <p>السائق مايقدرش يقفل الأوردر من غير ما يصوّر إثبات وصول الطلب</p>
+          </div>
+          <span class="switch-label" id="labelOrderClose">-</span>
+          <label class="switch">
+            <input type="checkbox" id="togglePhotoOrderClose" onchange="updatePhotoSetting('photo_required_order_close', this.checked, 'labelOrderClose')">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      <div id="photoSettingsMsg" class="form-msg"></div>
     </div>
 
     <!-- تبويب المناسبات -->
@@ -1480,6 +1542,62 @@
       g.setAttribute('stroke-dashoffset', `${-(payrollLen + maintLen)}`);
     }
 
+    // ==================== إعدادات الصور الإجبارية ====================
+    function loadPhotoSettings() {
+      fetch('/settings')
+        .then(r => r.json())
+        .then(rows => {
+          const map = {};
+          rows.forEach(s => { map[s.setting_key] = s.setting_value; });
+
+          setToggle('togglePhotoCheckin', 'labelCheckin', map['photo_required_checkin']);
+          setToggle('togglePhotoCheckout', 'labelCheckout', map['photo_required_checkout']);
+          setToggle('togglePhotoOrderClose', 'labelOrderClose', map['photo_required_order_close']);
+        })
+        .catch(err => console.error(err));
+    }
+
+    function setToggle(toggleId, labelId, value) {
+      const isOn = String(value) === 'true';
+      document.getElementById(toggleId).checked = isOn;
+      const lbl = document.getElementById(labelId);
+      lbl.textContent = isOn ? 'إجبارية' : 'اختيارية';
+      lbl.style.color = isOn ? 'var(--nile)' : 'var(--muted)';
+    }
+
+    function updatePhotoSetting(key, checked, labelId) {
+      const msg = document.getElementById('photoSettingsMsg');
+      msg.className = 'form-msg';
+      msg.textContent = 'جاري الحفظ...';
+
+      fetch('/settings/' + key, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: checked ? 'true' : 'false' })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.message) {
+          msg.className = 'form-msg';
+          msg.textContent = d.message;
+          const lbl = document.getElementById(labelId);
+          lbl.textContent = checked ? 'إجبارية' : 'اختيارية';
+          lbl.style.color = checked ? 'var(--nile)' : 'var(--muted)';
+          showToast(d.message);
+        } else {
+          msg.className = 'form-msg error-msg';
+          msg.textContent = d.error;
+          showToast(d.error, true);
+          loadPhotoSettings();
+        }
+      })
+      .catch(() => {
+        msg.className = 'form-msg error-msg';
+        msg.textContent = 'حصل خطأ في الاتصال بالسيرفر';
+        loadPhotoSettings();
+      });
+    }
+
     // ==================== أدوات الصيانة والتنظيف ====================
     function loadStorageInfo() {
       fetch('/maintenance/storage-info')
@@ -1557,6 +1675,7 @@
     initMonthPicker();
     loadSettings();
     loadLeaveConfig();
+    loadPhotoSettings();
     loadDriversAndPayroll();
 
     // باقي البيانات بتتحمّل لما تفتح تبويبها (أسرع بكتير في الفتح)
