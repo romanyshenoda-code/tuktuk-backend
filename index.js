@@ -221,6 +221,11 @@ const driverProtectedPages = [
 
 app.use((req, res, next) => {
   const path = req.path;
+
+  if (adminProtectedPages.includes(path) || driverProtectedPages.includes(path) || path === '/finance' || path === '/finance.html') {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+  }
   console.log('>>> CHECK:', path, '| in list:', adminProtectedPages.includes(path), '| loggedIn:', !!(req.session && req.session.loggedIn));
 
   if (adminProtectedPages.includes(path)) {
