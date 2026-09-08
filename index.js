@@ -1,4 +1,11 @@
 process.env.TZ = 'Africa/Cairo';
+// دالة ترجع الوقت الحالي بتوقيت القاهرة كنص جاهز لـ MySQL
+function cairoNow() {
+  const now = new Date();
+  const cairoTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
+  const pad = n => String(n).padStart(2, '0');
+  return `${cairoTime.getFullYear()}-${pad(cairoTime.getMonth() + 1)}-${pad(cairoTime.getDate())} ${pad(cairoTime.getHours())}:${pad(cairoTime.getMinutes())}:${pad(cairoTime.getSeconds())}`;
+}
 const express = require('express');
 const session = require('express-session');
 const multer = require('multer');
