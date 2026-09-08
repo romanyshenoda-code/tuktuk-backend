@@ -1567,6 +1567,14 @@ app.get('/payroll/calculate-all/:year/:month', (req, res) => {
                       (err, advanceRows) => {
                         if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب السلف' }); }
 
+                        // استعلام واحد للحوافز
+                        db.query(
+                          `SELECT driver_id, COALESCE(SUM(amount),0) AS total FROM incentives
+                           WHERE YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY driver_id`,
+                          [year, month],
+                          (err, incentiveRows) => {
+                            if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحوافز' }); }
+
                         // استعلام واحد لأيام الأعياد
                         db.query(
                           `SELECT hed.driver_id, he.start_date, he.end_date
@@ -1594,6 +1602,9 @@ app.get('/payroll/calculate-all/:year/:month', (req, res) => {
 
                             const advanceMap = {};
                             advanceRows.forEach(r => { advanceMap[r.driver_id] = parseFloat(r.total); });
+
+                            const incentiveMap = {};
+                            incentiveRows.forEach(r => { incentiveMap[r.driver_id] = parseFloat(r.total); });
 
                             const holidayMap = {};
                             holidayRows.forEach(h => {
@@ -1624,6 +1635,7 @@ app.get('/payroll/calculate-all/:year/:month', (req, res) => {
 
                               const total_deductions = deductionMap[driver.id] || 0;
                               const total_advances = advanceMap[driver.id] || 0;
+                              const total_incentives = incentiveMap[driver.id] || 0;
 
                               let salaryPart = 0, deliveryCommission = 0, fullTripCommission = 0;
 
@@ -1661,6 +1673,7 @@ app.get('/payroll/calculate-all/:year/:month', (req, res) => {
                                 gross_pay: grossPay.toFixed(2),
                                 total_deductions: total_deductions.toFixed(2),
                                 total_advances: total_advances.toFixed(2),
+                                total_incentives: total_incentives.toFixed(2),
                                 net_pay: netPay.toFixed(2)
                               };
                             });
@@ -1668,6 +1681,8 @@ app.get('/payroll/calculate-all/:year/:month', (req, res) => {
                             res.json(results);
                           }
                         );
+                              }
+                            );
                       }
                     );
                   }
@@ -1680,6 +1695,9 @@ app.get('/payroll/calculate-all/:year/:month', (req, res) => {
     });
   });
 });
+
+
+// ==================== إضافة أوردر يدوي (من الأدمن) ====================
 
 
 // ==================== إضافة أوردر يدوي (من الأدمن) ====================
@@ -1921,6 +1939,26 @@ app.get('/maintenance/storage-info', (req, res) => {
     console.error(e);
     res.status(500).json({ error: 'حصل خطأ في حساب المساحة' });
   }
+});
+// ==================== الحوافز ====================
+app.post('/incentives', (req, res) => {
+  const { driver_id, amount, reason } = req.body;
+  db.query('INSERT INTO incentives (driver_id, amount, reason) VALUES (?, ?, ?)', [driver_id, amount, reason], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الحافز' }); }
+    const message = `تم صرف حافز بمبلغ ${amount} جنيه - السبب: ${reason}`;
+    db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [driver_id, message], (err) => {
+      if (err) console.error(err);
+      res.status(201).json({ message: 'تم تسجيل الحافز بنجاح', incentive_id: result.insertId });
+    });
+  });
+});
+
+app.get('/incentives/driver/:driver_id', (req, res) => {
+  const { driver_id } = req.params;
+  db.query('SELECT * FROM incentives WHERE driver_id = ? ORDER BY created_at DESC', [driver_id], (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الحوافز' }); }
+    res.json(results);
+  });
 });
 
 
