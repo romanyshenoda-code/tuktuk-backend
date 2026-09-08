@@ -206,13 +206,12 @@ const driverProtectedPages = [
 ];
 
 app.use((req, res, next) => {
+  app.use((req, res, next) => {
   const reqPath = req.path;
   const isAdminPage = adminProtectedPages.includes(reqPath);
-  if (reqPath.includes('admin')) {
-    console.log('### DEBUG path=', JSON.stringify(reqPath), '| isAdminPage=', isAdminPage, '| session exists=', !!req.session, '| loggedIn=', req.session ? req.session.loggedIn : 'NO SESSION');
-  }
+  const isDriverPage = driverProtectedPages.includes(reqPath);
   const isFinancePage = (reqPath === '/finance' || reqPath === '/finance.html');
-
+  
   if (isAdminPage || isDriverPage || isFinancePage) {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.set('Pragma', 'no-cache');
