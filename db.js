@@ -10,7 +10,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  timezone: '+03:00'
+  timezone: 'Africa/Cairo'
 });
 
 pool.getConnection((err, connection) => {
