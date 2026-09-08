@@ -1192,55 +1192,74 @@ app.delete('/general-expenses/:id', (req, res) => {
 app.get('/reports/driver-performance/:year/:month', (req, res) => {
   const { year, month } = req.params;
 
-  // استعلام منفصل لأيام العمل (من shifts بس)
+  const query = `
+    SELECT 
+      d.id AS driver_id,
+      d.name AS driver_name,
+      COUNT(DISTINCT DATE(s.check_in_time)) AS days_worked,
+      COUNT(DISTINCT o.id) AS total_orders,
+      COALESCE(SUM(o.price), 0) AS total_revenue,
+      COALESCE(SUM(CASE WHEN o.order_type = 'delivery' THEN 1 ELSE 0 END), 0) AS delivery_count,
+      COALESCE(SUM(CASE WHEN o.order_type = 'full_trip' THEN 1 ELSE 0 END), 0) AS full_trip_count
+    FROM drivers d
+    LEFT JOIN shifts s ON d.id = s.driver_id 
+      AND YEAR(s.check_in_time) = ? AND MONTH(s.check_in_time) = ?
+    LEFT JOIN orders o ON d.id = o.driver_id AND o.status = 'closed'
+      AND YEAR(o.start_time) = ? AND MONTH(o.start_time) = ?
+    GROUP BY d.id, d.name
+    ORDER BY total_revenue DESC
+  `;
+
+  db.query(query, [year, month, year, month], (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب تقرير الأداء' }); }
+    res.json(results);
+  });
+});
+
+// ==================== بيانات الرسم البياني السنوي ====================
+app.get('/reports/yearly-chart/:year', (req, res) => {
+  const { year } = req.params;
+
   db.query(
-    `SELECT driver_id, COUNT(DISTINCT DATE(check_in_time)) AS days_worked
-     FROM shifts
-     WHERE YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
-     GROUP BY driver_id`,
-    [year, month],
-    (err, shiftsRows) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب أيام العمل' }); }
+    `SELECT MONTH(start_time) AS month, COALESCE(SUM(price), 0) AS revenue
+     FROM orders WHERE status = 'closed' AND YEAR(start_time) = ?
+     GROUP BY MONTH(start_time)`,
+    [year],
+    (err, revenueResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإيرادات' }); }
 
-      // استعلام منفصل تماماً للأوردرات (من orders بس)
       db.query(
-        `SELECT driver_id, order_type, COUNT(*) AS cnt, COALESCE(SUM(price), 0) AS revenue
-         FROM orders
-         WHERE status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
-         GROUP BY driver_id, order_type`,
-        [year, month],
-        (err, ordersRows) => {
-          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الأوردرات' }); }
+        `SELECT MONTH(maintenance_date) AS month, COALESCE(SUM(cost), 0) AS total
+         FROM tuktuk_maintenance WHERE YEAR(maintenance_date) = ?
+         GROUP BY MONTH(maintenance_date)`,
+        [year],
+        (err, maintResults) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الصيانة' }); }
 
-          db.query('SELECT id, name FROM drivers', (err, drivers) => {
-            if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب السواقين' }); }
+          db.query(
+            `SELECT MONTH(expense_date) AS month, COALESCE(SUM(amount), 0) AS total
+             FROM general_expenses WHERE YEAR(expense_date) = ?
+             GROUP BY MONTH(expense_date)`,
+            [year],
+            (err, genResults) => {
+              if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب المصروفات' }); }
 
-            const daysMap = {};
-            shiftsRows.forEach(r => { daysMap[r.driver_id] = r.days_worked; });
+              const months = Array.from({ length: 12 }, (_, i) => i + 1);
+              const data = months.map(m => {
+                const rev = revenueResults.find(r => r.month === m);
+                const maint = maintResults.find(r => r.month === m);
+                const gen = genResults.find(r => r.month === m);
+                return {
+                  month: m,
+                  revenue: parseFloat(rev ? rev.revenue : 0),
+                  maintenance: parseFloat(maint ? maint.total : 0),
+                  general: parseFloat(gen ? gen.total : 0)
+                };
+              });
 
-            const ordersMap = {};
-            ordersRows.forEach(r => {
-              if (!ordersMap[r.driver_id]) ordersMap[r.driver_id] = { delivery: 0, full_trip: 0, revenue: 0 };
-              ordersMap[r.driver_id][r.order_type] = r.cnt;
-              ordersMap[r.driver_id].revenue += parseFloat(r.revenue);
-            });
-
-            const results = drivers.map(d => {
-              const o = ordersMap[d.id] || { delivery: 0, full_trip: 0, revenue: 0 };
-              return {
-                driver_id: d.id,
-                driver_name: d.name,
-                days_worked: daysMap[d.id] || 0,
-                total_orders: (o.delivery || 0) + (o.full_trip || 0),
-                delivery_count: o.delivery || 0,
-                full_trip_count: o.full_trip || 0,
-                total_revenue: o.revenue.toFixed(2)
-              };
-            });
-
-            results.sort((a, b) => parseFloat(b.total_revenue) - parseFloat(a.total_revenue));
-            res.json(results);
-          });
+              res.json(data);
+            }
+          );
         }
       );
     }
@@ -1758,84 +1777,46 @@ app.get('/maintenance/storage-info', (req, res) => {
     res.status(500).json({ error: 'حصل خطأ في حساب المساحة' });
   }
 });
-// ==================== إضافة أوردر يدوي (من الأدمن) ====================
-app.post('/orders/manual', (req, res) => {
-  const { driver_id, order_date, order_type, count } = req.body;
-
-  if (!driver_id || !order_date || !order_type) {
-    return res.status(400).json({ error: 'كل الحقول مطلوبة' });
-  }
-
-  const orderCount = parseInt(count) || 1;
-  if (orderCount < 1 || orderCount > 50) {
-    return res.status(400).json({ error: 'عدد الأوردرات يجب أن يكون بين 1 و50' });
-  }
-
-  // نجيب الإعدادات المالية عشان نحسب السعر والعمولة زي أي أوردر عادي
-  db.query('SELECT * FROM drivers WHERE id = ?', [driver_id], (err, driverResults) => {
-    if (err || driverResults.length === 0) return res.status(404).json({ error: 'السائق غير موجود' });
-    const driver = driverResults[0];
-
-    db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
-      const settings = settingsResults[0];
-
-      const delivery_base_price = driver.is_customized ? driver.custom_delivery_base_price : settings.delivery_base_price;
-      const full_trip_base_price = driver.is_customized ? driver.custom_full_trip_base_price : settings.full_trip_base_price;
-      const delivery_commission_pct = driver.is_customized ? driver.custom_delivery_commission_pct : settings.delivery_commission_pct;
-      const full_trip_commission_pct = driver.is_customized ? driver.custom_full_trip_commission_pct : settings.full_trip_commission_pct;
-
-      const price = order_type === 'delivery' ? parseFloat(delivery_base_price || 0) : parseFloat(full_trip_base_price || 0);
-      const commissionPct = order_type === 'delivery' ? parseFloat(delivery_commission_pct || 0) : parseFloat(full_trip_commission_pct || 0);
-      const driver_earning = price * (commissionPct / 100);
-
-      const dateTimeStr = order_date + ' 12:00:00'; // نستخدم منتصف اليوم كوقت افتراضي
-
-      const values = [];
-      for (let i = 0; i < orderCount; i++) {
-        values.push([
-          driver_id, order_type, dateTimeStr, dateTimeStr,
-          price.toFixed(2), driver_earning.toFixed(2), commissionPct,
-          'closed', true, order_date
-        ]);
-      }
+// ==================== إحصائيات اليوم للورديات والأوردرات ====================
+app.get('/dashboard/today-status', (req, res) => {
+  db.query(
+    `SELECT COUNT(*) AS open_count FROM shifts WHERE status = 'open'`,
+    (err, openShifts) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
 
       db.query(
-        `INSERT INTO orders (driver_id, order_type, start_time, end_time, price, driver_earning, driver_commission_pct, status, is_manual, manual_order_date) VALUES ?`,
-        [values],
-        (err, result) => {
-          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في إضافة الأوردر' }); }
-          res.status(201).json({
-            message: `تم إضافة ${orderCount} أوردر يدوي بنجاح لـ${driver.name}`,
-            count: orderCount,
-            total_price: (price * orderCount).toFixed(2),
-            total_earning: (driver_earning * orderCount).toFixed(2)
-          });
+        `SELECT COUNT(*) AS closed_today FROM shifts WHERE status = 'closed' AND DATE(check_out_time) = CURDATE()`,
+        (err, closedShiftsToday) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
+
+          db.query(
+            `SELECT COUNT(*) AS open_count FROM orders WHERE status = 'open'`,
+            (err, openOrders) => {
+              if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
+
+              db.query(
+                `SELECT COUNT(*) AS closed_today FROM orders WHERE status = 'closed' AND DATE(end_time) = CURDATE()`,
+                (err, closedOrdersToday) => {
+                  if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
+
+                  res.json({
+                    shifts: {
+                      open: openShifts[0].open_count,
+                      closed_today: closedShiftsToday[0].closed_today
+                    },
+                    orders: {
+                      open: openOrders[0].open_count,
+                      closed_today: closedOrdersToday[0].closed_today
+                    }
+                  });
+                }
+              );
+            }
+          );
         }
       );
-    });
-  });
-});
-
-// جلب كل الأوردرات اليدوية
-app.get('/orders/manual', (req, res) => {
-  db.query(
-    `SELECT orders.*, drivers.name AS driver_name FROM orders JOIN drivers ON orders.driver_id = drivers.id WHERE is_manual = TRUE ORDER BY manual_order_date DESC, orders.id DESC LIMIT 300`,
-    (err, results) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الأوردرات اليدوية' }); }
-      res.json(results);
     }
   );
-});
-
-// حذف أوردر يدوي
-app.delete('/orders/manual/:id', (req, res) => {
-  const { id } = req.params;
-  db.query('DELETE FROM orders WHERE id = ? AND is_manual = TRUE', [id], (err, result) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف الأوردر' }); }
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'الأوردر غير موجود أو مش يدوي' });
-    res.json({ message: 'تم حذف الأوردر اليدوي بنجاح' });
-  });
 });
 
 app.listen(PORT, () => {
