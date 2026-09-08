@@ -206,12 +206,11 @@ const driverProtectedPages = [
 ];
 
 app.use((req, res, next) => {
-  app.use((req, res, next) => {
   const reqPath = req.path;
   const isAdminPage = adminProtectedPages.includes(reqPath);
   const isDriverPage = driverProtectedPages.includes(reqPath);
   const isFinancePage = (reqPath === '/finance' || reqPath === '/finance.html');
-  
+
   if (isAdminPage || isDriverPage || isFinancePage) {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.set('Pragma', 'no-cache');
