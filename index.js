@@ -187,7 +187,17 @@ app.get('/api/finance-session', (req, res) => {
 });
 
 app.get('/api/admin-session', (req, res) => {
-  res.json({ loggedIn: !!(req.session && req.session.loggedIn) });
+  if (!req.session || !req.session.loggedIn) {
+    return res.json({ loggedIn: false });
+  }
+
+  db.query('SELECT id FROM admins WHERE id = ?', [req.session.adminId], (err, results) => {
+    if (err || results.length === 0) {
+      req.session.destroy(() => {});
+      return res.json({ loggedIn: false });
+    }
+    res.json({ loggedIn: true });
+  });
 });
 
 // ==================== الصفحات المحمية ====================
