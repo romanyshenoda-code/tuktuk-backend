@@ -208,7 +208,9 @@ const driverProtectedPages = [
 app.use((req, res, next) => {
   const reqPath = req.path;
   const isAdminPage = adminProtectedPages.includes(reqPath);
-  const isDriverPage = driverProtectedPages.includes(reqPath);
+  if (reqPath.includes('admin')) {
+    console.log('### DEBUG path=', JSON.stringify(reqPath), '| isAdminPage=', isAdminPage, '| session exists=', !!req.session, '| loggedIn=', req.session ? req.session.loggedIn : 'NO SESSION');
+  }
   const isFinancePage = (reqPath === '/finance' || reqPath === '/finance.html');
 
   if (isAdminPage || isDriverPage || isFinancePage) {
