@@ -186,6 +186,10 @@ app.get('/api/finance-session', (req, res) => {
   res.json({ loggedIn: !!(req.session && req.session.financeLoggedIn) });
 });
 
+app.get('/api/admin-session', (req, res) => {
+  res.json({ loggedIn: !!(req.session && req.session.loggedIn) });
+});
+
 // ==================== الصفحات المحمية ====================
 const adminProtectedPages = [
   '/', '/index', '/index.html',
