@@ -11,6 +11,7 @@
     :root {
       --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
       --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+      --gold: #C9A227;
     }
     * { box-sizing: border-box; }
     body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
@@ -19,9 +20,10 @@
     .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
     .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; }
     .logout-link { margin-inline-start: auto; color: var(--sand); opacity: 0.75; font-size: 13px; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); padding: 6px 12px; border-radius: 20px; }
-    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
     .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
-    .section-head h2 { font-size: 18px; margin: 0; }
+    .section-head h2 { font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px; }
+    .section-head h2 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--section-color, var(--nile)); }
     input, select, textarea { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
     input:focus, select:focus, textarea:focus { outline: 2px solid var(--nile); outline-offset: 1px; }
     .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 30px; }
@@ -36,9 +38,10 @@
     .table-scroll { overflow-x: auto; }
     .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
     .btn-approve { background: var(--nile); }
-    .btn-incentive { background: #C9A227; }
     .btn-reject { background: var(--rust); }
     .btn-delete { background: #8B1A1A; }
+    .btn-edit { background: var(--amber); }
+    .btn-incentive { background: var(--gold); }
     .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
     .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
 
@@ -46,6 +49,21 @@
     .status-pending { background: var(--amber); }
     .status-approved { background: var(--nile); }
     .status-rejected { background: var(--rust); }
+    .amount-gold { color: var(--gold); font-weight: 800; }
+    .amount-red { color: var(--rust); font-weight: 800; }
+
+    /* شريط الفلاتر الموحّد */
+    .filters-bar {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 22px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+    }
+    .filter-group { display: flex; flex-direction: column; min-width: 110px; }
+    .filter-group label { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .filter-search { flex: 1; min-width: 200px; }
+    .filter-reset {
+      padding: 10px 16px; background: var(--line); color: var(--ink); border: none; border-radius: 8px;
+      font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer; height: 41px;
+    }
 
     .modal-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
     .modal-backdrop.open { display: flex; }
@@ -53,12 +71,14 @@
     .modal-box.danger { border-top-color: var(--rust); }
     .modal-box h3 { margin: 0 0 8px; font-size: 17px; }
     .modal-box p { font-size: 13.5px; color: var(--muted); margin: 0 0 16px; line-height: 1.6; }
-    .modal-box input, .modal-box textarea { width: 100%; margin-bottom: 10px; }
+    .modal-box input, .modal-box textarea, .modal-box select { width: 100%; margin-bottom: 10px; }
     .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
     .modal-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
     .btn-modal-confirm { background: var(--nile); color: white; }
     .btn-modal-danger { background: var(--rust); color: white; }
     .btn-modal-cancel { background: var(--line); color: var(--ink); }
+    .btn-modal-save-gold { background: var(--gold); color: white; }
+    .btn-modal-save-amber { background: var(--amber); color: white; }
 
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transition: opacity 0.25s; pointer-events: none; max-width: 90%; text-align: center; }
     .toast.show { opacity: 1; }
@@ -101,7 +121,32 @@
 
   <div class="container">
 
-    <div class="section-head"><h2>طلبات الإجازة</h2></div>
+    <div class="section-head"><h2>فلترة كل الجداول</h2></div>
+    <div class="filters-bar">
+      <div class="filter-group">
+        <label>السنة</label>
+        <select id="filterYear"></select>
+      </div>
+      <div class="filter-group">
+        <label>الشهر</label>
+        <select id="filterMonth">
+          <option value="">كل الشهور</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>اليوم</label>
+        <select id="filterDay">
+          <option value="">كل الأيام</option>
+        </select>
+      </div>
+      <div class="filter-group filter-search">
+        <label>بحث بالاسم أو رقم السائق</label>
+        <input type="text" id="filterSearch" placeholder="اكتب اسم السائق أو رقمه...">
+      </div>
+      <button class="filter-reset" onclick="resetFilters()">مسح الفلاتر</button>
+    </div>
+
+    <div class="section-head" style="--section-color: var(--amber);"><h2><span class="dot"></span>طلبات الإجازة</h2></div>
     <div class="panel table-scroll">
       <table id="leaveTable">
         <thead><tr><th>السائق</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
@@ -109,10 +154,26 @@
       </table>
     </div>
 
-    <div class="section-head"><h2>طلبات السلف</h2></div>
+    <div class="section-head" style="--section-color: var(--asphalt);"><h2><span class="dot"></span>طلبات السلف</h2></div>
     <div class="panel table-scroll">
       <table id="advancesTable">
         <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
+        <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="section-head" style="--section-color: var(--rust);"><h2><span class="dot"></span>سجل الخصومات</h2></div>
+    <div class="panel table-scroll">
+      <table id="deductionsTable">
+        <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
+        <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="section-head" style="--section-color: var(--gold);"><h2><span class="dot"></span>سجل الحوافز</h2></div>
+    <div class="panel table-scroll">
+      <table id="incentivesTable">
+        <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
         <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
       </table>
     </div>
@@ -122,7 +183,7 @@
       <select id="deductionDriver"></select>
       <input type="number" id="deductionAmount" placeholder="المبلغ">
       <input type="text" id="deductionReason" placeholder="سبب الخصم">
-      <button type="submit" class="submit-btn">تسجيل الخصم</button>
+      <button type="submit" class="submit-btn" style="background: var(--rust);">تسجيل الخصم</button>
     </form>
     <div id="deductionMsg" class="form-msg"></div>
 
@@ -131,7 +192,7 @@
       <select id="incentiveDriver"></select>
       <input type="number" id="incentiveAmount" placeholder="المبلغ">
       <input type="text" id="incentiveReason" placeholder="سبب الحافز">
-      <button type="submit" class="submit-btn" style="background: var(--btn-incentive, #C9A227);">تسجيل الحافز</button>
+      <button type="submit" class="submit-btn" style="background: var(--gold);">تسجيل الحافز</button>
     </form>
     <div id="incentiveMsg" class="form-msg"></div>
 
@@ -165,17 +226,53 @@
     </div>
   </div>
 
+  <!-- بوب أب تعديل الخصم -->
+  <div class="modal-backdrop" id="editDeductionModal">
+    <div class="modal-box">
+      <h3>تعديل الخصم</h3>
+      <input type="hidden" id="editDeductionId">
+      <select id="editDeductionDriver"></select>
+      <input type="number" id="editDeductionAmount" placeholder="المبلغ">
+      <input type="text" id="editDeductionReason" placeholder="السبب">
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancel" onclick="closeEditDeduction()">إلغاء</button>
+        <button type="button" class="btn-modal-save-amber" onclick="saveEditDeduction()">حفظ</button>
+      </div>
+      <div id="editDeductionMsg" class="form-msg"></div>
+    </div>
+  </div>
+
+  <!-- بوب أب تعديل الحافز -->
+  <div class="modal-backdrop" id="editIncentiveModal">
+    <div class="modal-box">
+      <h3>تعديل الحافز</h3>
+      <input type="hidden" id="editIncentiveId">
+      <select id="editIncentiveDriver"></select>
+      <input type="number" id="editIncentiveAmount" placeholder="المبلغ">
+      <input type="text" id="editIncentiveReason" placeholder="السبب">
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancel" onclick="closeEditIncentive()">إلغاء</button>
+        <button type="button" class="btn-modal-save-gold" onclick="saveEditIncentive()">حفظ</button>
+      </div>
+      <div id="editIncentiveMsg" class="form-msg"></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
-        function checkAdminSession() {
+    function checkAdminSession() {
       fetch('/api/admin-session').then(res => res.json()).then(data => {
         if (!data.loggedIn) window.location.href = '/login.html';
       });
     }
     checkAdminSession();
     setInterval(checkAdminSession, 15000);
+
     const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+
+    // البيانات الخام (قبل الفلترة) لكل جدول
+    let rawLeave = [], rawAdvances = [], rawDeductions = [], rawIncentives = [];
 
     function showToast(msg, isError) {
       const t = document.getElementById('toast');
@@ -196,11 +293,70 @@
       });
       document.getElementById('confirmModal').classList.add('open');
     }
+    function closeConfirm() { document.getElementById('confirmModal').classList.remove('open'); }
 
-    function closeConfirm() {
-      document.getElementById('confirmModal').classList.remove('open');
+    // ==================== الفلاتر الموحّدة ====================
+    const now = new Date();
+    function initFilters() {
+      const yearSelect = document.getElementById('filterYear');
+      const years = [];
+      for (let y = now.getFullYear() - 2; y <= now.getFullYear() + 1; y++) years.push(y);
+      yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+      yearSelect.value = now.getFullYear();
+
+      const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+      const monthSelect = document.getElementById('filterMonth');
+      monthSelect.innerHTML = '<option value="">كل الشهور</option>' +
+        monthNames.map((n, i) => `<option value="${i + 1}">${n}</option>`).join('');
+
+      const daySelect = document.getElementById('filterDay');
+      daySelect.innerHTML = '<option value="">كل الأيام</option>' +
+        Array.from({ length: 31 }, (_, i) => i + 1).map(d => `<option value="${d}">${d}</option>`).join('');
+
+      [yearSelect, monthSelect, daySelect].forEach(el => el.addEventListener('change', applyAllFilters));
+      document.getElementById('filterSearch').addEventListener('input', applyAllFilters);
     }
 
+    function resetFilters() {
+      document.getElementById('filterYear').value = now.getFullYear();
+      document.getElementById('filterMonth').value = '';
+      document.getElementById('filterDay').value = '';
+      document.getElementById('filterSearch').value = '';
+      applyAllFilters();
+    }
+
+    function matchesFilter(dateStr, driverName, driverId) {
+      const year = document.getElementById('filterYear').value;
+      const month = document.getElementById('filterMonth').value;
+      const day = document.getElementById('filterDay').value;
+      const search = document.getElementById('filterSearch').value.trim().toLowerCase();
+
+      if (dateStr) {
+        const d = new Date(dateStr);
+        if (year && d.getFullYear() != year) return false;
+        if (month && (d.getMonth() + 1) != month) return false;
+        if (day && d.getDate() != day) return false;
+      }
+
+      if (search) {
+        const nameMatch = driverName && driverName.toLowerCase().includes(search);
+        const idMatch = driverId && String(driverId).includes(search);
+        if (!nameMatch && !idMatch) return false;
+      }
+
+      return true;
+    }
+
+    function applyAllFilters() {
+      renderLeaveTable(rawLeave.filter(r => matchesFilter(r.start_date, r.driver_name, r.driver_id)));
+      renderAdvancesTable(rawAdvances.filter(r => matchesFilter(r.created_at, r.driver_name, r.driver_id)));
+      renderDeductionsTable(rawDeductions.filter(r => matchesFilter(r.created_at, r.driver_name, r.driver_id)));
+      renderIncentivesTable(rawIncentives.filter(r => matchesFilter(r.created_at, r.driver_name, r.driver_id)));
+    }
+
+    function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : '-'; }
+
+    // ==================== طلبات الإجازة ====================
     function openNoteModal(type, id, status) {
       document.getElementById('noteRequestId').value = id;
       document.getElementById('noteRequestType').value = type;
@@ -211,17 +367,13 @@
       document.getElementById('noteModalTitle').textContent = `${action} ${label}`;
       document.getElementById('noteModal').classList.add('open');
     }
-
-    function closeNoteModal() {
-      document.getElementById('noteModal').classList.remove('open');
-    }
+    function closeNoteModal() { document.getElementById('noteModal').classList.remove('open'); }
 
     function submitReview() {
       const id = document.getElementById('noteRequestId').value;
       const type = document.getElementById('noteRequestType').value;
       const status = document.getElementById('noteRequestStatus').value;
       const admin_note = document.getElementById('adminNote').value;
-
       const url = type === 'leave' ? `/leave-requests/${id}` : `/advances/${id}`;
 
       fetch(url, {
@@ -260,60 +412,224 @@
 
     function loadLeaveRequests() {
       fetch('/leave-requests').then(res => res.json()).then(data => {
-        const tbody = document.querySelector('#leaveTable tbody');
-        if (data.length === 0) {
-          tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش طلبات إجازة</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = data.map(r => `
-          <tr>
-            <td>${r.driver_name}</td>
-            <td>${r.start_date}</td>
-            <td>${r.end_date}</td>
-            <td>${r.reason || '-'}</td>
-            <td><span class="status-badge status-${r.status}">${statusText[r.status]}</span></td>
-            <td>
-              ${r.status === 'pending' ? `
-                <button class="row-btn btn-approve" onclick="openNoteModal('leave', ${r.id}, 'approved')">موافقة</button>
-                <button class="row-btn btn-reject" onclick="openNoteModal('leave', ${r.id}, 'rejected')">رفض</button>
-              ` : '-'}
-            </td>
-            <td><button class="row-btn btn-delete" onclick="confirmDeleteRequest('leave', ${r.id})">حذف نهائي</button></td>
-          </tr>
-        `).join('');
+        rawLeave = data;
+        renderLeaveTable(data);
       });
     }
 
+    function renderLeaveTable(data) {
+      const tbody = document.querySelector('#leaveTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش طلبات إجازة</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td>${r.driver_name}</td>
+          <td>${formatDate(r.start_date)}</td>
+          <td>${formatDate(r.end_date)}</td>
+          <td>${r.reason || '-'}</td>
+          <td><span class="status-badge status-${r.status}">${statusText[r.status]}</span></td>
+          <td>
+            ${r.status === 'pending' ? `
+              <button class="row-btn btn-approve" onclick="openNoteModal('leave', ${r.id}, 'approved')">موافقة</button>
+              <button class="row-btn btn-reject" onclick="openNoteModal('leave', ${r.id}, 'rejected')">رفض</button>
+            ` : '-'}
+          </td>
+          <td><button class="row-btn btn-delete" onclick="confirmDeleteRequest('leave', ${r.id})">حذف نهائي</button></td>
+        </tr>
+      `).join('');
+    }
+
+    // ==================== طلبات السلف ====================
     function loadAdvances() {
       fetch('/advances').then(res => res.json()).then(data => {
-        const tbody = document.querySelector('#advancesTable tbody');
-        if (data.length === 0) {
-          tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش طلبات سلف</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = data.map(r => `
-          <tr>
-            <td>${r.driver_name}</td>
-            <td>${r.amount} ج</td>
-            <td>${r.reason || '-'}</td>
-            <td><span class="status-badge status-${r.status}">${statusText[r.status]}</span></td>
-            <td>
-              ${r.status === 'pending' ? `
-                <button class="row-btn btn-approve" onclick="openNoteModal('advance', ${r.id}, 'approved')">موافقة</button>
-                <button class="row-btn btn-reject" onclick="openNoteModal('advance', ${r.id}, 'rejected')">رفض</button>
-              ` : '-'}
-            </td>
-            <td><button class="row-btn btn-delete" onclick="confirmDeleteRequest('advance', ${r.id})">حذف نهائي</button></td>
-          </tr>
-        `).join('');
+        rawAdvances = data;
+        renderAdvancesTable(data);
       });
     }
 
+    function renderAdvancesTable(data) {
+      const tbody = document.querySelector('#advancesTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش طلبات سلف</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td>${r.driver_name}</td>
+          <td>${r.amount} ج</td>
+          <td>${r.reason || '-'}</td>
+          <td><span class="status-badge status-${r.status}">${statusText[r.status]}</span></td>
+          <td>
+            ${r.status === 'pending' ? `
+              <button class="row-btn btn-approve" onclick="openNoteModal('advance', ${r.id}, 'approved')">موافقة</button>
+              <button class="row-btn btn-reject" onclick="openNoteModal('advance', ${r.id}, 'rejected')">رفض</button>
+            ` : '-'}
+          </td>
+          <td><button class="row-btn btn-delete" onclick="confirmDeleteRequest('advance', ${r.id})">حذف نهائي</button></td>
+        </tr>
+      `).join('');
+    }
+
+    // ==================== سجل الخصومات ====================
+    function loadDeductions() {
+      fetch('/deductions').then(res => res.json()).then(data => {
+        rawDeductions = data;
+        renderDeductionsTable(data);
+      });
+    }
+
+    function renderDeductionsTable(data) {
+      const tbody = document.querySelector('#deductionsTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش خصومات مسجلة</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td>${r.driver_name}</td>
+          <td class="amount-red">${r.amount} ج</td>
+          <td>${r.reason || '-'}</td>
+          <td>${formatDate(r.created_at)}</td>
+          <td><button class="row-btn btn-edit" onclick='openEditDeduction(${JSON.stringify(r)})'>تعديل</button></td>
+          <td><button class="row-btn btn-delete" onclick="confirmDeleteDeduction(${r.id})">حذف نهائي</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function openEditDeduction(r) {
+      document.getElementById('editDeductionId').value = r.id;
+      document.getElementById('editDeductionDriver').value = r.driver_id;
+      document.getElementById('editDeductionAmount').value = r.amount;
+      document.getElementById('editDeductionReason').value = r.reason || '';
+      document.getElementById('editDeductionMsg').textContent = '';
+      document.getElementById('editDeductionModal').classList.add('open');
+    }
+    function closeEditDeduction() { document.getElementById('editDeductionModal').classList.remove('open'); }
+
+    function saveEditDeduction() {
+      const id = document.getElementById('editDeductionId').value;
+      fetch(`/deductions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driver_id: document.getElementById('editDeductionDriver').value,
+          amount: document.getElementById('editDeductionAmount').value,
+          reason: document.getElementById('editDeductionReason').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('editDeductionMsg').textContent = data.message || data.error;
+        if (data.message) {
+          showToast(data.message);
+          setTimeout(closeEditDeduction, 600);
+          loadDeductions();
+        }
+      });
+    }
+
+    function confirmDeleteDeduction(id) {
+      showConfirm(
+        '⚠️ حذف الخصم نهائياً',
+        'هتمسح الخصم ده نهائياً، وده هيقلل قيمة الخصومات المحسوبة في مرتب السائق الشهر ده. متأكد؟',
+        () => deleteDeduction(id)
+      );
+    }
+
+    function deleteDeduction(id) {
+      fetch(`/deductions/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          showToast(data.message || data.error, !data.message);
+          loadDeductions();
+        });
+    }
+
+    // ==================== سجل الحوافز ====================
+    function loadIncentives() {
+      fetch('/incentives').then(res => res.json()).then(data => {
+        rawIncentives = data;
+        renderIncentivesTable(data);
+      });
+    }
+
+    function renderIncentivesTable(data) {
+      const tbody = document.querySelector('#incentivesTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش حوافز مسجلة</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td>${r.driver_name}</td>
+          <td class="amount-gold">${r.amount} ج</td>
+          <td>${r.reason || '-'}</td>
+          <td>${formatDate(r.created_at)}</td>
+          <td><button class="row-btn btn-edit" onclick='openEditIncentive(${JSON.stringify(r)})'>تعديل</button></td>
+          <td><button class="row-btn btn-delete" onclick="confirmDeleteIncentive(${r.id})">حذف نهائي</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function openEditIncentive(r) {
+      document.getElementById('editIncentiveId').value = r.id;
+      document.getElementById('editIncentiveDriver').value = r.driver_id;
+      document.getElementById('editIncentiveAmount').value = r.amount;
+      document.getElementById('editIncentiveReason').value = r.reason || '';
+      document.getElementById('editIncentiveMsg').textContent = '';
+      document.getElementById('editIncentiveModal').classList.add('open');
+    }
+    function closeEditIncentive() { document.getElementById('editIncentiveModal').classList.remove('open'); }
+
+    function saveEditIncentive() {
+      const id = document.getElementById('editIncentiveId').value;
+      fetch(`/incentives/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driver_id: document.getElementById('editIncentiveDriver').value,
+          amount: document.getElementById('editIncentiveAmount').value,
+          reason: document.getElementById('editIncentiveReason').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('editIncentiveMsg').textContent = data.message || data.error;
+        if (data.message) {
+          showToast(data.message);
+          setTimeout(closeEditIncentive, 600);
+          loadIncentives();
+        }
+      });
+    }
+
+    function confirmDeleteIncentive(id) {
+      showConfirm(
+        '⚠️ حذف الحافز نهائياً',
+        'هتمسح الحافز ده نهائياً، وده هيقلل مستحقات السائق المحسوبة الشهر ده. متأكد؟',
+        () => deleteIncentive(id)
+      );
+    }
+
+    function deleteIncentive(id) {
+      fetch(`/incentives/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          showToast(data.message || data.error, !data.message);
+          loadIncentives();
+        });
+    }
+
+    // ==================== قوائم السواقين ====================
     function loadDriversDropdown() {
       fetch('/drivers').then(res => res.json()).then(data => {
         const options = data.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
         document.getElementById('deductionDriver').innerHTML = options;
         document.getElementById('incentiveDriver').innerHTML = options;
+        document.getElementById('editDeductionDriver').innerHTML = options;
+        document.getElementById('editIncentiveDriver').innerHTML = options;
       });
     }
 
@@ -334,6 +650,7 @@
         if (data.message) {
           document.getElementById('deductionForm').reset();
           loadDriversDropdown();
+          loadDeductions();
           showToast(data.message);
         }
       });
@@ -356,15 +673,20 @@
         if (data.message) {
           document.getElementById('incentiveForm').reset();
           loadDriversDropdown();
+          loadIncentives();
           showToast(data.message);
         }
       });
     });
 
+    initFilters();
     loadLeaveRequests();
     loadAdvances();
+    loadDeductions();
+    loadIncentives();
     loadDriversDropdown();
   </script>
+
   <footer class="dev-footer">
     <div class="dev-brand">
       <svg class="dev-mark" viewBox="0 0 68 68" xmlns="http://www.w3.org/2000/svg">
