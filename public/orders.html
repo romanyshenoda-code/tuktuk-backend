@@ -131,33 +131,6 @@
       </table>
     </div>
 
-    <div class="section-head"><h2>ملخصات الورديات</h2></div>
-    <div class="panel table-scroll">
-      <table id="summariesTable">
-        <thead><tr><th>الرقم</th><th>السائق</th><th>عدد الأوردرات</th><th>رحلات كاملة</th><th>توصيلات</th><th>إجمالي السعر</th><th>مستحقات السائق</th><th>معدّل يدوي؟</th><th>إجراء</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="modal-backdrop" id="editSummaryModal">
-    <div class="modal-box">
-      <h3>تعديل ملخص الوردية</h3>
-      <div class="modal-sub">تقدر تعدّل الأرقام الخمسة يدوياً، والتعديل هيتسجل في سجل المراجعة</div>
-      <form id="editSummaryForm">
-        <input type="hidden" id="editSummaryId">
-        <input type="number" id="editTotalOrders" placeholder="عدد الأوردرات" required>
-        <input type="number" id="editFullTrip" placeholder="عدد الرحلات الكاملة" required>
-        <input type="number" id="editDelivery" placeholder="عدد التوصيلات" required>
-        <input type="number" step="0.01" id="editTotalPrice" placeholder="إجمالي السعر" required>
-        <input type="number" step="0.01" id="editDriverEarning" placeholder="مستحقات السائق" required>
-        <div class="modal-actions">
-          <button type="button" class="btn-modal-cancel" onclick="closeEditSummary()">إلغاء</button>
-          <button type="submit" class="btn-modal-save">حفظ التعديل</button>
-        </div>
-      </form>
-      <div id="editSummaryMsg" class="form-msg"></div>
-    </div>
   </div>
 
   <div class="confirm-backdrop" id="confirmBackdrop">
@@ -304,78 +277,8 @@
         });
     }
 
-    function loadSummaries() {
-      fetch('/shift-summaries').then(res => res.json()).then(data => {
-        const tbody = document.querySelector('#summariesTable tbody');
-        if (data.length === 0) {
-          tbody.innerHTML = `<tr class="empty-row"><td colspan="9">مفيش ملخصات لسه</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = data.map(sm => `
-          <tr>
-            <td>${sm.id}</td>
-            <td>${sm.driver_name}</td>
-            <td>${sm.total_orders}</td>
-            <td>${sm.full_trip_count}</td>
-            <td>${sm.delivery_count}</td>
-            <td>${sm.total_price}</td>
-            <td>${sm.total_driver_earning}</td>
-            <td>${sm.is_manually_edited ? 'نعم' : 'لا'}</td>
-            <td><button class="row-btn btn-edit" onclick='openEditSummary(${JSON.stringify(sm)})'>تعديل</button></td>
-          </tr>
-        `).join('');
-      });
-    }
-
-    function openEditSummary(sm) {
-      document.getElementById('editSummaryId').value = sm.id;
-      document.getElementById('editTotalOrders').value = sm.total_orders;
-      document.getElementById('editFullTrip').value = sm.full_trip_count;
-      document.getElementById('editDelivery').value = sm.delivery_count;
-      document.getElementById('editTotalPrice').value = sm.total_price;
-      document.getElementById('editDriverEarning').value = sm.total_driver_earning;
-      document.getElementById('editSummaryMsg').textContent = '';
-      document.getElementById('editSummaryModal').classList.add('open');
-    }
-
-    function closeEditSummary() {
-      document.getElementById('editSummaryModal').classList.remove('open');
-    }
-
-    document.getElementById('editSummaryForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const id = document.getElementById('editSummaryId').value;
-
-      fetch(`/shift-summary/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          total_orders: document.getElementById('editTotalOrders').value,
-          full_trip_count: document.getElementById('editFullTrip').value,
-          delivery_count: document.getElementById('editDelivery').value,
-          total_price: document.getElementById('editTotalPrice').value,
-          total_driver_earning: document.getElementById('editDriverEarning').value
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('editSummaryMsg').textContent = data.message || data.error;
-        if (data.message) {
-          showToast(data.message);
-          loadSummaries();
-          setTimeout(closeEditSummary, 700);
-        } else {
-          showToast(data.error, true);
-        }
-      })
-      .catch(() => {
-        document.getElementById('editSummaryMsg').textContent = 'حصل خطأ في الاتصال بالسيرفر';
-      });
-    });
-
     loadActiveOrders();
     loadOrders();
-    loadSummaries();
   </script>
   <footer class="dev-footer">
     <div class="dev-brand">
