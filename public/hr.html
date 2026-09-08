@@ -158,7 +158,13 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    fetch('/api/admin-session').then(res => res.json()).then(data => { if (!data.loggedIn) window.location.href = '/login.html'; });
+        function checkAdminSession() {
+      fetch('/api/admin-session').then(res => res.json()).then(data => {
+        if (!data.loggedIn) window.location.href = '/login.html';
+      });
+    }
+    checkAdminSession();
+    setInterval(checkAdminSession, 15000);
     const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
 
     function showToast(msg, isError) {

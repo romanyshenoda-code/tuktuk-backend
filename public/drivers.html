@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>السواقين - Ginger</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
@@ -208,7 +207,14 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    fetch('/api/admin-session').then(res => res.json()).then(data => { if (!data.loggedIn) window.location.href = '/login.html'; });
+    function checkAdminSession() {
+      fetch('/api/admin-session').then(res => res.json()).then(data => {
+        if (!data.loggedIn) window.location.href = '/login.html';
+      });
+    }
+    checkAdminSession();
+    setInterval(checkAdminSession, 15000);
+
     let allDrivers = [];
     let confirmResolve = null;
 
@@ -232,7 +238,7 @@
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
     document.querySelectorAll('.modal-backdrop').forEach(b => b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); }));
 
-       function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : '-'; }
+    function formatDate(d) { return d ? new Date(d).toLocaleDateString('ar-EG') : '-'; }
 
     function loadDrivers() {
       fetch('/drivers').then(res => res.json()).then(data => {
