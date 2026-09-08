@@ -1777,6 +1777,85 @@ app.get('/maintenance/storage-info', (req, res) => {
     res.status(500).json({ error: 'حصل خطأ في حساب المساحة' });
   }
 });
+// ==================== إضافة أوردر يدوي (من الأدمن) ====================
+app.post('/orders/manual', (req, res) => {
+  const { driver_id, order_date, order_type, count } = req.body;
+
+  if (!driver_id || !order_date || !order_type) {
+    return res.status(400).json({ error: 'كل الحقول مطلوبة' });
+  }
+
+  const orderCount = parseInt(count) || 1;
+  if (orderCount < 1 || orderCount > 50) {
+    return res.status(400).json({ error: 'عدد الأوردرات يجب أن يكون بين 1 و50' });
+  }
+
+  // نجيب الإعدادات المالية عشان نحسب السعر والعمولة زي أي أوردر عادي
+  db.query('SELECT * FROM drivers WHERE id = ?', [driver_id], (err, driverResults) => {
+    if (err || driverResults.length === 0) return res.status(404).json({ error: 'السائق غير موجود' });
+    const driver = driverResults[0];
+
+    db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
+      const settings = settingsResults[0];
+
+      const delivery_base_price = driver.is_customized ? driver.custom_delivery_base_price : settings.delivery_base_price;
+      const full_trip_base_price = driver.is_customized ? driver.custom_full_trip_base_price : settings.full_trip_base_price;
+      const delivery_commission_pct = driver.is_customized ? driver.custom_delivery_commission_pct : settings.delivery_commission_pct;
+      const full_trip_commission_pct = driver.is_customized ? driver.custom_full_trip_commission_pct : settings.full_trip_commission_pct;
+
+      const price = order_type === 'delivery' ? parseFloat(delivery_base_price || 0) : parseFloat(full_trip_base_price || 0);
+      const commissionPct = order_type === 'delivery' ? parseFloat(delivery_commission_pct || 0) : parseFloat(full_trip_commission_pct || 0);
+      const driver_earning = price * (commissionPct / 100);
+
+      const dateTimeStr = order_date + ' 12:00:00'; // نستخدم منتصف اليوم كوقت افتراضي
+
+      const values = [];
+      for (let i = 0; i < orderCount; i++) {
+        values.push([
+          driver_id, order_type, dateTimeStr, dateTimeStr,
+          price.toFixed(2), driver_earning.toFixed(2), commissionPct,
+          'closed', true, order_date
+        ]);
+      }
+
+      db.query(
+        `INSERT INTO orders (driver_id, order_type, start_time, end_time, price, driver_earning, driver_commission_pct, status, is_manual, manual_order_date) VALUES ?`,
+        [values],
+        (err, result) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في إضافة الأوردر' }); }
+          res.status(201).json({
+            message: `تم إضافة ${orderCount} أوردر يدوي بنجاح لـ${driver.name}`,
+            count: orderCount,
+            total_price: (price * orderCount).toFixed(2),
+            total_earning: (driver_earning * orderCount).toFixed(2)
+          });
+        }
+      );
+    });
+  });
+});
+
+// جلب كل الأوردرات اليدوية
+app.get('/orders/manual', (req, res) => {
+  db.query(
+    `SELECT orders.*, drivers.name AS driver_name FROM orders JOIN drivers ON orders.driver_id = drivers.id WHERE is_manual = TRUE ORDER BY manual_order_date DESC, orders.id DESC LIMIT 300`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الأوردرات اليدوية' }); }
+      res.json(results);
+    }
+  );
+});
+
+// حذف أوردر يدوي
+app.delete('/orders/manual/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM orders WHERE id = ? AND is_manual = TRUE', [id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف الأوردر' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الأوردر غير موجود أو مش يدوي' });
+    res.json({ message: 'تم حذف الأوردر اليدوي بنجاح' });
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
