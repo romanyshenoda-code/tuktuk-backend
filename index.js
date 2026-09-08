@@ -202,31 +202,39 @@ const publicPages = [
 ];
 
 // حماية صفحات الأدمن (كل حاجة عدا صفحات الدخول والسائق)
-const adminProtectedPages = [
-  '/index.html', '/drivers.html', '/tuktuks.html', '/shifts.html',
-  '/orders.html', '/hr.html', '/admins.html', '/manual-orders.html'
-];
 
-// حماية صفحات السائق
-const driverProtectedPages = [
-  '/driver.html', '/driver-attendance.html', '/driver-orders.html', '/driver-requests.html'
-];
 
 app.use((req, res, next) => {
   const path = req.path;
-  console.log('>>> PROTECTION CHECK:', path, '| loggedIn:', !!(req.session && req.session.loggedIn));
+  
 
   if (adminProtectedPages.includes(path)) {
     if (req.session && req.session.loggedIn) return next();
     return res.redirect('/login.html');
   }
+const adminProtectedPages = [
+  '/', '/index', '/index.html',
+  '/drivers', '/drivers.html',
+  '/tuktuks', '/tuktuks.html',
+  '/shifts', '/shifts.html',
+  '/orders', '/orders.html',
+  '/hr', '/hr.html',
+  '/admins', '/admins.html',
+  '/manual-orders', '/manual-orders.html'
+];
 
+const driverProtectedPages = [
+  '/driver', '/driver.html',
+  '/driver-attendance', '/driver-attendance.html',
+  '/driver-orders', '/driver-orders.html',
+  '/driver-requests', '/driver-requests.html'
+];
   if (driverProtectedPages.includes(path)) {
     if (req.session && req.session.driverId) return next();
     return res.redirect('/driver-login.html');
   }
 
-  if (path === '/finance.html') {
+    if (path === '/finance' || path === '/finance.html') {
     if (req.session && req.session.financeLoggedIn) return next();
     return res.redirect('/finance-login.html');
   }
