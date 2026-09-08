@@ -201,17 +201,6 @@ const publicPages = [
   '/logo.png', '/favicon.ico'
 ];
 
-// حماية صفحات الأدمن (كل حاجة عدا صفحات الدخول والسائق)
-
-
-app.use((req, res, next) => {
-  const path = req.path;
-  
-
-  if (adminProtectedPages.includes(path)) {
-    if (req.session && req.session.loggedIn) return next();
-    return res.redirect('/login.html');
-  }
 const adminProtectedPages = [
   '/', '/index', '/index.html',
   '/drivers', '/drivers.html',
@@ -229,18 +218,29 @@ const driverProtectedPages = [
   '/driver-orders', '/driver-orders.html',
   '/driver-requests', '/driver-requests.html'
 ];
+
+app.use((req, res, next) => {
+  const path = req.path;
+
+  if (adminProtectedPages.includes(path)) {
+    if (req.session && req.session.loggedIn) return next();
+    return res.redirect('/login.html');
+  }
+
   if (driverProtectedPages.includes(path)) {
     if (req.session && req.session.driverId) return next();
     return res.redirect('/driver-login.html');
   }
 
-    if (path === '/finance' || path === '/finance.html') {
+  if (path === '/finance' || path === '/finance.html') {
     if (req.session && req.session.financeLoggedIn) return next();
     return res.redirect('/finance-login.html');
   }
 
   next();
 });
+
+app.use(express.static('public'));
 
 app.use(express.static('public'));
 
