@@ -229,6 +229,25 @@
     input:checked + .slider { background: var(--nile); }
     input:checked + .slider:before { transform: translateX(23px); }
     .switch-label { font-size: 11px; font-weight: 700; color: var(--muted); min-width: 42px; text-align: center; }
+
+    /* ألوان احترافية لأرقام كشف المرتبات */
+    .amt-blue { color: #16305C; font-weight: 700; }
+    .amt-green { color: #1F6F63; font-weight: 700; }
+    .amt-red { color: #B23A1E; font-weight: 700; }
+    .amt-net { color: #1E1B16; font-weight: 800; font-size: 14.5px; }
+
+    .day-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 30px; height: 26px; padding: 0 8px; border-radius: 14px;
+      font-weight: 700; font-size: 13px;
+    }
+    .day-badge.required { background: #EAF0F7; color: #16305C; }
+    .day-badge.present { background: #E3EEEC; color: #1F6F63; }
+    .day-badge.holiday { background: #FBF3E3; color: #C97A1A; }
+
+    /* صافي الربح الديناميكي */
+    .net-hero .big-num.positive { color: #1F6F63; }
+    .net-hero .big-num.negative { color: #B23A1E; }
   </style>
 </head>
 <body>
@@ -1077,15 +1096,15 @@
         <tr>
           <td>${p.driver_name}</td>
           <td>${incomeLabel[p.income_type] || p.income_type}</td>
-          <td>${p.required_working_days}</td>
-          <td>${p.days_present}</td>
-          <td>${p.holiday_days}</td>
-          <td>${p.salary_part}</td>
-          <td>${p.commission_part}</td>
-          <td>${p.gross_pay}</td>
-          <td style="color: #C9A227; font-weight: 700;">${parseFloat(p.total_incentives || 0).toFixed(2)}</td>
-          <td>${(parseFloat(p.total_deductions) + parseFloat(p.total_advances)).toFixed(2)}</td>
-          <td><strong>${p.net_pay}</strong></td>
+          <td><span class="day-badge required">${p.required_working_days}</span></td>
+          <td><span class="day-badge present">${p.days_present}</span></td>
+          <td><span class="day-badge holiday">${p.holiday_days}</span></td>
+          <td class="amt-blue">${p.salary_part}</td>
+          <td class="amt-blue">${p.commission_part}</td>
+          <td class="amt-blue">${p.gross_pay}</td>
+          <td class="amt-green">${parseFloat(p.total_incentives || 0).toFixed(2)}</td>
+          <td class="amt-red">${(parseFloat(p.total_deductions) + parseFloat(p.total_advances)).toFixed(2)}</td>
+          <td class="amt-net">${p.net_pay}</td>
           <td><button class="row-btn btn-edit" onclick='openCustomizeModal(${p.driver_id})'>تخصيص</button></td>
           <td><button class="row-btn btn-payslip" onclick='openPayslip(${JSON.stringify(p)})'>مفردات</button></td>
         </tr>
@@ -1231,11 +1250,18 @@
           const netProfit = totalRevenue - totalExpenses;
 
           document.getElementById('statExpenses').textContent = totalExpenses.toFixed(2) + ' ج';
-          document.getElementById('statNet').textContent = netProfit.toFixed(2) + ' ج';
+          const statNetEl = document.getElementById('statNet');
+          statNetEl.textContent = netProfit.toFixed(2) + ' ج';
+          statNetEl.style.color = netProfit >= 0 ? '#1F6F63' : '#B23A1E';
+
           document.getElementById('repMaintenance').textContent = totalMaintenance.toFixed(2) + ' ج';
           document.getElementById('repGeneral').textContent = totalGeneral.toFixed(2) + ' ج';
           document.getElementById('repTotalExpenses').textContent = totalExpenses.toFixed(2) + ' ج';
-          document.getElementById('reportNetProfit').textContent = netProfit.toFixed(2) + ' جنيه';
+
+          const bigNumEl = document.getElementById('reportNetProfit');
+          bigNumEl.textContent = netProfit.toFixed(2) + ' جنيه';
+          bigNumEl.classList.remove('positive', 'negative');
+          bigNumEl.classList.add(netProfit >= 0 ? 'positive' : 'negative');
           renderDonut(totalPayroll, totalIncentives, totalMaintenance, totalGeneral);
         });
       });
