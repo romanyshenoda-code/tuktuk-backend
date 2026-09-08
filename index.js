@@ -432,9 +432,13 @@ app.post('/shifts/check-in', upload.single('photo'), (req, res) => {
   getSetting('photo_required_checkin', (err, required) => {
     if (required === 'true' && !photo) return res.status(400).json({ error: 'الصورة إجبارية عند تسجيل الحضور' });
 
-    db.query('SELECT id FROM tuktuks WHERE qr_code = ?', [tuktuk_qr_code], (err, tuktukResults) => {
+    db.query('SELECT id, status FROM tuktuks WHERE qr_code = ?', [tuktuk_qr_code], (err, tuktukResults) => {
       if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في البحث عن التوكتوك' }); }
       if (tuktukResults.length === 0) return res.status(404).json({ error: 'كود QR غير معروف' });
+
+      if (tuktukResults[0].status === 'maintenance') {
+        return res.status(400).json({ error: 'التوكتوك ده خارج الخدمة للصيانة حالياً، اختار توكتوك تاني أو كلّم الأدمن' });
+      }
 
       const tuktuk_id = tuktukResults[0].id;
       db.query(
@@ -477,9 +481,13 @@ app.post('/shifts/change-tuktuk', (req, res) => {
     const shift_id = shiftResults[0].id;
     const current_tuktuk_id = shiftResults[0].tuktuk_id;
 
-    db.query('SELECT id FROM tuktuks WHERE qr_code = ?', [new_tuktuk_qr_code], (err, tuktukResults) => {
+    db.query('SELECT id, status FROM tuktuks WHERE qr_code = ?', [new_tuktuk_qr_code], (err, tuktukResults) => {
       if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في البحث عن التوكتوك' }); }
       if (tuktukResults.length === 0) return res.status(404).json({ error: 'كود QR غير معروف' });
+
+      if (tuktukResults[0].status === 'maintenance') {
+        return res.status(400).json({ error: 'التوكتوك ده خارج الخدمة للصيانة حالياً، اختار توكتوك تاني' });
+      }
 
       const new_tuktuk_id = tuktukResults[0].id;
       if (new_tuktuk_id === current_tuktuk_id) {
