@@ -254,7 +254,7 @@
           list.innerHTML = data.map(n => `
             <div class="notif-item ${n.is_read ? '' : 'unread'}">
               ${n.message}
-              <div class="notif-time">${new Date(n.created_at).toLocaleString('ar-EG')}</div>
+               <div class="notif-time">${new Date(n.created_at).toLocaleString('en-GB')}</div>
             </div>
           `).join('');
         });
