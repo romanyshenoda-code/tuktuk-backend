@@ -42,7 +42,7 @@ function requireLogin(req, res, next) {
 
   db.query('SELECT id FROM admins WHERE id = ?', [req.session.adminId], (err, results) => {
     if (err || results.length === 0) {
-      req.session.destroy();
+      req.session.destroy(() => {});
       return res.redirect('/login.html');
     }
     next();
@@ -187,20 +187,6 @@ app.get('/api/finance-session', (req, res) => {
 });
 
 // ==================== الصفحات المحمية ====================
-app.get('/', requireLogin, (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
-});
-
-app.get('/finance.html', requireFinanceLogin, (req, res) => {
-  res.sendFile(__dirname + '/public/finance.html');
-});
-
-// الصفحات اللي مسموح الوصول ليها من غير تسجيل دخول (صفحات الدخول نفسها + الأصول العامة)
-const publicPages = [
-  '/login.html', '/finance-login.html', '/driver-login.html',
-  '/logo.png', '/favicon.ico'
-];
-
 const adminProtectedPages = [
   '/', '/index', '/index.html',
   '/drivers', '/drivers.html',
@@ -220,33 +206,34 @@ const driverProtectedPages = [
 ];
 
 app.use((req, res, next) => {
-  const path = req.path;
+  const reqPath = req.path;
+  const isAdminPage = adminProtectedPages.includes(reqPath);
+  const isDriverPage = driverProtectedPages.includes(reqPath);
+  const isFinancePage = (reqPath === '/finance' || reqPath === '/finance.html');
 
-  if (adminProtectedPages.includes(path) || driverProtectedPages.includes(path) || path === '/finance' || path === '/finance.html') {
+  if (isAdminPage || isDriverPage || isFinancePage) {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
   }
-  console.log('>>> CHECK:', path, '| in list:', adminProtectedPages.includes(path), '| loggedIn:', !!(req.session && req.session.loggedIn));
 
-  if (adminProtectedPages.includes(path)) {
+  if (isAdminPage) {
     if (req.session && req.session.loggedIn) return next();
     return res.redirect('/login.html');
   }
 
-  if (driverProtectedPages.includes(path)) {
+  if (isDriverPage) {
     if (req.session && req.session.driverId) return next();
     return res.redirect('/driver-login.html');
   }
 
-  if (path === '/finance' || path === '/finance.html') {
+  if (isFinancePage) {
     if (req.session && req.session.financeLoggedIn) return next();
     return res.redirect('/finance-login.html');
   }
 
   next();
 });
-
-app.use(express.static('public'));
 
 app.use(express.static('public'));
 
@@ -633,47 +620,26 @@ app.post('/shifts/:shift_id/summary', (req, res) => {
 
 app.put('/shift-summary/:id', (req, res) => {
   const { id } = req.params;
-  const { total_orders, full_trip_count, delivery_count, total_price, total_driver_earning, admin_id } = req.body;
+  const { field_name, new_value, admin_id } = req.body;
+  const allowedFields = ['total_orders', 'full_trip_count', 'delivery_count', 'total_price', 'total_driver_earning'];
+  if (!allowedFields.includes(field_name)) return res.status(400).json({ error: 'الحقل ده مش مسموح تعديله' });
 
-  db.query('SELECT * FROM shift_summary WHERE id = ?', [id], (err, oldResults) => {
+  db.query(`SELECT ${field_name} AS old_value FROM shift_summary WHERE id = ?`, [id], (err, oldResults) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب البيانات' }); }
     if (oldResults.length === 0) return res.status(404).json({ error: 'الملخص غير موجود' });
 
-    const old = oldResults[0];
-
-    db.query(
-      `UPDATE shift_summary SET
-        total_orders = ?, full_trip_count = ?, delivery_count = ?,
-        total_price = ?, total_driver_earning = ?,
-        is_manually_edited = TRUE, edited_by = ?, edited_at = NOW()
-       WHERE id = ?`,
-      [total_orders, full_trip_count, delivery_count, total_price, total_driver_earning, admin_id || null, id],
-      (err) => {
-        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التعديل' }); }
-
-        const fields = [
-          { name: 'total_orders', old: old.total_orders, new: total_orders },
-          { name: 'full_trip_count', old: old.full_trip_count, new: full_trip_count },
-          { name: 'delivery_count', old: old.delivery_count, new: delivery_count },
-          { name: 'total_price', old: old.total_price, new: total_price },
-          { name: 'total_driver_earning', old: old.total_driver_earning, new: total_driver_earning }
-        ];
-
-        const logQueries = fields
-          .filter(f => String(f.old) !== String(f.new))
-          .map(f => new Promise((resolve) => {
-            db.query(
-              `INSERT INTO audit_logs (entity_type, entity_id, admin_id, field_name, old_value, new_value) VALUES ('shift_summary', ?, ?, ?, ?, ?)`,
-              [id, admin_id || null, f.name, f.old, f.new],
-              () => resolve()
-            );
-          }));
-
-        Promise.all(logQueries).then(() => {
-          res.json({ message: 'تم تعديل الملخص بنجاح' });
-        });
-      }
-    );
+    const old_value = oldResults[0].old_value;
+    db.query(`UPDATE shift_summary SET ${field_name} = ?, is_manually_edited = TRUE, edited_by = ?, edited_at = NOW() WHERE id = ?`, [new_value, admin_id, id], (err) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التعديل' }); }
+      db.query(
+        `INSERT INTO audit_logs (entity_type, entity_id, admin_id, field_name, old_value, new_value) VALUES ('shift_summary', ?, ?, ?, ?, ?)`,
+        [id, admin_id, field_name, old_value, new_value],
+        (err) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل السجل' }); }
+          res.json({ message: 'تم التعديل وتسجيله بنجاح', field_name, old_value, new_value });
+        }
+      );
+    });
   });
 });
 
@@ -1252,28 +1218,55 @@ app.delete('/general-expenses/:id', (req, res) => {
 app.get('/reports/driver-performance/:year/:month', (req, res) => {
   const { year, month } = req.params;
 
-  const query = `
-    SELECT 
-      d.id AS driver_id,
-      d.name AS driver_name,
-      COUNT(DISTINCT DATE(s.check_in_time)) AS days_worked,
-      COUNT(DISTINCT o.id) AS total_orders,
-      COALESCE(SUM(o.price), 0) AS total_revenue,
-      COALESCE(SUM(CASE WHEN o.order_type = 'delivery' THEN 1 ELSE 0 END), 0) AS delivery_count,
-      COALESCE(SUM(CASE WHEN o.order_type = 'full_trip' THEN 1 ELSE 0 END), 0) AS full_trip_count
-    FROM drivers d
-    LEFT JOIN shifts s ON d.id = s.driver_id 
-      AND YEAR(s.check_in_time) = ? AND MONTH(s.check_in_time) = ?
-    LEFT JOIN orders o ON d.id = o.driver_id AND o.status = 'closed'
-      AND YEAR(o.start_time) = ? AND MONTH(o.start_time) = ?
-    GROUP BY d.id, d.name
-    ORDER BY total_revenue DESC
-  `;
+  db.query(
+    `SELECT driver_id, COUNT(DISTINCT DATE(check_in_time)) AS days_worked
+     FROM shifts WHERE YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
+     GROUP BY driver_id`,
+    [year, month],
+    (err, shiftsRows) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب أيام العمل' }); }
 
-  db.query(query, [year, month, year, month], (err, results) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب تقرير الأداء' }); }
-    res.json(results);
-  });
+      db.query(
+        `SELECT driver_id, order_type, COUNT(*) AS cnt, COALESCE(SUM(price), 0) AS revenue
+         FROM orders WHERE status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
+         GROUP BY driver_id, order_type`,
+        [year, month],
+        (err, ordersRows) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الأوردرات' }); }
+
+          db.query('SELECT id, name FROM drivers', (err, drivers) => {
+            if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب السواقين' }); }
+
+            const daysMap = {};
+            shiftsRows.forEach(r => { daysMap[r.driver_id] = r.days_worked; });
+
+            const ordersMap = {};
+            ordersRows.forEach(r => {
+              if (!ordersMap[r.driver_id]) ordersMap[r.driver_id] = { delivery: 0, full_trip: 0, revenue: 0 };
+              ordersMap[r.driver_id][r.order_type] = r.cnt;
+              ordersMap[r.driver_id].revenue += parseFloat(r.revenue);
+            });
+
+            const results = drivers.map(d => {
+              const o = ordersMap[d.id] || { delivery: 0, full_trip: 0, revenue: 0 };
+              return {
+                driver_id: d.id,
+                driver_name: d.name,
+                days_worked: daysMap[d.id] || 0,
+                total_orders: (o.delivery || 0) + (o.full_trip || 0),
+                delivery_count: o.delivery || 0,
+                full_trip_count: o.full_trip || 0,
+                total_revenue: o.revenue.toFixed(2)
+              };
+            });
+
+            results.sort((a, b) => parseFloat(b.total_revenue) - parseFloat(a.total_revenue));
+            res.json(results);
+          });
+        }
+      );
+    }
+  );
 });
 
 // ==================== بيانات الرسم البياني السنوي ====================
@@ -1627,10 +1620,117 @@ app.get('/payroll/calculate-all/:year/:month', (req, res) => {
   });
 });
 
+
+// ==================== إضافة أوردر يدوي (من الأدمن) ====================
+app.post('/orders/manual', (req, res) => {
+  const { driver_id, order_date, order_type, count } = req.body;
+
+  if (!driver_id || !order_date || !order_type) {
+    return res.status(400).json({ error: 'كل الحقول مطلوبة' });
+  }
+
+  const orderCount = parseInt(count) || 1;
+  if (orderCount < 1 || orderCount > 50) {
+    return res.status(400).json({ error: 'عدد الأوردرات يجب أن يكون بين 1 و50' });
+  }
+
+  db.query('SELECT * FROM drivers WHERE id = ?', [driver_id], (err, driverResults) => {
+    if (err || driverResults.length === 0) return res.status(404).json({ error: 'السائق غير موجود' });
+    const driver = driverResults[0];
+
+    db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
+      const settings = settingsResults[0];
+
+      const delivery_base_price = driver.is_customized ? driver.custom_delivery_base_price : settings.delivery_base_price;
+      const full_trip_base_price = driver.is_customized ? driver.custom_full_trip_base_price : settings.full_trip_base_price;
+      const delivery_commission_pct = driver.is_customized ? driver.custom_delivery_commission_pct : settings.delivery_commission_pct;
+      const full_trip_commission_pct = driver.is_customized ? driver.custom_full_trip_commission_pct : settings.full_trip_commission_pct;
+
+      const price = order_type === 'delivery' ? parseFloat(delivery_base_price || 0) : parseFloat(full_trip_base_price || 0);
+      const commissionPct = order_type === 'delivery' ? parseFloat(delivery_commission_pct || 0) : parseFloat(full_trip_commission_pct || 0);
+      const driver_earning = price * (commissionPct / 100);
+
+      const dateTimeStr = order_date + ' 12:00:00';
+
+      const values = [];
+      for (let i = 0; i < orderCount; i++) {
+        values.push([
+          driver_id, order_type, dateTimeStr, dateTimeStr,
+          price.toFixed(2), driver_earning.toFixed(2), commissionPct,
+          'closed', true, order_date
+        ]);
+      }
+
+      db.query(
+        `INSERT INTO orders (driver_id, order_type, start_time, end_time, price, driver_earning, driver_commission_pct, status, is_manual, manual_order_date) VALUES ?`,
+        [values],
+        (err, result) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في إضافة الأوردر' }); }
+          res.status(201).json({
+            message: `تم إضافة ${orderCount} أوردر يدوي بنجاح لـ${driver.name}`,
+            count: orderCount,
+            total_price: (price * orderCount).toFixed(2),
+            total_earning: (driver_earning * orderCount).toFixed(2)
+          });
+        }
+      );
+    });
+  });
+});
+
+app.get('/orders/manual', (req, res) => {
+  db.query(
+    `SELECT orders.*, drivers.name AS driver_name FROM orders JOIN drivers ON orders.driver_id = drivers.id WHERE is_manual = TRUE ORDER BY manual_order_date DESC, orders.id DESC LIMIT 300`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الأوردرات اليدوية' }); }
+      res.json(results);
+    }
+  );
+});
+
+app.delete('/orders/manual/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM orders WHERE id = ? AND is_manual = TRUE', [id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف الأوردر' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الأوردر غير موجود أو مش يدوي' });
+    res.json({ message: 'تم حذف الأوردر اليدوي بنجاح' });
+  });
+});
+
+// ==================== إحصائيات اليوم للورديات والأوردرات ====================
+app.get('/dashboard/today-status', (req, res) => {
+  db.query(`SELECT COUNT(*) AS open_count FROM shifts WHERE status = 'open'`, (err, openShifts) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
+
+    db.query(
+      `SELECT COUNT(*) AS closed_today FROM shifts WHERE status = 'closed' AND DATE(check_out_time) = CURDATE()`,
+      (err, closedShiftsToday) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
+
+        db.query(`SELECT COUNT(*) AS open_count FROM orders WHERE status = 'open'`, (err, openOrders) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
+
+          db.query(
+            `SELECT COUNT(*) AS closed_today FROM orders WHERE status = 'closed' AND DATE(end_time) = CURDATE()`,
+            (err, closedOrdersToday) => {
+              if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
+
+              res.json({
+                shifts: { open: openShifts[0].open_count, closed_today: closedShiftsToday[0].closed_today },
+                orders: { open: openOrders[0].open_count, closed_today: closedOrdersToday[0].closed_today }
+              });
+            }
+          );
+        });
+      }
+    );
+  });
+});
+
 // ==================== أدوات الصيانة والتنظيف (محمية) ====================
 const fs = require('fs');
 
-// دالة تتحقق من باسورد المالية قبل أي عملية خطيرة
 function verifyFinancePassword(password, callback) {
   db.query('SELECT * FROM finance_admin', (err, results) => {
     if (err) return callback(err, false);
@@ -1640,24 +1740,18 @@ function verifyFinancePassword(password, callback) {
   });
 }
 
-// 1) تنظيف الصور القديمة (أقدم من شهرين)
 app.post('/maintenance/clean-old-photos', (req, res) => {
   const { password, confirmText } = req.body;
-
-  if (confirmText !== 'مسح الصور') {
-    return res.status(400).json({ error: 'كلمة التأكيد غير صحيحة' });
-  }
+  if (confirmText !== 'مسح الصور') return res.status(400).json({ error: 'كلمة التأكيد غير صحيحة' });
 
   verifyFinancePassword(password, (err, valid) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحقق' }); }
     if (!valid) return res.status(401).json({ error: 'باسورد المالية غلط' });
 
-    // نحدد تاريخ القطع: بداية الشهر اللي قبل الحالي
     const now = new Date();
     const cutoff = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const cutoffStr = cutoff.toISOString().split('T')[0];
 
-    // نجيب أسماء الصور القديمة من الورديات والأوردرات
     db.query(
       `SELECT check_in_photo AS photo FROM shifts WHERE check_in_time < ? AND check_in_photo IS NOT NULL
        UNION ALL
@@ -1668,102 +1762,59 @@ app.post('/maintenance/clean-old-photos', (req, res) => {
       (err, rows) => {
         if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الصور' }); }
 
-        let deleted = 0, failed = 0;
+        let deleted = 0;
         rows.forEach(r => {
           if (!r.photo) return;
           const filePath = path.join(__dirname, 'uploads', r.photo);
-          try {
-            if (fs.existsSync(filePath)) { fs.unlinkSync(filePath); deleted++; }
-          } catch (e) { failed++; }
+          try { if (fs.existsSync(filePath)) { fs.unlinkSync(filePath); deleted++; } } catch (e) {}
         });
 
-        // نفضي أعمدة الصور في قاعدة البيانات
-        db.query(
-          `UPDATE shifts SET check_in_photo = NULL, check_out_photo = NULL WHERE check_in_time < ?`,
-          [cutoffStr],
-          (err) => {
+        db.query(`UPDATE shifts SET check_in_photo = NULL, check_out_photo = NULL WHERE check_in_time < ?`, [cutoffStr], (err) => {
+          if (err) console.error(err);
+          db.query(`UPDATE orders SET delivery_photo = NULL WHERE start_time < ?`, [cutoffStr], (err) => {
             if (err) console.error(err);
-            db.query(
-              `UPDATE orders SET delivery_photo = NULL WHERE start_time < ?`,
-              [cutoffStr],
-              (err) => {
-                if (err) console.error(err);
-                res.json({
-                  message: `تم حذف ${deleted} صورة قديمة بنجاح`,
-                  deleted, failed,
-                  cutoff_date: cutoffStr
-                });
-              }
-            );
-          }
-        );
+            res.json({ message: `تم حذف ${deleted} صورة قديمة بنجاح`, deleted, cutoff_date: cutoffStr });
+          });
+        });
       }
     );
   });
 });
 
-// 2) مسح البيانات التشغيلية (السواقين والتوكتوكات يفضلوا)
 app.post('/maintenance/reset-operations', (req, res) => {
   const { password, confirmText } = req.body;
-
-  if (confirmText !== 'مسح البيانات') {
-    return res.status(400).json({ error: 'كلمة التأكيد غير صحيحة' });
-  }
+  if (confirmText !== 'مسح البيانات') return res.status(400).json({ error: 'كلمة التأكيد غير صحيحة' });
 
   verifyFinancePassword(password, (err, valid) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحقق' }); }
     if (!valid) return res.status(401).json({ error: 'باسورد المالية غلط' });
 
-    // نمسح كل ملفات الصور
     try {
       const uploadsDir = path.join(__dirname, 'uploads');
       if (fs.existsSync(uploadsDir)) {
         fs.readdirSync(uploadsDir).forEach(f => {
-          if (f !== '.gitkeep') {
-            try { fs.unlinkSync(path.join(uploadsDir, f)); } catch (e) {}
-          }
+          if (f !== '.gitkeep') { try { fs.unlinkSync(path.join(uploadsDir, f)); } catch (e) {} }
         });
       }
     } catch (e) { console.error(e); }
 
-    // الترتيب مهم: من الأبناء للآباء
     const queries = [
-      'DELETE FROM shift_summary',
-      'DELETE FROM audit_logs',
-      'DELETE FROM orders',
-      'DELETE FROM shifts',
-      'DELETE FROM notifications',
-      'DELETE FROM leave_requests',
-      'DELETE FROM advances',
-      'DELETE FROM deductions',
-      'DELETE FROM holiday_event_drivers',
-      'DELETE FROM holiday_events',
-      'DELETE FROM tuktuk_maintenance',
-      'DELETE FROM general_expenses'
+      'DELETE FROM shift_summary', 'DELETE FROM audit_logs', 'DELETE FROM orders', 'DELETE FROM shifts',
+      'DELETE FROM notifications', 'DELETE FROM leave_requests', 'DELETE FROM advances', 'DELETE FROM deductions',
+      'DELETE FROM holiday_event_drivers', 'DELETE FROM holiday_events', 'DELETE FROM tuktuk_maintenance', 'DELETE FROM general_expenses'
     ];
-
     let i = 0;
     function runNext() {
-      if (i >= queries.length) {
-        return res.json({ message: 'تم مسح كل البيانات التشغيلية بنجاح. السواقين والتوكتوكات لسه موجودين.' });
-      }
-      db.query(queries[i], (err) => {
-        if (err) console.error('خطأ في: ' + queries[i], err);
-        i++;
-        runNext();
-      });
+      if (i >= queries.length) return res.json({ message: 'تم مسح كل البيانات التشغيلية بنجاح. السواقين والتوكتوكات لسه موجودين.' });
+      db.query(queries[i], (err) => { if (err) console.error('خطأ في: ' + queries[i], err); i++; runNext(); });
     }
     runNext();
   });
 });
 
-// 3) إعادة تعيين كاملة (كل حاجة)
 app.post('/maintenance/factory-reset', (req, res) => {
   const { password, confirmText } = req.body;
-
-  if (confirmText !== 'اعادة تعيين كاملة') {
-    return res.status(400).json({ error: 'كلمة التأكيد غير صحيحة' });
-  }
+  if (confirmText !== 'اعادة تعيين كاملة') return res.status(400).json({ error: 'كلمة التأكيد غير صحيحة' });
 
   verifyFinancePassword(password, (err, valid) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحقق' }); }
@@ -1773,50 +1824,28 @@ app.post('/maintenance/factory-reset', (req, res) => {
       const uploadsDir = path.join(__dirname, 'uploads');
       if (fs.existsSync(uploadsDir)) {
         fs.readdirSync(uploadsDir).forEach(f => {
-          if (f !== '.gitkeep') {
-            try { fs.unlinkSync(path.join(uploadsDir, f)); } catch (e) {}
-          }
+          if (f !== '.gitkeep') { try { fs.unlinkSync(path.join(uploadsDir, f)); } catch (e) {} }
         });
       }
     } catch (e) { console.error(e); }
 
     const queries = [
-      'DELETE FROM shift_summary',
-      'DELETE FROM audit_logs',
-      'DELETE FROM orders',
-      'DELETE FROM shifts',
-      'DELETE FROM notifications',
-      'DELETE FROM leave_requests',
-      'DELETE FROM advances',
-      'DELETE FROM deductions',
-      'DELETE FROM holiday_event_drivers',
-      'DELETE FROM holiday_events',
-      'DELETE FROM tuktuk_maintenance',
-      'DELETE FROM general_expenses',
-      'DELETE FROM drivers',
-      'DELETE FROM tuktuks',
-      'ALTER TABLE drivers AUTO_INCREMENT = 1',
-      'ALTER TABLE tuktuks AUTO_INCREMENT = 1',
-      'ALTER TABLE shifts AUTO_INCREMENT = 1',
-      'ALTER TABLE orders AUTO_INCREMENT = 1'
+      'DELETE FROM shift_summary', 'DELETE FROM audit_logs', 'DELETE FROM orders', 'DELETE FROM shifts',
+      'DELETE FROM notifications', 'DELETE FROM leave_requests', 'DELETE FROM advances', 'DELETE FROM deductions',
+      'DELETE FROM holiday_event_drivers', 'DELETE FROM holiday_events', 'DELETE FROM tuktuk_maintenance', 'DELETE FROM general_expenses',
+      'DELETE FROM drivers', 'DELETE FROM tuktuks',
+      'ALTER TABLE drivers AUTO_INCREMENT = 1', 'ALTER TABLE tuktuks AUTO_INCREMENT = 1',
+      'ALTER TABLE shifts AUTO_INCREMENT = 1', 'ALTER TABLE orders AUTO_INCREMENT = 1'
     ];
-
     let i = 0;
     function runNext() {
-      if (i >= queries.length) {
-        return res.json({ message: 'تم إعادة تعيين النظام بالكامل. النظام رجع جديد تماماً.' });
-      }
-      db.query(queries[i], (err) => {
-        if (err) console.error('خطأ في: ' + queries[i], err);
-        i++;
-        runNext();
-      });
+      if (i >= queries.length) return res.json({ message: 'تم إعادة تعيين النظام بالكامل. النظام رجع جديد تماماً.' });
+      db.query(queries[i], (err) => { if (err) console.error('خطأ في: ' + queries[i], err); i++; runNext(); });
     }
     runNext();
   });
 });
 
-// إحصائيات المساحة المستخدمة
 app.get('/maintenance/storage-info', (req, res) => {
   try {
     const uploadsDir = path.join(__dirname, 'uploads');
@@ -1824,60 +1853,15 @@ app.get('/maintenance/storage-info', (req, res) => {
 
     const files = fs.readdirSync(uploadsDir).filter(f => f !== '.gitkeep');
     let totalSize = 0;
-    files.forEach(f => {
-      try { totalSize += fs.statSync(path.join(uploadsDir, f)).size; } catch (e) {}
-    });
+    files.forEach(f => { try { totalSize += fs.statSync(path.join(uploadsDir, f)).size; } catch (e) {} });
 
-    res.json({
-      files: files.length,
-      size_mb: (totalSize / (1024 * 1024)).toFixed(1)
-    });
+    res.json({ files: files.length, size_mb: (totalSize / (1024 * 1024)).toFixed(1) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'حصل خطأ في حساب المساحة' });
   }
 });
-// ==================== إحصائيات اليوم للورديات والأوردرات ====================
-app.get('/dashboard/today-status', (req, res) => {
-  db.query(
-    `SELECT COUNT(*) AS open_count FROM shifts WHERE status = 'open'`,
-    (err, openShifts) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
 
-      db.query(
-        `SELECT COUNT(*) AS closed_today FROM shifts WHERE status = 'closed' AND DATE(check_out_time) = CURDATE()`,
-        (err, closedShiftsToday) => {
-          if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
-
-          db.query(
-            `SELECT COUNT(*) AS open_count FROM orders WHERE status = 'open'`,
-            (err, openOrders) => {
-              if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
-
-              db.query(
-                `SELECT COUNT(*) AS closed_today FROM orders WHERE status = 'closed' AND DATE(end_time) = CURDATE()`,
-                (err, closedOrdersToday) => {
-                  if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في جلب البيانات' }); }
-
-                  res.json({
-                    shifts: {
-                      open: openShifts[0].open_count,
-                      closed_today: closedShiftsToday[0].closed_today
-                    },
-                    orders: {
-                      open: openOrders[0].open_count,
-                      closed_today: closedOrdersToday[0].closed_today
-                    }
-                  });
-                }
-              );
-            }
-          );
-        }
-      );
-    }
-  );
-});
 
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
