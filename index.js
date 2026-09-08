@@ -38,8 +38,15 @@ app.use(session({
 
 // ==================== تسجيل دخول الأدمن (مشفّر) ====================
 function requireLogin(req, res, next) {
-  if (req.session && req.session.loggedIn) return next();
-  return res.redirect('/login.html');
+  if (!req.session || !req.session.loggedIn) return res.redirect('/login.html');
+
+  db.query('SELECT id FROM admins WHERE id = ?', [req.session.adminId], (err, results) => {
+    if (err || results.length === 0) {
+      req.session.destroy();
+      return res.redirect('/login.html');
+    }
+    next();
+  });
 }
 
 app.post('/api/login', (req, res) => {
@@ -186,6 +193,44 @@ app.get('/', requireLogin, (req, res) => {
 
 app.get('/finance.html', requireFinanceLogin, (req, res) => {
   res.sendFile(__dirname + '/public/finance.html');
+});
+
+// الصفحات اللي مسموح الوصول ليها من غير تسجيل دخول (صفحات الدخول نفسها + الأصول العامة)
+const publicPages = [
+  '/login.html', '/finance-login.html', '/driver-login.html',
+  '/logo.png', '/favicon.ico'
+];
+
+// حماية صفحات الأدمن (كل حاجة عدا صفحات الدخول والسائق)
+const adminProtectedPages = [
+  '/index.html', '/drivers.html', '/tuktuks.html', '/shifts.html',
+  '/orders.html', '/hr.html', '/admins.html', '/manual-orders.html'
+];
+
+// حماية صفحات السائق
+const driverProtectedPages = [
+  '/driver.html', '/driver-attendance.html', '/driver-orders.html', '/driver-requests.html'
+];
+
+app.use((req, res, next) => {
+  const path = req.path;
+
+  if (adminProtectedPages.includes(path)) {
+    if (req.session && req.session.loggedIn) return next();
+    return res.redirect('/login.html');
+  }
+
+  if (driverProtectedPages.includes(path)) {
+    if (req.session && req.session.driverId) return next();
+    return res.redirect('/driver-login.html');
+  }
+
+  if (path === '/finance.html') {
+    if (req.session && req.session.financeLoggedIn) return next();
+    return res.redirect('/finance-login.html');
+  }
+
+  next();
 });
 
 app.use(express.static('public'));
