@@ -91,6 +91,14 @@
       .dev-footer { flex-direction: column; gap: 13px; padding: 22px 16px; }
       .dev-divider { display: none; }
     }
+  
+    .password-wrap { position: relative; }
+    .password-wrap input { padding-inline-end: 42px !important; }
+    .toggle-eye {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      inset-inline-end: 12px; cursor: pointer; font-size: 17px;
+      background: none; border: none; padding: 0; line-height: 1;
+    }
   </style>
 </head>
 <body>
@@ -121,7 +129,10 @@
       <form id="addAdminForm">
         <input type="text" id="newAdminName" placeholder="الاسم" required>
         <input type="text" id="newAdminUsername" placeholder="اسم المستخدم" required>
-        <input type="password" id="newAdminPassword" placeholder="كلمة المرور" required>
+        <div class="password-wrap">
+          <input type="password" id="newAdminPassword" placeholder="كلمة المرور" required>
+          <button type="button" class="toggle-eye" id="eyeNewAdminPassword" onclick="togglePasswordVisibility('newAdminPassword', 'eyeNewAdminPassword')">👁️</button>
+        </div>
         <div class="modal-actions">
           <button type="button" class="btn-modal-cancel" onclick="closeModal('adminModal')">إلغاء</button>
           <button type="submit" class="btn-modal-save">حفظ المشرف</button>
@@ -152,7 +163,10 @@
       <h3>تغيير كلمة المرور</h3>
       <form id="adminPasswordForm">
         <input type="hidden" id="passwordAdminId">
-        <input type="password" id="newAdminPasswordValue" placeholder="كلمة المرور الجديدة" required>
+        <div class="password-wrap">
+          <input type="password" id="newAdminPasswordValue" placeholder="كلمة المرور الجديدة" required>
+          <button type="button" class="toggle-eye" id="eyeNewAdminPasswordValue" onclick="togglePasswordVisibility('newAdminPasswordValue', 'eyeNewAdminPasswordValue')">👁️</button>
+        </div>
         <div class="modal-actions">
           <button type="button" class="btn-modal-cancel" onclick="closeModal('adminPasswordModal')">إلغاء</button>
           <button type="submit" class="btn-modal-save">حفظ الباسورد</button>
@@ -174,6 +188,13 @@
   <div class="toast" id="toast"></div>
 
   <script>
+    function togglePasswordVisibility(inputId, eyeId) {
+      const input = document.getElementById(inputId);
+      const eye = document.getElementById(eyeId);
+      if (input.type === 'password') { input.type = 'text'; eye.textContent = '🙈'; }
+      else { input.type = 'password'; eye.textContent = '👁️'; }
+    }
+
          function checkAdminSession() {
       fetch('/api/admin-session').then(res => res.json()).then(data => {
         if (!data.loggedIn) window.location.href = '/login.html';

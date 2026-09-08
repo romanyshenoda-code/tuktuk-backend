@@ -75,6 +75,14 @@
       .dev-footer { flex-direction: column; gap: 13px; padding: 22px 16px; }
       .dev-divider { display: none; }
     }
+  
+    .password-wrap { position: relative; }
+    .password-wrap input { padding-inline-end: 42px !important; }
+    .toggle-eye {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      inset-inline-end: 12px; cursor: pointer; font-size: 17px;
+      background: none; border: none; padding: 0; line-height: 1;
+    }
   </style>
 </head>
 <body>
@@ -91,7 +99,10 @@
 
     <div class="field-wrap">
       <label for="password">كلمة المرور</label>
+      <div class="password-wrap">
       <input type="password" id="password" placeholder="كلمة المرور">
+      <button type="button" class="toggle-eye" id="eyePassword" onclick="togglePasswordVisibility('password', 'eyePassword')">👁️</button>
+    </div>
     </div>
 
     <button id="loginBtn" onclick="login()">دخول</button>
@@ -99,6 +110,13 @@
   </div>
 
   <script>
+    function togglePasswordVisibility(inputId, eyeId) {
+      const input = document.getElementById(inputId);
+      const eye = document.getElementById(eyeId);
+      if (input.type === 'password') { input.type = 'text'; eye.textContent = '🙈'; }
+      else { input.type = 'password'; eye.textContent = '👁️'; }
+    }
+
     function getGreeting() {
       const h = new Date().getHours();
       if (h < 12) return 'صباح الخير';

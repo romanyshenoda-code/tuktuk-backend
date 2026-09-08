@@ -61,6 +61,14 @@
       .dev-footer { flex-direction: column; gap: 13px; padding: 22px 16px; }
       .dev-divider { display: none; }
     }
+  
+    .password-wrap { position: relative; }
+    .password-wrap input { padding-inline-end: 42px !important; }
+    .toggle-eye {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      inset-inline-end: 12px; cursor: pointer; font-size: 17px;
+      background: none; border: none; padding: 0; line-height: 1;
+    }
   </style>
 </head>
 <body>
@@ -69,12 +77,22 @@
     <img src="/logo.png" alt="Ginger">
     <h2>قسم المالية والرواتب</h2>
     <div class="sub">دخول محمي — للمخوّلين فقط</div>
-    <input type="password" id="password" placeholder="كلمة المرور الخاصة بالمالية">
+    <div class="password-wrap">
+      <input type="password" id="password" placeholder="كلمة المرور الخاصة بالمالية">
+      <button type="button" class="toggle-eye" id="eyePassword" onclick="togglePasswordVisibility('password', 'eyePassword')">👁️</button>
+    </div>
     <button onclick="login()">دخول</button>
     <div id="msg"></div>
   </div>
 
   <script>
+    function togglePasswordVisibility(inputId, eyeId) {
+      const input = document.getElementById(inputId);
+      const eye = document.getElementById(eyeId);
+      if (input.type === 'password') { input.type = 'text'; eye.textContent = '🙈'; }
+      else { input.type = 'password'; eye.textContent = '👁️'; }
+    }
+
     function login() {
       const password = document.getElementById('password').value;
       if (!password) { document.getElementById('msg').textContent = 'من فضلك اكتب الباسورد'; return; }

@@ -36,6 +36,14 @@
     button:hover { filter: brightness(0.95); }
     #msg { color: var(--rust); margin-top: 10px; font-size: 13.5px; min-height: 14px; }
 
+    .password-wrap { position: relative; }
+    .password-wrap input { padding-inline-end: 42px !important; }
+    .toggle-eye {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      inset-inline-end: 12px; cursor: pointer; font-size: 17px;
+      background: none; border: none; padding: 0; line-height: 1;
+    }
+
     .dev-footer {
       position: fixed; bottom: 0; left: 0; right: 0;
       padding: 13px 20px; background: rgba(255,255,255,0.07);
@@ -69,12 +77,22 @@
     <h2>تسجيل دخول الأدمن</h2>
     <div class="sub">GINGER — SPICE UP THE ORDINARY</div>
     <input type="text" id="username" placeholder="اسم المستخدم">
-    <input type="password" id="password" placeholder="كلمة المرور">
+    <div class="password-wrap">
+      <input type="password" id="password" placeholder="كلمة المرور">
+      <button type="button" class="toggle-eye" id="eyePassword" onclick="togglePasswordVisibility('password', 'eyePassword')">👁️</button>
+    </div>
     <button onclick="login()">دخول</button>
     <div id="msg"></div>
   </div>
 
   <script>
+    function togglePasswordVisibility(inputId, eyeId) {
+      const input = document.getElementById(inputId);
+      const eye = document.getElementById(eyeId);
+      if (input.type === 'password') { input.type = 'text'; eye.textContent = '🙈'; }
+      else { input.type = 'password'; eye.textContent = '👁️'; }
+    }
+
     function login() {
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
