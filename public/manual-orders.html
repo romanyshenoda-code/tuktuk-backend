@@ -147,6 +147,7 @@
   <div class="toast" id="toast"></div>
 
   <script>
+    fetch('/api/admin-session').then(res => res.json()).then(data => { if (!data.loggedIn) window.location.href = '/login.html'; });
     let allDrivers = [];
     let allManualOrders = [];
     let confirmResolve = null;

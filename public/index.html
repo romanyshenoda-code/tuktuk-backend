@@ -265,6 +265,7 @@
   </div>
 
   <script>
+    fetch('/api/admin-session').then(res => res.json()).then(data => { if (!data.loggedIn) window.location.href = '/login.html'; });
     fetch('/drivers').then(r => r.json()).then(d => document.getElementById('countDrivers').textContent = d.length);
     fetch('/tuktuks').then(r => r.json()).then(d => document.getElementById('countTuktuks').textContent = d.length);
     // إحصائيات اليوم بالدايرتين المتحركتين
