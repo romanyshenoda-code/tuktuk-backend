@@ -36,6 +36,7 @@
     .table-scroll { overflow-x: auto; }
     .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
     .btn-approve { background: var(--nile); }
+    .btn-incentive { background: #C9A227; }
     .btn-reject { background: var(--rust); }
     .btn-delete { background: #8B1A1A; }
     .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
@@ -124,6 +125,15 @@
       <button type="submit" class="submit-btn">تسجيل الخصم</button>
     </form>
     <div id="deductionMsg" class="form-msg"></div>
+
+    <div class="section-head"><h2>تسجيل حافز</h2></div>
+    <form id="incentiveForm" class="panel">
+      <select id="incentiveDriver"></select>
+      <input type="number" id="incentiveAmount" placeholder="المبلغ">
+      <input type="text" id="incentiveReason" placeholder="سبب الحافز">
+      <button type="submit" class="submit-btn" style="background: var(--btn-incentive, #C9A227);">تسجيل الحافز</button>
+    </form>
+    <div id="incentiveMsg" class="form-msg"></div>
 
   </div>
 
@@ -301,8 +311,9 @@
 
     function loadDriversDropdown() {
       fetch('/drivers').then(res => res.json()).then(data => {
-        const select = document.getElementById('deductionDriver');
-        select.innerHTML = data.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+        const options = data.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+        document.getElementById('deductionDriver').innerHTML = options;
+        document.getElementById('incentiveDriver').innerHTML = options;
       });
     }
 
@@ -322,6 +333,28 @@
         document.getElementById('deductionMsg').textContent = data.message || data.error;
         if (data.message) {
           document.getElementById('deductionForm').reset();
+          loadDriversDropdown();
+          showToast(data.message);
+        }
+      });
+    });
+
+    document.getElementById('incentiveForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      fetch('/incentives', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driver_id: document.getElementById('incentiveDriver').value,
+          amount: document.getElementById('incentiveAmount').value,
+          reason: document.getElementById('incentiveReason').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('incentiveMsg').textContent = data.message || data.error;
+        if (data.message) {
+          document.getElementById('incentiveForm').reset();
           loadDriversDropdown();
           showToast(data.message);
         }
