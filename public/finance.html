@@ -277,8 +277,8 @@
       </div>
       <div class="panel table-scroll" style="padding:0;">
         <table id="payrollTable">
-          <thead><tr><th>السائق</th><th>نوع الدخل</th><th>أيام العمل المطلوبة</th><th>حضور فعلي</th><th>أيام أعياد</th><th>المرتب</th><th>العمولة</th><th>الإجمالي</th><th>خصومات وسلف</th><th>الصافي</th><th>تخصيص</th><th>مفردات</th></tr></thead>
-          <tbody><tr class="empty-row"><td colspan="12">جاري التحميل...</td></tr></tbody>
+          <thead><tr><th>السائق</th><th>نوع الدخل</th><th>أيام العمل المطلوبة</th><th>حضور فعلي</th><th>أيام أعياد</th><th>المرتب</th><th>العمولة</th><th>الإجمالي</th><th>حوافز</th><th>خصومات وسلف</th><th>الصافي</th><th>تخصيص</th><th>مفردات</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="13">جاري التحميل...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -530,6 +530,8 @@
                     stroke-dasharray="0 440" transform="rotate(-90 100 100)"></circle>
             <circle id="donutGeneral" cx="100" cy="100" r="70" fill="none" stroke="#C97A1A" stroke-width="34"
                     stroke-dasharray="0 440" transform="rotate(-90 100 100)"></circle>
+            <circle id="donutIncentive" cx="100" cy="100" r="70" fill="none" stroke="#C9A227" stroke-width="34"
+                    stroke-dasharray="0 440" transform="rotate(-90 100 100)"></circle>
             <text id="donutTotal" x="100" y="96" text-anchor="middle" font-size="19" font-weight="800" fill="#1E1B16">-</text>
             <text x="100" y="115" text-anchor="middle" font-size="10" fill="#8A8272">إجمالي المصروفات</text>
           </svg>
@@ -548,6 +550,11 @@
               <span class="legend-dot" style="background:#C97A1A;"></span>
               <span class="dl-label">مصروفات أخرى</span>
               <span class="dl-value" id="donutGeneralVal">-</span>
+            </div>
+            <div class="donut-legend-item">
+              <span class="legend-dot" style="background:#C9A227;"></span>
+              <span class="dl-label">حوافز السواقين</span>
+              <span class="dl-value" id="donutIncentiveVal">-</span>
             </div>
           </div>
         </div>
@@ -724,6 +731,7 @@
         <div class="payslip-row"><span>عمولة التوصيل (<span id="payslipDeliveryCount">-</span> أوردر)</span><span id="payslipDeliveryCommission">-</span></div>
         <div class="payslip-row"><span>عمولة الرحلات (<span id="payslipTripCount">-</span> رحلة)</span><span id="payslipTripCommission">-</span></div>
         <div class="payslip-row"><span>إجمالي الاستحقاق</span><span id="payslipGross">-</span></div>
+        <div class="payslip-row"><span style="color:#C9A227;">حوافز</span><span id="payslipIncentives" style="color:#C9A227; font-weight:700;">-</span></div>
         <div class="payslip-row"><span>خصومات وسلف</span><span id="payslipDeductions">-</span></div>
         <div class="payslip-row total"><span>الصافي المستحق</span><span id="payslipNet">-</span></div>
       </div>
@@ -1033,6 +1041,7 @@
 
       let totalGross = 0;
       let totalRevenue = 0;
+      let totalIncentives = 0;
 
       fetch(`/payroll/calculate-all/${selectedYear}/${selectedMonth}?t=${Date.now()}`)
         .then(res => res.json())
@@ -1041,12 +1050,13 @@
         results.forEach(p => {
           totalGross += parseFloat(p.gross_pay || 0);
           totalRevenue += parseFloat(p.total_revenue || 0);
+          totalIncentives += parseFloat(p.total_incentives || 0);
         });
         document.getElementById('statRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
         document.getElementById('repRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
         document.getElementById('repPayroll').textContent = totalGross.toFixed(2) + ' ج';
         document.getElementById('reportPeriodLabel').textContent = `صافي الربح لشهر ${monthNames[selectedMonth - 1]} ${selectedYear}`;
-        loadFinancialSummary(totalRevenue, totalGross);
+        loadFinancialSummary(totalRevenue, totalGross, totalIncentives);
         renderPayrollTable(allPayrollRows);
       })
       .catch(err => {
@@ -1059,7 +1069,7 @@
     function renderPayrollTable(rows) {
       const tbody = document.querySelector('#payrollTable tbody');
       if (rows.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="12">مفيش نتائج</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="13">مفيش نتائج</td></tr>`;
         return;
       }
       const incomeLabel = { salary: 'مرتب', commission: 'عمولة', both: 'مرتب+عمولة' };
@@ -1073,6 +1083,7 @@
           <td>${p.salary_part}</td>
           <td>${p.commission_part}</td>
           <td>${p.gross_pay}</td>
+          <td style="color: #C9A227; font-weight: 700;">${parseFloat(p.total_incentives || 0).toFixed(2)}</td>
           <td>${(parseFloat(p.total_deductions) + parseFloat(p.total_advances)).toFixed(2)}</td>
           <td><strong>${p.net_pay}</strong></td>
           <td><button class="row-btn btn-edit" onclick='openCustomizeModal(${p.driver_id})'>تخصيص</button></td>
@@ -1100,6 +1111,7 @@
         'المرتب': parseFloat(p.salary_part),
         'العمولة': parseFloat(p.commission_part),
         'الإجمالي': parseFloat(p.gross_pay),
+        'حوافز': parseFloat(p.total_incentives || 0),
         'خصومات وسلف': parseFloat(p.total_deductions) + parseFloat(p.total_advances),
         'الصافي المستحق': parseFloat(p.net_pay)
       }));
@@ -1207,14 +1219,15 @@
       }).join('');
     }
 
-    function loadFinancialSummary(totalRevenue, totalPayroll) {
+    function loadFinancialSummary(totalRevenue, totalPayroll, totalIncentives) {
+      totalIncentives = totalIncentives || 0;
       fetch(`/tuktuk-maintenance?year=${selectedYear}&month=${selectedMonth}`).then(res => res.json()).then(maintData => {
         const totalMaintenance = maintData.reduce((sum, m) => sum + parseFloat(m.cost), 0);
 
         fetch(`/general-expenses?year=${selectedYear}&month=${selectedMonth}`).then(res => res.json()).then(genData => {
           const totalGeneral = genData.reduce((sum, g) => sum + parseFloat(g.amount), 0);
 
-          const totalExpenses = totalPayroll + totalMaintenance + totalGeneral;
+          const totalExpenses = totalPayroll + totalIncentives + totalMaintenance + totalGeneral;
           const netProfit = totalRevenue - totalExpenses;
 
           document.getElementById('statExpenses').textContent = totalExpenses.toFixed(2) + ' ج';
@@ -1223,7 +1236,7 @@
           document.getElementById('repGeneral').textContent = totalGeneral.toFixed(2) + ' ج';
           document.getElementById('repTotalExpenses').textContent = totalExpenses.toFixed(2) + ' ج';
           document.getElementById('reportNetProfit').textContent = netProfit.toFixed(2) + ' جنيه';
-          renderDonut(totalPayroll, totalMaintenance, totalGeneral);
+          renderDonut(totalPayroll, totalIncentives, totalMaintenance, totalGeneral);
         });
       });
     }
@@ -1241,6 +1254,7 @@
       document.getElementById('payslipTripCount').textContent = p.full_trip_count;
       document.getElementById('payslipTripCommission').textContent = p.full_trip_commission + ' ج';
       document.getElementById('payslipGross').textContent = p.gross_pay + ' ج';
+      document.getElementById('payslipIncentives').textContent = parseFloat(p.total_incentives || 0).toFixed(2) + ' ج';
       document.getElementById('payslipDeductions').textContent = (parseFloat(p.total_deductions) + parseFloat(p.total_advances)).toFixed(2) + ' ج';
       document.getElementById('payslipNet').textContent = p.net_pay + ' ج';
       document.getElementById('payslipModal').classList.add('open');
@@ -1264,6 +1278,7 @@
 عمولة التوصيل: ${p.delivery_commission} ج
 عمولة الرحلات: ${p.full_trip_commission} ج
 الإجمالي: ${p.gross_pay} ج
+حوافز: ${parseFloat(p.total_incentives || 0).toFixed(2)} ج
 خصومات وسلف: ${(parseFloat(p.total_deductions) + parseFloat(p.total_advances)).toFixed(2)} ج
 الصافي المستحق: ${p.net_pay} ج`;
 
@@ -1509,17 +1524,19 @@
       });
     });
 
-    function renderDonut(payroll, maintenance, general) {
-      const total = payroll + maintenance + general;
+    function renderDonut(payroll, incentive, maintenance, general) {
+      incentive = incentive || 0;
+      const total = payroll + incentive + maintenance + general;
       const circumference = 2 * Math.PI * 70;
 
       document.getElementById('donutTotal').textContent = total.toFixed(0);
       document.getElementById('donutPayrollVal').textContent = payroll.toFixed(0) + ' ج';
       document.getElementById('donutMaintVal').textContent = maintenance.toFixed(0) + ' ج';
       document.getElementById('donutGeneralVal').textContent = general.toFixed(0) + ' ج';
+      document.getElementById('donutIncentiveVal').textContent = incentive.toFixed(0) + ' ج';
 
       if (total <= 0) {
-        ['donutPayroll', 'donutMaint', 'donutGeneral'].forEach(id => {
+        ['donutPayroll', 'donutMaint', 'donutGeneral', 'donutIncentive'].forEach(id => {
           document.getElementById(id).setAttribute('stroke-dasharray', `0 ${circumference}`);
         });
         return;
@@ -1528,6 +1545,7 @@
       const payrollLen = (payroll / total) * circumference;
       const maintLen = (maintenance / total) * circumference;
       const generalLen = (general / total) * circumference;
+      const incentiveLen = (incentive / total) * circumference;
 
       const p = document.getElementById('donutPayroll');
       p.setAttribute('stroke-dasharray', `${payrollLen} ${circumference}`);
@@ -1540,6 +1558,10 @@
       const g = document.getElementById('donutGeneral');
       g.setAttribute('stroke-dasharray', `${generalLen} ${circumference}`);
       g.setAttribute('stroke-dashoffset', `${-(payrollLen + maintLen)}`);
+
+      const i = document.getElementById('donutIncentive');
+      i.setAttribute('stroke-dasharray', `${incentiveLen} ${circumference}`);
+      i.setAttribute('stroke-dashoffset', `${-(payrollLen + maintLen + generalLen)}`);
     }
 
     // ==================== إعدادات الصور الإجبارية ====================
