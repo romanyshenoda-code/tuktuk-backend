@@ -10,12 +10,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  // نضبط توقيت الجلسة يدوياً (يتغيّر مرتين في السنة فقط حسب توقيت مصر الرسمي)
-// من أبريل لأكتوبر: +03:00 (صيفي) | من أكتوبر لأبريل: +02:00 (شتوي)
-const CAIRO_OFFSET = '+03:00';
-
-pool.on('connection', function (connection) {
-  connection.query(`SET time_zone = '${CAIRO_OFFSET}'`);
+  timezone: '+03:00'
 });
 
 pool.getConnection((err, connection) => {
