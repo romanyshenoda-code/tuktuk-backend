@@ -573,26 +573,47 @@ app.post('/shifts/:shift_id/summary', (req, res) => {
 
 app.put('/shift-summary/:id', (req, res) => {
   const { id } = req.params;
-  const { field_name, new_value, admin_id } = req.body;
-  const allowedFields = ['total_orders', 'full_trip_count', 'delivery_count', 'total_price', 'total_driver_earning'];
-  if (!allowedFields.includes(field_name)) return res.status(400).json({ error: 'الحقل ده مش مسموح تعديله' });
+  const { total_orders, full_trip_count, delivery_count, total_price, total_driver_earning, admin_id } = req.body;
 
-  db.query(`SELECT ${field_name} AS old_value FROM shift_summary WHERE id = ?`, [id], (err, oldResults) => {
+  db.query('SELECT * FROM shift_summary WHERE id = ?', [id], (err, oldResults) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب البيانات' }); }
     if (oldResults.length === 0) return res.status(404).json({ error: 'الملخص غير موجود' });
 
-    const old_value = oldResults[0].old_value;
-    db.query(`UPDATE shift_summary SET ${field_name} = ?, is_manually_edited = TRUE, edited_by = ?, edited_at = NOW() WHERE id = ?`, [new_value, admin_id, id], (err) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التعديل' }); }
-      db.query(
-        `INSERT INTO audit_logs (entity_type, entity_id, admin_id, field_name, old_value, new_value) VALUES ('shift_summary', ?, ?, ?, ?, ?)`,
-        [id, admin_id, field_name, old_value, new_value],
-        (err) => {
-          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل السجل' }); }
-          res.json({ message: 'تم التعديل وتسجيله بنجاح', field_name, old_value, new_value });
-        }
-      );
-    });
+    const old = oldResults[0];
+
+    db.query(
+      `UPDATE shift_summary SET
+        total_orders = ?, full_trip_count = ?, delivery_count = ?,
+        total_price = ?, total_driver_earning = ?,
+        is_manually_edited = TRUE, edited_by = ?, edited_at = NOW()
+       WHERE id = ?`,
+      [total_orders, full_trip_count, delivery_count, total_price, total_driver_earning, admin_id || null, id],
+      (err) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التعديل' }); }
+
+        const fields = [
+          { name: 'total_orders', old: old.total_orders, new: total_orders },
+          { name: 'full_trip_count', old: old.full_trip_count, new: full_trip_count },
+          { name: 'delivery_count', old: old.delivery_count, new: delivery_count },
+          { name: 'total_price', old: old.total_price, new: total_price },
+          { name: 'total_driver_earning', old: old.total_driver_earning, new: total_driver_earning }
+        ];
+
+        const logQueries = fields
+          .filter(f => String(f.old) !== String(f.new))
+          .map(f => new Promise((resolve) => {
+            db.query(
+              `INSERT INTO audit_logs (entity_type, entity_id, admin_id, field_name, old_value, new_value) VALUES ('shift_summary', ?, ?, ?, ?, ?)`,
+              [id, admin_id || null, f.name, f.old, f.new],
+              () => resolve()
+            );
+          }));
+
+        Promise.all(logQueries).then(() => {
+          res.json({ message: 'تم تعديل الملخص بنجاح' });
+        });
+      }
+    );
   });
 });
 
