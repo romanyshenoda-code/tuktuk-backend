@@ -853,6 +853,34 @@ app.delete('/advances/:id', (req, res) => {
 });
 
 // ==================== الخصومات ====================
+app.get('/deductions', (req, res) => {
+  db.query(
+    `SELECT deductions.*, drivers.name AS driver_name FROM deductions JOIN drivers ON deductions.driver_id = drivers.id ORDER BY deductions.created_at DESC LIMIT 500`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الخصومات' }); }
+      res.json(results);
+    }
+  );
+});
+
+app.put('/deductions/:id', (req, res) => {
+  const { id } = req.params;
+  const { driver_id, amount, reason } = req.body;
+  db.query('UPDATE deductions SET driver_id = ?, amount = ?, reason = ? WHERE id = ?', [driver_id, amount, reason, id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تعديل الخصم' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الخصم غير موجود' });
+    res.json({ message: 'تم تعديل الخصم بنجاح' });
+  });
+});
+
+app.delete('/deductions/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM deductions WHERE id = ?', [id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف الخصم' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الخصم غير موجود' });
+    res.json({ message: 'تم حذف الخصم نهائياً' });
+  });
+});
 app.post('/deductions', (req, res) => {
   const { driver_id, amount, reason } = req.body;
   db.query('INSERT INTO deductions (driver_id, amount, reason) VALUES (?, ?, ?)', [driver_id, amount, reason], (err, result) => {
@@ -882,6 +910,34 @@ app.get('/incentives/driver/:driver_id', (req, res) => {
   db.query('SELECT * FROM incentives WHERE driver_id = ? ORDER BY created_at DESC', [driver_id], (err, results) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الحوافز' }); }
     res.json(results);
+  });
+});
+app.get('/incentives', (req, res) => {
+  db.query(
+    `SELECT incentives.*, drivers.name AS driver_name FROM incentives JOIN drivers ON incentives.driver_id = drivers.id ORDER BY incentives.created_at DESC LIMIT 500`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الحوافز' }); }
+      res.json(results);
+    }
+  );
+});
+
+app.put('/incentives/:id', (req, res) => {
+  const { id } = req.params;
+  const { driver_id, amount, reason } = req.body;
+  db.query('UPDATE incentives SET driver_id = ?, amount = ?, reason = ? WHERE id = ?', [driver_id, amount, reason, id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تعديل الحافز' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الحافز غير موجود' });
+    res.json({ message: 'تم تعديل الحافز بنجاح' });
+  });
+});
+
+app.delete('/incentives/:id', (req, res) => {
+  const { id } = req.params;
+  db.query('DELETE FROM incentives WHERE id = ?', [id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حذف الحافز' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الحافز غير موجود' });
+    res.json({ message: 'تم حذف الحافز نهائياً' });
   });
 });
 
