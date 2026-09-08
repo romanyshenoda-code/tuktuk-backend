@@ -221,6 +221,7 @@ const driverProtectedPages = [
 
 app.use((req, res, next) => {
   const path = req.path;
+  console.log('>>> CHECK:', path, '| in list:', adminProtectedPages.includes(path), '| loggedIn:', !!(req.session && req.session.loggedIn));
 
   if (adminProtectedPages.includes(path)) {
     if (req.session && req.session.loggedIn) return next();
