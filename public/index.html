@@ -108,6 +108,34 @@
       .dev-footer { flex-direction: column; gap: 13px; padding: 22px 16px; }
       .dev-divider { display: none; }
     }
+
+    /* كروت الورديات والأوردرات بدايرتين متحركتين */
+    .status-card {
+      background: var(--paper); border-radius: 16px; padding: 22px 16px; text-align: center;
+      text-decoration: none; color: var(--ink); border: 1px solid var(--line);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      animation: riseIn 0.4s ease backwards; display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .status-card:hover { transform: translateY(-5px); box-shadow: 0 12px 26px rgba(22,48,92,0.16); }
+    .status-card .sc-title { font-size: 14px; font-weight: 800; color: var(--asphalt); margin-bottom: 2px; }
+    .donut-pair { display: flex; gap: 14px; justify-content: center; }
+    .mini-donut-wrap { position: relative; width: 78px; height: 78px; }
+    .mini-donut-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .mini-donut-bg { fill: none; stroke: #EFE8DA; stroke-width: 9; }
+    .mini-donut-fg { fill: none; stroke-width: 9; stroke-linecap: round; stroke-dasharray: 0 210; transition: stroke-dasharray 1s cubic-bezier(.2,.8,.2,1); }
+    .mini-donut-fg.pulse { animation: donutPulse 2.2s ease-in-out infinite; }
+    @keyframes donutPulse {
+      0%, 100% { filter: drop-shadow(0 0 0px currentColor); }
+      50% { filter: drop-shadow(0 0 5px currentColor); }
+    }
+    .mini-donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .mini-donut-center .num { font-size: 20px; font-weight: 800; line-height: 1; }
+    .mini-donut-center .lbl { font-size: 9px; color: var(--muted); margin-top: 3px; font-weight: 700; }
+    .donut-open .mini-donut-fg { stroke: var(--nile); color: var(--nile); }
+    .donut-open .num { color: var(--nile); }
+    .donut-closed .mini-donut-fg { stroke: var(--rust); color: var(--rust); }
+    .donut-closed .num { color: var(--rust); }
+    .sc-footer { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -143,71 +171,108 @@
       <div class="alerts-wrap" id="alertsWrap"></div>
     </div>
 
-    <h2>إدارة النظام</h2>
+    <h2>اختار القسم اللي عايز تديره</h2>
     <div class="modules-grid">
-
-  <!-- الصف الأول -->
-  <a href="/drivers.html" class="module-card">
-    <div class="icon">🧑‍✈️</div>
-    <div class="count" id="countDrivers">-</div>
-    <div class="label">السواقين</div>
-  </a>
-
-  <a href="/admins.html" class="module-card">
-    <div class="icon">🛡️</div>
-    <div class="count" id="countAdmins">-</div>
-    <div class="label">مشرفين</div>
-  </a>
-
-  <a href="/tuktuks.html" class="module-card">
-    <div class="icon">🛺</div>
-    <div class="count" id="countTuktuks">-</div>
-    <div class="label">التوكتوكات</div>
-  </a>
-
-
-  <!-- الصف الثاني -->
-  <a href="/shifts.html" class="module-card">
-    <div class="icon">🕐</div>
-    <div class="count" id="countShiftsOpen">-</div>
-    <div class="label">ورديات شغالة</div>
-  </a>
-
-  <a href="/orders.html" class="module-card">
-    <div class="icon">📦</div>
-    <div class="count" id="countOrdersOpen">-</div>
-    <div class="label">أوردرات شغالة</div>
-  </a>
-
-  <a href="/manual-orders.html" class="module-card">
-    <div class="icon">✍️</div>
-    <div class="count">-</div>
-    <div class="label">أوردرات يدوية</div>
-  </a>
-
-
-  <!-- الصف الثالث -->
-  <a href="/hr.html" class="module-card">
-    <div id="hrAlertDot"></div>
-    <div class="icon">📋</div>
-    <div class="count" id="countPendingRequests">-</div>
-    <div class="label">طلبات معلّقة</div>
-  </a>
-
-  <a href="/finance-login.html" class="module-card">
-    <div class="icon">💰</div>
-    <div class="count">🔐</div>
-    <div class="label">المالية والرواتب</div>
-  </a>
-
-</div>
+      <a href="/drivers.html" class="module-card">
+        <div class="icon">🧑‍✈️</div>
+        <div class="count" id="countDrivers">-</div>
+        <div class="label">السواقين</div>
+      </a>
+      <a href="/tuktuks.html" class="module-card">
+        <div class="icon">🛺</div>
+        <div class="count" id="countTuktuks">-</div>
+        <div class="label">التوكتوكات</div>
+      </a>
+      <a href="/shifts.html" class="status-card">
+        <div class="sc-title">🕐 الورديات</div>
+        <div class="donut-pair">
+          <div class="mini-donut-wrap donut-open">
+            <svg viewBox="0 0 78 78">
+              <circle class="mini-donut-bg" cx="39" cy="39" r="33"></circle>
+              <circle class="mini-donut-fg pulse" id="shiftOpenRing" cx="39" cy="39" r="33"></circle>
+            </svg>
+            <div class="mini-donut-center"><div class="num" id="shiftOpenNum">-</div><div class="lbl">شغال</div></div>
+          </div>
+          <div class="mini-donut-wrap donut-closed">
+            <svg viewBox="0 0 78 78">
+              <circle class="mini-donut-bg" cx="39" cy="39" r="33"></circle>
+              <circle class="mini-donut-fg" id="shiftClosedRing" cx="39" cy="39" r="33"></circle>
+            </svg>
+            <div class="mini-donut-center"><div class="num" id="shiftClosedNum">-</div><div class="lbl">قفل النهاردة</div></div>
+          </div>
+        </div>
+        <div class="sc-footer">اضغط لعرض كل الورديات</div>
+      </a>
+      <a href="/orders.html" class="status-card">
+        <div class="sc-title">📦 الأوردرات</div>
+        <div class="donut-pair">
+          <div class="mini-donut-wrap donut-open">
+            <svg viewBox="0 0 78 78">
+              <circle class="mini-donut-bg" cx="39" cy="39" r="33"></circle>
+              <circle class="mini-donut-fg pulse" id="orderOpenRing" cx="39" cy="39" r="33"></circle>
+            </svg>
+            <div class="mini-donut-center"><div class="num" id="orderOpenNum">-</div><div class="lbl">شغال</div></div>
+          </div>
+          <div class="mini-donut-wrap donut-closed">
+            <svg viewBox="0 0 78 78">
+              <circle class="mini-donut-bg" cx="39" cy="39" r="33"></circle>
+              <circle class="mini-donut-fg" id="orderClosedRing" cx="39" cy="39" r="33"></circle>
+            </svg>
+            <div class="mini-donut-center"><div class="num" id="orderClosedNum">-</div><div class="lbl">قفل النهاردة</div></div>
+          </div>
+        </div>
+        <div class="sc-footer">اضغط لعرض كل الأوردرات</div>
+      </a>
+      <a href="/hr.html" class="module-card">
+        <div id="hrAlertDot"></div>
+        <div class="icon">📋</div>
+        <div class="count" id="countPendingRequests">-</div>
+        <div class="label">طلبات معلّقة</div>
+      </a>
+      <a href="/finance-login.html" class="module-card">
+        <div class="icon">💰</div>
+        <div class="count">🔐</div>
+        <div class="label">المالية والرواتب</div>
+      </a>
+      <a href="/manual-orders.html" class="module-card">
+        <div class="icon">✍️</div>
+        <div class="count">-</div>
+        <div class="label">أوردرات يدوية</div>
+      </a>
+      <a href="/admins.html" class="module-card">
+        <div class="icon">🛡️</div>
+        <div class="count" id="countAdmins">-</div>
+        <div class="label">مشرفين</div>
+      </a>
+    </div>
   </div>
 
   <script>
     fetch('/drivers').then(r => r.json()).then(d => document.getElementById('countDrivers').textContent = d.length);
     fetch('/tuktuks').then(r => r.json()).then(d => document.getElementById('countTuktuks').textContent = d.length);
-    fetch('/shifts').then(r => r.json()).then(d => document.getElementById('countShiftsOpen').textContent = d.filter(s => s.status === 'open').length);
-    fetch('/orders/active').then(r => r.json()).then(d => document.getElementById('countOrdersOpen').textContent = d.length);
+    // إحصائيات اليوم بالدايرتين المتحركتين
+    function animateDonut(ringId, numId, value, maxForRing) {
+      const circumference = 2 * Math.PI * 33; // 207.3
+      const ratio = maxForRing > 0 ? Math.min(value / maxForRing, 1) : 0;
+      const dash = ratio * circumference;
+      document.getElementById(numId).textContent = value;
+      setTimeout(() => {
+        document.getElementById(ringId).setAttribute('stroke-dasharray', `${dash} ${circumference}`);
+      }, 150);
+    }
+
+    fetch('/dashboard/today-status')
+      .then(r => r.json())
+      .then(d => {
+        const shiftMax = Math.max(d.shifts.open, d.shifts.closed_today, 1);
+        animateDonut('shiftOpenRing', 'shiftOpenNum', d.shifts.open, shiftMax);
+        animateDonut('shiftClosedRing', 'shiftClosedNum', d.shifts.closed_today, shiftMax);
+
+        const orderMax = Math.max(d.orders.open, d.orders.closed_today, 1);
+        animateDonut('orderOpenRing', 'orderOpenNum', d.orders.open, orderMax);
+        animateDonut('orderClosedRing', 'orderClosedNum', d.orders.closed_today, orderMax);
+      })
+      .catch(err => console.error(err));
     fetch('/admins').then(r => r.json()).then(d => document.getElementById('countAdmins').textContent = d.length);
 
     Promise.all([
