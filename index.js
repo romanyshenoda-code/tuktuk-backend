@@ -864,6 +864,26 @@ app.post('/deductions', (req, res) => {
     });
   });
 });
+// ==================== الحوافز ====================
+app.post('/incentives', (req, res) => {
+  const { driver_id, amount, reason } = req.body;
+  db.query('INSERT INTO incentives (driver_id, amount, reason) VALUES (?, ?, ?)', [driver_id, amount, reason], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الحافز' }); }
+    const message = `تم صرف حافز بمبلغ ${amount} جنيه - السبب: ${reason}`;
+    db.query('INSERT INTO notifications (driver_id, message) VALUES (?, ?)', [driver_id, message], (err) => {
+      if (err) console.error(err);
+      res.status(201).json({ message: 'تم تسجيل الحافز بنجاح', incentive_id: result.insertId });
+    });
+  });
+});
+
+app.get('/incentives/driver/:driver_id', (req, res) => {
+  const { driver_id } = req.params;
+  db.query('SELECT * FROM incentives WHERE driver_id = ? ORDER BY created_at DESC', [driver_id], (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الحوافز' }); }
+    res.json(results);
+  });
+});
 
 app.get('/deductions/driver/:driver_id', (req, res) => {
   const { driver_id } = req.params;
@@ -1079,12 +1099,19 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
                           if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' }); }
                           const total_deductions = parseFloat(deductionsResults[0].total_deductions);
 
-                          db.query(
+                                                    db.query(
                             `SELECT COALESCE(SUM(amount), 0) AS total_advances FROM advances WHERE driver_id = ? AND status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ?`,
                             [driver_id, year, month],
                             (err, advancesResults) => {
                               if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب السلف' }); }
                               const total_advances = parseFloat(advancesResults[0].total_advances);
+
+                              db.query(
+                                `SELECT COALESCE(SUM(amount), 0) AS total_incentives FROM incentives WHERE driver_id = ? AND YEAR(created_at) = ? AND MONTH(created_at) = ?`,
+                                [driver_id, year, month],
+                                (err, incentivesResults) => {
+                                  if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحوافز' }); }
+                                  const total_incentives = parseFloat(incentivesResults[0].total_incentives);
 
                               let salaryPart = 0, commissionPart = 0;
                               let deliveryCommission = 0, fullTripCommission = 0;
@@ -1101,8 +1128,8 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
                                 commissionPart = deliveryCommission + fullTripCommission;
                               }
 
-                              const grossPay = salaryPart + commissionPart;
-                              const netPay = grossPay - total_deductions - total_advances;
+                                                            const grossPay = salaryPart + commissionPart;
+                              const netPay = grossPay + total_incentives - total_deductions - total_advances;
 
                               res.json({
                                 driver_id: parseInt(driver_id),
@@ -1121,10 +1148,13 @@ app.get('/payroll/calculate/:driver_id/:year/:month', (req, res) => {
                                 salary_part: salaryPart.toFixed(2),
                                 commission_part: commissionPart.toFixed(2),
                                 gross_pay: grossPay.toFixed(2),
-                                total_deductions: total_deductions.toFixed(2),
-                                total_advances: total_advances.toFixed(2),
-                                net_pay: netPay.toFixed(2)
-                              });
+                                    total_deductions: total_deductions.toFixed(2),
+                                    total_advances: total_advances.toFixed(2),
+                                    total_incentives: total_incentives.toFixed(2),
+                                    net_pay: netPay.toFixed(2)
+                                  });
+                                }
+                              );
                             }
                           );
                         }
