@@ -117,6 +117,21 @@
       animation: riseIn 0.4s ease backwards; display: flex; flex-direction: column; align-items: center; gap: 10px;
     }
     .status-card:hover { transform: translateY(-5px); box-shadow: 0 12px 26px rgba(22,48,92,0.16); }
+    .status-card.top-nile { border-top: 5px solid var(--nile); }
+    .status-card.top-amber { border-top: 5px solid var(--amber); }
+
+    .module-card.finance-glow {
+      border: 2px solid var(--amber);
+      outline: 1px solid rgba(201,122,26,0.25);
+      outline-offset: 4px;
+      position: relative;
+      animation: riseIn 0.4s ease backwards, financePulse 2.6s ease-in-out infinite;
+    }
+    @keyframes financePulse {
+      0%, 100% { box-shadow: 0 0 0px rgba(201,122,26,0.0), 0 1px 3px rgba(30,27,22,0.06); }
+      50% { box-shadow: 0 0 18px rgba(201,122,26,0.45), 0 1px 3px rgba(30,27,22,0.06); }
+    }
+    .module-card.finance-glow:hover { transform: translateY(-6px) scale(1.02); }
     .status-card .sc-title { font-size: 14px; font-weight: 800; color: var(--asphalt); margin-bottom: 2px; }
     .donut-pair { display: flex; gap: 14px; justify-content: center; }
     .mini-donut-wrap { position: relative; width: 78px; height: 78px; }
@@ -178,12 +193,18 @@
         <div class="count" id="countDrivers">-</div>
         <div class="label">السواقين</div>
       </a>
+      <a href="/admins.html" class="module-card">
+        <div class="icon">🛡️</div>
+        <div class="count" id="countAdmins">-</div>
+        <div class="label">مشرفين</div>
+      </a>
       <a href="/tuktuks.html" class="module-card">
         <div class="icon">🛺</div>
         <div class="count" id="countTuktuks">-</div>
         <div class="label">التوكتوكات</div>
       </a>
-      <a href="/shifts.html" class="status-card">
+
+      <a href="/shifts.html" class="status-card top-nile">
         <div class="sc-title">🕐 الورديات</div>
         <div class="donut-pair">
           <div class="mini-donut-wrap donut-open">
@@ -203,8 +224,8 @@
         </div>
         <div class="sc-footer">اضغط لعرض كل الورديات</div>
       </a>
-      <a href="/orders.html" class="status-card">
-        <div class="sc-title">📦 الأوردرات</div>
+      <a href="/orders.html" class="status-card top-nile">
+        <div class="sc-title">🛣️ الأوردرات</div>
         <div class="donut-pair">
           <div class="mini-donut-wrap donut-open">
             <svg viewBox="0 0 78 78">
@@ -223,26 +244,22 @@
         </div>
         <div class="sc-footer">اضغط لعرض كل الأوردرات</div>
       </a>
+      <a href="/manual-orders.html" class="module-card">
+        <div class="icon">✍️</div>
+        <div class="count">-</div>
+        <div class="label">أوردرات يدوية</div>
+      </a>
+
       <a href="/hr.html" class="module-card">
         <div id="hrAlertDot"></div>
         <div class="icon">📋</div>
         <div class="count" id="countPendingRequests">-</div>
         <div class="label">طلبات معلّقة</div>
       </a>
-      <a href="/finance-login.html" class="module-card">
+      <a href="/finance-login.html" class="module-card finance-glow">
         <div class="icon">💰</div>
         <div class="count">🔐</div>
         <div class="label">المالية والرواتب</div>
-      </a>
-      <a href="/manual-orders.html" class="module-card">
-        <div class="icon">✍️</div>
-        <div class="count">-</div>
-        <div class="label">أوردرات يدوية</div>
-      </a>
-      <a href="/admins.html" class="module-card">
-        <div class="icon">🛡️</div>
-        <div class="count" id="countAdmins">-</div>
-        <div class="label">مشرفين</div>
       </a>
     </div>
   </div>
