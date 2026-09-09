@@ -161,6 +161,30 @@
       50% { box-shadow: 0 0 18px rgba(178,58,30,0.45), 0 1px 3px rgba(30,27,22,0.06); }
     }
     .module-card.maintenance-glow:hover { transform: translateY(-6px) scale(1.02); }
+
+    .module-card.drivers-pro {
+      background: linear-gradient(155deg, var(--paper) 0%, #FAF5EC 100%);
+      border: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+    .module-card.drivers-pro::before {
+      content: '';
+      position: absolute; top: 0; right: 0; width: 70px; height: 70px;
+      background: radial-gradient(circle, rgba(22,48,92,0.06) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .module-card.drivers-pro .icon {
+      background: linear-gradient(135deg, var(--asphalt), #1E4373);
+      width: 54px; height: 54px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 10px; font-size: 26px;
+      box-shadow: 0 4px 12px rgba(22,48,92,0.25);
+    }
+    .module-card.drivers-pro .count {
+      background: linear-gradient(135deg, var(--asphalt), var(--orange));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
     .status-card .sc-title { font-size: 14px; font-weight: 800; color: var(--asphalt); margin-bottom: 2px; }
     .donut-pair { display: flex; gap: 14px; justify-content: center; }
     .mini-donut-wrap { position: relative; width: 78px; height: 78px; }
@@ -210,17 +234,6 @@
       </div>
     </div>
 
-    <div class="alert-counters" id="alertCounters" style="display:none;">
-      <a href="/drivers.html" class="alert-counter docs" style="text-decoration:none;color:inherit;">
-        <span class="ac-num" id="countMissingDocs">0</span>
-        <span class="ac-label">مستندات ناقصة</span>
-      </a>
-      <a href="/drivers.html" class="alert-counter license" style="text-decoration:none;color:inherit;">
-        <span class="ac-num" id="countLicenseExpiry">0</span>
-        <span class="ac-label">رخص قربت تنتهي</span>
-      </a>
-    </div>
-
     <div class="alerts-box" id="alertsBox" style="display:none;">
       <div class="alerts-header" id="alertsHeader"></div>
       <div class="alerts-wrap" id="alertsWrap"></div>
@@ -228,7 +241,7 @@
 
     <h2>اختار القسم اللي عايز تديره</h2>
     <div class="modules-grid">
-      <a href="/drivers.html" class="module-card">
+      <a href="/drivers.html" class="module-card drivers-pro">
         <div class="icon">🧑‍✈️</div>
         <div class="count" id="countDrivers">-</div>
         <div class="label">السواقين</div>
@@ -392,16 +405,6 @@
       .then(data => {
         const operational = data.operational || [];
         const documents = data.documents || [];
-        const counts = data.counts || { missing_docs: 0, license_expiry: 0 };
-
-        const countersBox = document.getElementById('alertCounters');
-        if (counts.missing_docs > 0 || counts.license_expiry > 0) {
-          countersBox.style.display = 'flex';
-          document.getElementById('countMissingDocs').textContent = counts.missing_docs;
-          document.getElementById('countLicenseExpiry').textContent = counts.license_expiry;
-        } else {
-          countersBox.style.display = 'none';
-        }
 
         const box = document.getElementById('alertsBox');
         const wrap = document.getElementById('alertsWrap');

@@ -47,6 +47,19 @@
     .table-box::-webkit-scrollbar-thumb:hover { background: var(--muted); }
     .table-box thead th { position: sticky; top: 0; z-index: 5; }
 
+    /* ألوان مميزة للأعمدة */
+    #driversTable td:nth-child(3) { color: var(--asphalt); font-weight: 700; }
+    #driversTable td:nth-child(4) { color: var(--nile); }
+    #driversTable td:nth-child(5) { color: var(--muted); font-size: 12.5px; }
+    #driversTable td:nth-child(6) { color: var(--muted); font-size: 12.5px; }
+
+    .license-cell { display: flex; align-items: center; gap: 5px; padding: 3px 7px; border-radius: 6px; font-size: 12.5px; }
+    .license-cell.ok { color: var(--muted); }
+    .license-cell.warn { background: #FBEEEA; color: var(--rust); font-weight: 700; }
+    .license-cell.warn .lc-icon { animation: licensePulse 1.6s ease-in-out infinite; }
+    @keyframes licensePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .license-cell.none { color: #C9C2B2; }
+
     .driver-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--line); display: block; }
     .driver-avatar-empty {
       width: 38px; height: 38px; border-radius: 50%; background: var(--asphalt); color: white;
@@ -210,7 +223,7 @@
     </div>
     <div class="panel table-scroll table-box">
       <table id="driversTable">
-        <thead><tr><th></th><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الرقم القومي</th><th>تاريخ التعيين</th><th>الحالة</th><th>المستندات</th><th>إجراءات</th></tr></thead>
+        <thead><tr><th></th><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الرقم القومي</th><th>تاريخ التعيين</th><th>الحالة</th><th>المستندات</th><th>انتهاء الرخصة</th><th>إجراءات</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -486,10 +499,23 @@
       return `<div class="driver-avatar-empty">${initial}</div>`;
     }
 
+    function renderLicenseCell(d) {
+      if (!d.license_expiry) return '<span class="license-cell none">-</span>';
+      const days = Math.floor((new Date(d.license_expiry) - new Date()) / (1000 * 60 * 60 * 24));
+      const dateStr = formatDate(d.license_expiry);
+
+      if (days < 0) {
+        return `<span class="license-cell warn"><span class="lc-icon">⚠️</span> ${dateStr} (منتهية)</span>`;
+      } else if (days <= 30) {
+        return `<span class="license-cell warn"><span class="lc-icon">⚠️</span> ${dateStr}</span>`;
+      }
+      return `<span class="license-cell ok">${dateStr}</span>`;
+    }
+
     function renderDrivers(data) {
       const tbody = document.querySelector('#driversTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="9">مفيش سواقين لسه</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="10">مفيش سواقين لسه</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(d => `
@@ -502,6 +528,7 @@
           <td>${formatDate(d.created_at)}</td>
           <td><span class="badge">${d.status === 'active' ? 'نشط' : 'غير نشط'}</span></td>
           <td>${renderDocsStatus(d)}</td>
+          <td>${renderLicenseCell(d)}</td>
           <td>
             <div class="actions-cell">
               <button class="row-btn btn-edit" onclick='openEditModal(${JSON.stringify(d)})'>تعديل</button>
