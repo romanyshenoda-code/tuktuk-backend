@@ -70,6 +70,12 @@
     tbody tr:hover { background: #F3E9DA; }
     td { border-bottom: 1px solid var(--line); }
     .table-scroll { overflow-x: auto; }
+    .table-box { max-height: 460px; overflow-y: auto; }
+    .table-box::-webkit-scrollbar { width: 7px; }
+    .table-box::-webkit-scrollbar-track { background: #FAF7F0; }
+    .table-box::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+    .table-box::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    .table-box thead th { position: sticky; top: 0; z-index: 5; }
     .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
     .btn-edit { background: var(--amber); }
     .btn-delete { background: var(--rust); }
@@ -313,7 +319,7 @@
           <button class="row-btn btn-edit" onclick="loadDriversAndPayroll()">تحديث</button>
         </div>
       </div>
-      <div class="panel table-scroll" style="padding:0;">
+      <div class="panel table-scroll table-box" style="padding:0;">
         <table id="payrollTable">
           <thead><tr><th>السائق</th><th>نوع الدخل</th><th>أيام العمل المطلوبة</th><th>حضور فعلي</th><th>أيام أعياد</th><th>المرتب</th><th>العمولة</th><th>الإجمالي</th><th>حوافز</th><th>خصومات وسلف</th><th>الصافي</th><th>تخصيص</th><th>مفردات</th></tr></thead>
           <tbody><tr class="empty-row"><td colspan="13">جاري التحميل...</td></tr></tbody>
