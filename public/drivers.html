@@ -166,6 +166,7 @@
 
     /* توسيع مودال الإضافة ليشمل كل الحقول */
     #driverModal .modal-box { max-width: 460px; max-height: 88vh; overflow-y: auto; }
+    #editModal .modal-box { max-width: 460px; max-height: 88vh; overflow-y: auto; }
 
     /* قسم تحليل المخدرات والصور الإضافية */
     .drug-result-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
@@ -428,7 +429,7 @@
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
     document.querySelectorAll('.modal-backdrop').forEach(b => b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); }));
 
-    function formatDate(d) { return d ? new Date(d).toLocaleDateString('ar-EG') : '-'; }
+    function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : '-'; }
 
     function loadDrivers() {
       fetch('/drivers').then(res => res.json()).then(data => {
