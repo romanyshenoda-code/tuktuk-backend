@@ -296,6 +296,34 @@ app.get('/drivers', (req, res) => {
 });
 
 app.put('/drivers/:id', (req, res) => {
+  // ==================== رفع صور السائق (شخصية / بطاقة / رخصة) ====================
+app.put('/drivers/:id/photo/:type', upload.single('photo'), (req, res) => {
+  const { id, type } = req.params;
+  const allowedTypes = { personal: 'photo_personal', national_id: 'photo_national_id', license: 'photo_license' };
+
+  if (!allowedTypes[type]) return res.status(400).json({ error: 'نوع الصورة غير معروف' });
+  if (!req.file) return res.status(400).json({ error: 'من فضلك ارفع صورة' });
+
+  const column = allowedTypes[type];
+  const filename = req.file.filename;
+
+  db.query(`UPDATE drivers SET ${column} = ? WHERE id = ?`, [filename, id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في رفع الصورة' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'السائق غير موجود' });
+    res.json({ message: 'تم رفع الصورة بنجاح', filename });
+  });
+});
+
+// تحديث تاريخ انتهاء الرخصة
+app.put('/drivers/:id/license-expiry', (req, res) => {
+  const { id } = req.params;
+  const { license_expiry } = req.body;
+  db.query('UPDATE drivers SET license_expiry = ? WHERE id = ?', [license_expiry, id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث التاريخ' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'السائق غير موجود' });
+    res.json({ message: 'تم تحديث تاريخ انتهاء الرخصة بنجاح' });
+  });
+});
   const { id } = req.params;
   const { name, phone, national_id } = req.body;
   db.query('UPDATE drivers SET name = ?, phone = ?, national_id = ? WHERE id = ?', [name, phone, national_id, id], (err, result) => {
@@ -1511,29 +1539,42 @@ app.get('/dashboard/alerts', (req, res) => {
       });
 
       db.query(
-        `SELECT t.tuktuk_number, COUNT(*) AS times
-         FROM tuktuk_maintenance m JOIN tuktuks t ON m.tuktuk_id = t.id
-         WHERE YEAR(m.maintenance_date) = ? AND MONTH(m.maintenance_date) = ?
-         GROUP BY t.id, t.tuktuk_number HAVING times >= 3`,
-        [year, month],
-        (err, repeatMaint) => {
+        `SELECT name, license_expiry, DATEDIFF(license_expiry, CURDATE()) AS days_left
+         FROM drivers WHERE license_expiry IS NOT NULL
+         AND DATEDIFF(license_expiry, CURDATE()) BETWEEN 0 AND 30`,
+        (err, licenseRows) => {
           if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
 
-          repeatMaint.forEach(t => {
-            alerts.push({ type: 'danger', message: `توكتوك ${t.tuktuk_number} دخل الصيانة ${t.times} مرات الشهر ده` });
+          licenseRows.forEach(d => {
+            alerts.push({ type: d.days_left <= 7 ? 'danger' : 'warning', message: `رخصة ${d.name} هتنتهي بعد ${d.days_left} يوم` });
           });
 
           db.query(
-            `SELECT d.name, s.check_in_time FROM shifts s JOIN drivers d ON s.driver_id = d.id
-             WHERE s.status = 'open' AND s.check_in_time < DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
-            (err, longShifts) => {
+            `SELECT t.tuktuk_number, COUNT(*) AS times
+             FROM tuktuk_maintenance m JOIN tuktuks t ON m.tuktuk_id = t.id
+             WHERE YEAR(m.maintenance_date) = ? AND MONTH(m.maintenance_date) = ?
+             GROUP BY t.id, t.tuktuk_number HAVING times >= 3`,
+            [year, month],
+            (err, repeatMaint) => {
               if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
 
-              longShifts.forEach(s => {
-                alerts.push({ type: 'danger', message: `${s.name} عنده وردية مفتوحة من أكتر من 24 ساعة` });
+              repeatMaint.forEach(t => {
+                alerts.push({ type: 'danger', message: `توكتوك ${t.tuktuk_number} دخل الصيانة ${t.times} مرات الشهر ده` });
               });
 
-              res.json(alerts);
+              db.query(
+                `SELECT d.name, s.check_in_time FROM shifts s JOIN drivers d ON s.driver_id = d.id
+                 WHERE s.status = 'open' AND s.check_in_time < DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+                (err, longShifts) => {
+                  if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
+
+                  longShifts.forEach(s => {
+                    alerts.push({ type: 'danger', message: `${s.name} عنده وردية مفتوحة من أكتر من 24 ساعة` });
+                  });
+
+                  res.json(alerts);
+                }
+              );
             }
           );
         }
