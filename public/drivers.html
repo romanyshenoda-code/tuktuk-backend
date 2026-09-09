@@ -151,6 +151,24 @@
     .expiry-badge.ok { background: #E3EEEC; color: var(--nile); }
     .expiry-badge.soon { background: #FBF3E3; color: var(--amber); }
     .expiry-badge.danger { background: #FBEEEA; color: var(--rust); }
+
+    /* عمود حالة المستندات في الجدول الرئيسي */
+    .docs-status { display: flex; gap: 4px; align-items: center; }
+    .doc-check { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: white; }
+    .doc-check.ok { background: var(--nile); }
+    .doc-check.missing { background: #D8CFBC; color: #8A8272; }
+    .doc-check.drug-neg { background: var(--nile); }
+    .doc-check.drug-pos { background: var(--rust); }
+
+    /* قسم تحليل المخدرات والصور الإضافية */
+    .drug-result-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .drug-result-row select { flex: 1; }
+    .drug-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+    .drug-badge.negative { background: #E3EEEC; color: var(--nile); }
+    .drug-badge.positive { background: #FBEEEA; color: var(--rust); }
+    .drug-badge.unset { background: var(--sand); color: var(--muted); }
+    .doc-pair { display: flex; gap: 8px; }
+    .doc-pair .doc-row { flex: 1; margin-bottom: 0; }
     .hidden { display: none !important; }
   </style>
 </head>
@@ -172,7 +190,7 @@
     </div>
     <div class="panel table-scroll">
       <table id="driversTable">
-        <thead><tr><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الرقم القومي</th><th>تاريخ التعيين</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+        <thead><tr><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الرقم القومي</th><th>تاريخ التعيين</th><th>الحالة</th><th>المستندات</th><th>إجراءات</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -229,23 +247,47 @@
           </div>
         </div>
 
-        <div class="doc-row">
-          <img id="thumbNationalId" class="doc-thumb hidden" onclick="openDocPreview(this.src)">
-          <div id="thumbNationalIdEmpty" class="doc-thumb-empty">لا توجد</div>
-          <div class="doc-info">
-            <label>صورة البطاقة</label>
-            <button type="button" class="doc-upload-btn" onclick="document.getElementById('uploadNationalId').click()">رفع / تغيير</button>
-            <input type="file" id="uploadNationalId" accept="image/*" style="display:none">
+        <h4 style="margin-top:16px;">البطاقة الشخصية</h4>
+        <div class="doc-pair">
+          <div class="doc-row">
+            <img id="thumbNationalId" class="doc-thumb hidden" onclick="openDocPreview(this.src)">
+            <div id="thumbNationalIdEmpty" class="doc-thumb-empty">لا توجد</div>
+            <div class="doc-info">
+              <label>وش البطاقة</label>
+              <button type="button" class="doc-upload-btn" onclick="document.getElementById('uploadNationalId').click()">رفع / تغيير</button>
+              <input type="file" id="uploadNationalId" accept="image/*" style="display:none">
+            </div>
+          </div>
+          <div class="doc-row">
+            <img id="thumbNationalIdBack" class="doc-thumb hidden" onclick="openDocPreview(this.src)">
+            <div id="thumbNationalIdBackEmpty" class="doc-thumb-empty">لا توجد</div>
+            <div class="doc-info">
+              <label>ضهر البطاقة</label>
+              <button type="button" class="doc-upload-btn" onclick="document.getElementById('uploadNationalIdBack').click()">رفع / تغيير</button>
+              <input type="file" id="uploadNationalIdBack" accept="image/*" style="display:none">
+            </div>
           </div>
         </div>
 
-        <div class="doc-row">
-          <img id="thumbLicense" class="doc-thumb hidden" onclick="openDocPreview(this.src)">
-          <div id="thumbLicenseEmpty" class="doc-thumb-empty">لا توجد</div>
-          <div class="doc-info">
-            <label>صورة الرخصة</label>
-            <button type="button" class="doc-upload-btn" onclick="document.getElementById('uploadLicense').click()">رفع / تغيير</button>
-            <input type="file" id="uploadLicense" accept="image/*" style="display:none">
+        <h4 style="margin-top:16px;">رخصة القيادة</h4>
+        <div class="doc-pair">
+          <div class="doc-row">
+            <img id="thumbLicense" class="doc-thumb hidden" onclick="openDocPreview(this.src)">
+            <div id="thumbLicenseEmpty" class="doc-thumb-empty">لا توجد</div>
+            <div class="doc-info">
+              <label>وش الرخصة</label>
+              <button type="button" class="doc-upload-btn" onclick="document.getElementById('uploadLicense').click()">رفع / تغيير</button>
+              <input type="file" id="uploadLicense" accept="image/*" style="display:none">
+            </div>
+          </div>
+          <div class="doc-row">
+            <img id="thumbLicenseBack" class="doc-thumb hidden" onclick="openDocPreview(this.src)">
+            <div id="thumbLicenseBackEmpty" class="doc-thumb-empty">لا توجد</div>
+            <div class="doc-info">
+              <label>ضهر الرخصة</label>
+              <button type="button" class="doc-upload-btn" onclick="document.getElementById('uploadLicenseBack').click()">رفع / تغيير</button>
+              <input type="file" id="uploadLicenseBack" accept="image/*" style="display:none">
+            </div>
           </div>
         </div>
 
@@ -255,6 +297,26 @@
           <button type="button" class="doc-upload-btn" onclick="saveLicenseExpiry()">حفظ</button>
         </div>
         <div id="licenseExpiryBadge"></div>
+
+        <h4 style="margin-top:16px;">تحليل المخدرات</h4>
+        <div class="doc-row">
+          <img id="thumbDrugTest" class="doc-thumb hidden" onclick="openDocPreview(this.src)">
+          <div id="thumbDrugTestEmpty" class="doc-thumb-empty">لا توجد</div>
+          <div class="doc-info">
+            <label>صورة التحليل</label>
+            <button type="button" class="doc-upload-btn" onclick="document.getElementById('uploadDrugTest').click()">رفع / تغيير</button>
+            <input type="file" id="uploadDrugTest" accept="image/*" style="display:none">
+          </div>
+        </div>
+        <div class="drug-result-row">
+          <select id="drugTestResult">
+            <option value="">لسه معملش تحليل</option>
+            <option value="negative">سلبي</option>
+            <option value="positive">إيجابي</option>
+          </select>
+          <button type="button" class="doc-upload-btn" onclick="saveDrugTestResult()">حفظ النتيجة</button>
+        </div>
+
         <div id="docsMsg" class="form-msg"></div>
       </div>
     </div>
@@ -338,10 +400,26 @@
       });
     }
 
+    function renderDocsStatus(d) {
+      const idOk = d.photo_national_id && d.photo_national_id_back;
+      const licOk = d.photo_license && d.photo_license_back;
+      const drugIcon = d.drug_test_result === 'negative' ? '<span class="doc-check drug-neg" title="تحليل سلبي">✓</span>'
+        : d.drug_test_result === 'positive' ? '<span class="doc-check drug-pos" title="تحليل إيجابي">!</span>'
+        : '<span class="doc-check missing" title="لسه معملش تحليل">-</span>';
+
+      return `
+        <div class="docs-status">
+          <span class="doc-check ${idOk ? 'ok' : 'missing'}" title="البطاقة">${idOk ? '✓' : '✕'}</span>
+          <span class="doc-check ${licOk ? 'ok' : 'missing'}" title="الرخصة">${licOk ? '✓' : '✕'}</span>
+          ${drugIcon}
+        </div>
+      `;
+    }
+
     function renderDrivers(data) {
       const tbody = document.querySelector('#driversTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش سواقين لسه</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">مفيش سواقين لسه</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(d => `
@@ -352,6 +430,7 @@
           <td>${d.national_id || '-'}</td>
           <td>${formatDate(d.created_at)}</td>
           <td><span class="badge">${d.status === 'active' ? 'نشط' : 'غير نشط'}</span></td>
+          <td>${renderDocsStatus(d)}</td>
           <td>
             <div class="actions-cell">
               <button class="row-btn btn-edit" onclick='openEditModal(${JSON.stringify(d)})'>تعديل</button>
@@ -393,7 +472,12 @@
 
       setDocThumb('thumbPersonal', driver.photo_personal);
       setDocThumb('thumbNationalId', driver.photo_national_id);
+      setDocThumb('thumbNationalIdBack', driver.photo_national_id_back);
       setDocThumb('thumbLicense', driver.photo_license);
+      setDocThumb('thumbLicenseBack', driver.photo_license_back);
+      setDocThumb('thumbDrugTest', driver.photo_drug_test);
+
+      document.getElementById('drugTestResult').value = driver.drug_test_result || '';
 
       const expiryInput = document.getElementById('licenseExpiryInput');
       expiryInput.value = driver.license_expiry ? driver.license_expiry.split('T')[0] : '';
@@ -431,19 +515,29 @@
 
     function openDocPreview(src) { window.open(src, '_blank'); }
 
+    // الصور الأساسية (وش البطاقة/الرخصة + الشخصية) عبر endpoint photo/:type
+    const primaryTypeMap = { personal: 'thumbPersonal', national_id: 'thumbNationalId', license: 'thumbLicense' };
+    // الصور الإضافية (ضهر البطاقة/الرخصة + تحليل المخدرات) عبر endpoint photo2/:type
+    const secondaryTypeMap = { national_id_back: 'thumbNationalIdBack', license_back: 'thumbLicenseBack', drug_test: 'thumbDrugTest' };
+
     function uploadDriverPhoto(type, file) {
       if (!currentEditDriverId || !file) return;
+      const isSecondary = secondaryTypeMap.hasOwnProperty(type);
+      const url = isSecondary
+        ? `/drivers/${currentEditDriverId}/photo2/${type}`
+        : `/drivers/${currentEditDriverId}/photo/${type}`;
+
       const formData = new FormData();
       formData.append('photo', file);
       const msg = document.getElementById('docsMsg');
       msg.textContent = 'جاري الرفع...';
 
-      fetch(`/drivers/${currentEditDriverId}/photo/${type}`, { method: 'PUT', body: formData })
+      fetch(url, { method: 'PUT', body: formData })
         .then(res => res.json())
         .then(data => {
           msg.textContent = data.message || data.error;
           if (data.message) {
-            const map = { personal: 'thumbPersonal', national_id: 'thumbNationalId', license: 'thumbLicense' };
+            const map = isSecondary ? secondaryTypeMap : primaryTypeMap;
             setDocThumb(map[type], data.filename);
             showToast(data.message);
             loadDrivers();
@@ -456,7 +550,31 @@
 
     document.getElementById('uploadPersonal').addEventListener('change', e => uploadDriverPhoto('personal', e.target.files[0]));
     document.getElementById('uploadNationalId').addEventListener('change', e => uploadDriverPhoto('national_id', e.target.files[0]));
+    document.getElementById('uploadNationalIdBack').addEventListener('change', e => uploadDriverPhoto('national_id_back', e.target.files[0]));
     document.getElementById('uploadLicense').addEventListener('change', e => uploadDriverPhoto('license', e.target.files[0]));
+    document.getElementById('uploadLicenseBack').addEventListener('change', e => uploadDriverPhoto('license_back', e.target.files[0]));
+    document.getElementById('uploadDrugTest').addEventListener('change', e => uploadDriverPhoto('drug_test', e.target.files[0]));
+
+    function saveDrugTestResult() {
+      if (!currentEditDriverId) return;
+      const value = document.getElementById('drugTestResult').value;
+      const msg = document.getElementById('docsMsg');
+
+      if (!value) { msg.textContent = 'اختار نتيجة التحليل الأول'; return; }
+
+      fetch(`/drivers/${currentEditDriverId}/drug-test-result`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result: value })
+      })
+      .then(res => res.json())
+      .then(data => {
+        msg.textContent = data.message || data.error;
+        if (data.message) { showToast(data.message); loadDrivers(); }
+        else { showToast(data.error, true); }
+      })
+      .catch(() => { msg.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
+    }
 
     function saveLicenseExpiry() {
       if (!currentEditDriverId) return;
