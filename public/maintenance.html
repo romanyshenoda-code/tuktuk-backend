@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الصيانة والمصروفات - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--rust); }
+    .topbar img { height: 38px; }
+    .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; }
+    .logout-link { margin-inline-start: auto; color: var(--sand); opacity: 0.75; font-size: 13px; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); padding: 6px 12px; border-radius: 20px; }
+    .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
+
+    .month-picker { display: flex; align-items: center; gap: 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin-bottom: 22px; flex-wrap: wrap; }
+    .month-picker label { font-size: 13px; font-weight: 700; color: var(--muted); }
+    .month-picker select { width: auto; min-width: 110px; }
+    .month-picker .current-badge { font-size: 12px; background: var(--nile); color: white; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 26px; }
+    .stat-card { background: var(--paper); border-radius: 14px; padding: 20px; text-align: center; border-top: 4px solid var(--line); box-shadow: 0 1px 3px rgba(30,27,22,0.06); }
+    .stat-card.maint { border-top-color: var(--rust); }
+    .stat-card.general { border-top-color: var(--amber); }
+    .stat-card .num { font-size: 24px; font-weight: 800; }
+    .stat-card .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .section-head h2 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 8px; }
+    .section-head h2 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--section-color, var(--rust)); }
+
+    input, select { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
+    input:focus, select:focus { outline: 2px solid var(--rust); outline-offset: 1px; }
+    .search-input { width: 220px !important; }
+    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 24px; padding: 18px; }
+    .field-group { display: flex; flex-direction: column; min-width: 150px; }
+    .field-group label { font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .fields-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+    button.submit-btn { padding: 10px 20px; color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; height: 41px; background: var(--section-color, var(--rust)); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
+    th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; }
+    tbody tr:nth-child(even) { background: #FAF7F0; }
+    tbody tr:hover { background: #F3E9DA; }
+    td { border-bottom: 1px solid var(--line); }
+    .table-scroll { overflow-x: auto; }
+    .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
+    .btn-edit { background: var(--amber); }
+    .btn-delete { background: var(--rust); }
+    .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
+    .form-msg { padding: 10px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transition: opacity 0.25s; pointer-events: none; max-width: 90%; text-align: center; }
+    .toast.show { opacity: 1; }
+    .toast.error { background: var(--rust); }
+
+    .dev-footer { margin-top: 40px; padding: 20px 24px; background: #FFFFFF; border-top: 1px solid #E4DCCB; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center; }
+    .dev-brand { display: flex; align-items: center; gap: 11px; }
+    .dev-mark { width: 40px; height: 40px; flex-shrink: 0; }
+    .dev-brand-text { line-height: 1.25; }
+    .dev-brand-name { font-size: 15px; font-weight: 800; color: #16305C; letter-spacing: 1.5px; }
+    .dev-brand-sub { font-size: 8.5px; color: #8A8272; letter-spacing: 1px; font-weight: 600; }
+    .dev-divider { width: 1px; height: 34px; background: #E4DCCB; }
+    .dev-info { text-align: center; }
+    .dev-name { font-size: 13px; font-weight: 800; color: #16305C; }
+    .dev-role { font-size: 10.5px; color: #8A8272; margin-top: 1px; }
+    .dev-contact { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; background: #25D366; color: white; padding: 8px 16px; border-radius: 22px; font-size: 13px; font-weight: 700; }
+    @media (max-width: 560px) { .dev-footer { flex-direction: column; gap: 13px; } .dev-divider { display: none; } }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/index.html" class="back-link">→ الرئيسية</a>
+    <img src="/logo.png" alt="Ginger">
+    <h1>الصيانة والمصروفات</h1>
+    <a href="/api/logout" class="logout-link">خروج</a>
+  </div>
+
+  <div class="container">
+
+    <div class="month-picker">
+      <label>عرض بيانات شهر:</label>
+      <select id="monthSelect"></select>
+      <select id="yearSelect"></select>
+      <span class="current-badge" id="currentMonthBadge" style="display:none;">الشهر الحالي</span>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card maint"><div class="num" id="statMaintTotal">-</div><div class="lbl">إجمالي مصروفات الصيانة</div></div>
+      <div class="stat-card general"><div class="num" id="statGeneralTotal">-</div><div class="lbl">إجمالي المصروفات الأخرى</div></div>
+    </div>
+
+    <div class="section-head" style="--section-color: var(--rust);"><h2><span class="dot"></span>صيانة التوكتوكات</h2></div>
+    <form id="maintenanceForm" class="panel">
+      <input type="hidden" id="maintEditId">
+      <div class="fields-row">
+        <div class="field-group"><label>التوكتوك</label><select id="maintTuktuk"></select></div>
+        <div class="field-group"><label>السائق وقت المصروف</label><select id="maintDriver"><option value="">بدون سائق محدد</option></select></div>
+        <div class="field-group">
+          <label>نوع المصروف</label>
+          <select id="maintType">
+            <option value="scheduled">صيانة دورية</option>
+            <option value="repair">إصلاح عطل</option>
+          </select>
+        </div>
+        <div class="field-group"><label>وصف المصروف</label><input type="text" id="maintDesc" placeholder="مثال: تغيير زيت"></div>
+        <div class="field-group"><label>التكلفة (جنيه)</label><input type="number" id="maintCost" placeholder="مثال: 250"></div>
+        <div class="field-group"><label>تاريخ المصروف</label><input type="date" id="maintDate"></div>
+        <button type="submit" class="submit-btn" id="maintSubmitBtn" style="--section-color: var(--rust);">تسجيل مصروف الصيانة</button>
+      </div>
+    </form>
+    <div id="maintMsg" class="form-msg"></div>
+
+    <div class="section-head" style="--section-color: var(--rust);">
+      <h2><span class="dot"></span>سجل الصيانة (الشهر المختار)</h2>
+      <input type="text" id="maintSearch" class="search-input" placeholder="بحث برقم التوكتوك أو السائق..." oninput="filterMaintenance()">
+    </div>
+    <div class="panel table-scroll" style="padding:0;">
+      <table id="maintenanceTable">
+        <thead><tr><th>التاريخ</th><th>التوكتوك</th><th>السائق</th><th>النوع</th><th>الوصف</th><th>التكلفة</th><th>إجراء</th></tr></thead>
+        <tbody><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="section-head" style="--section-color: var(--amber);"><h2><span class="dot"></span>مصروفات أخرى (إيجار، كافتيريا، إلخ)</h2></div>
+    <form id="generalExpenseForm" class="panel">
+      <input type="hidden" id="genExpEditId">
+      <div class="fields-row">
+        <div class="field-group"><label>اسم المصروف</label><input type="text" id="genExpName" placeholder="مثال: إيجار المحل"></div>
+        <div class="field-group"><label>المبلغ (جنيه)</label><input type="number" id="genExpAmount" placeholder="مثال: 3000"></div>
+        <div class="field-group"><label>تاريخ المصروف</label><input type="date" id="genExpDate"></div>
+        <div class="field-group"><label>ملاحظات (اختياري)</label><input type="text" id="genExpNotes" placeholder="تفاصيل إضافية"></div>
+        <button type="submit" class="submit-btn" id="genExpSubmitBtn" style="--section-color: var(--amber);">تسجيل المصروف</button>
+      </div>
+    </form>
+    <div id="genExpMsg" class="form-msg"></div>
+    <div class="panel table-scroll" style="padding:0;">
+      <table id="generalExpensesTable">
+        <thead><tr><th>التاريخ</th><th>اسم المصروف</th><th>المبلغ</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
+        <tbody><tr class="empty-row"><td colspan="5">جاري التحميل...</td></tr></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    function checkAdminSession() {
+      fetch('/api/admin-session').then(res => res.json()).then(data => {
+        if (!data.loggedIn) window.location.href = '/login.html';
+      });
+    }
+    checkAdminSession();
+    setInterval(checkAdminSession, 15000);
+
+    let allMaintenance = [];
+    let allGeneralExpenses = [];
+
+    const now = new Date();
+    const realCurrentYear = now.getFullYear();
+    const realCurrentMonth = now.getMonth() + 1;
+    let selectedYear = realCurrentYear;
+    let selectedMonth = realCurrentMonth;
+
+    const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+    function showToast(msg, isError) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (isError ? ' error' : '');
+      setTimeout(() => { t.className = 'toast'; }, 2800);
+    }
+
+    function initMonthPicker() {
+      const monthSelect = document.getElementById('monthSelect');
+      monthSelect.innerHTML = monthNames.map((name, i) => `<option value="${i + 1}">${name}</option>`).join('');
+      monthSelect.value = selectedMonth;
+
+      const yearSelect = document.getElementById('yearSelect');
+      const years = [];
+      for (let y = realCurrentYear - 2; y <= realCurrentYear + 1; y++) years.push(y);
+      yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+      yearSelect.value = selectedYear;
+
+      updateCurrentBadge();
+
+      monthSelect.addEventListener('change', () => {
+        selectedMonth = parseInt(monthSelect.value);
+        updateCurrentBadge();
+        loadMaintenance();
+        loadGeneralExpenses();
+      });
+      yearSelect.addEventListener('change', () => {
+        selectedYear = parseInt(yearSelect.value);
+        updateCurrentBadge();
+        loadMaintenance();
+        loadGeneralExpenses();
+      });
+    }
+
+    function updateCurrentBadge() {
+      const badge = document.getElementById('currentMonthBadge');
+      badge.style.display = (selectedMonth === realCurrentMonth && selectedYear === realCurrentYear) ? 'inline-block' : 'none';
+    }
+
+    function loadTuktuksDropdown() {
+      fetch('/tuktuks').then(res => res.json()).then(data => {
+        document.getElementById('maintTuktuk').innerHTML = data.map(t => `<option value="${t.id}">${t.tuktuk_number}</option>`).join('');
+      });
+    }
+
+    function loadDriversDropdown() {
+      fetch('/drivers').then(res => res.json()).then(data => {
+        document.getElementById('maintDriver').innerHTML = '<option value="">بدون سائق محدد</option>' + data.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+      });
+    }
+
+    function loadMaintenance() {
+      fetch(`/tuktuk-maintenance?year=${selectedYear}&month=${selectedMonth}`)
+        .then(res => res.json())
+        .then(data => {
+          allMaintenance = data;
+          renderMaintenanceTable(allMaintenance);
+          const total = data.reduce((sum, m) => sum + parseFloat(m.cost), 0);
+          document.getElementById('statMaintTotal').textContent = total.toFixed(2) + ' ج';
+        });
+    }
+
+    function renderMaintenanceTable(data) {
+      const tbody = document.querySelector('#maintenanceTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش سجل صيانة في الشهر المختار</td></tr>`;
+        return;
+      }
+      const typeLabel = { scheduled: 'دورية', repair: 'إصلاح عطل' };
+      tbody.innerHTML = data.map(m => `
+        <tr>
+          <td>${m.maintenance_date}</td>
+          <td>${m.tuktuk_number}</td>
+          <td>${m.driver_name || '-'}</td>
+          <td>${typeLabel[m.maintenance_type]}</td>
+          <td>${m.description}</td>
+          <td>${m.cost}</td>
+          <td>
+            <button class="row-btn btn-edit" onclick='editMaintenance(${JSON.stringify(m)})'>تعديل</button>
+            <button class="row-btn btn-delete" onclick="deleteMaintenance(${m.id})">حذف</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterMaintenance() {
+      const q = document.getElementById('maintSearch').value.trim();
+      if (!q) { renderMaintenanceTable(allMaintenance); return; }
+      renderMaintenanceTable(allMaintenance.filter(m =>
+        String(m.tuktuk_number).includes(q) || (m.driver_name && m.driver_name.includes(q))
+      ));
+    }
+
+    function editMaintenance(m) {
+      document.getElementById('maintEditId').value = m.id;
+      document.getElementById('maintTuktuk').value = m.tuktuk_id;
+      document.getElementById('maintDriver').value = m.driver_id || '';
+      document.getElementById('maintType').value = m.maintenance_type;
+      document.getElementById('maintDesc').value = m.description;
+      document.getElementById('maintCost').value = m.cost;
+      document.getElementById('maintDate').value = m.maintenance_date.split('T')[0];
+      document.getElementById('maintSubmitBtn').textContent = 'حفظ التعديل';
+    }
+
+    function deleteMaintenance(id) {
+      if (!confirm('متأكد إنك عايز تمسح مصروف الصيانة ده؟')) return;
+      fetch(`/tuktuk-maintenance/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          showToast(data.message || data.error);
+          loadMaintenance();
+        });
+    }
+
+    document.getElementById('maintenanceForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const editId = document.getElementById('maintEditId').value;
+      const payload = {
+        tuktuk_id: document.getElementById('maintTuktuk').value,
+        driver_id: document.getElementById('maintDriver').value || null,
+        maintenance_type: document.getElementById('maintType').value,
+        description: document.getElementById('maintDesc').value,
+        cost: document.getElementById('maintCost').value,
+        maintenance_date: document.getElementById('maintDate').value
+      };
+
+      fetch(editId ? `/tuktuk-maintenance/${editId}` : '/tuktuk-maintenance', {
+        method: editId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('maintMsg').textContent = data.message || data.error;
+        if (data.message) {
+          document.getElementById('maintenanceForm').reset();
+          document.getElementById('maintEditId').value = '';
+          document.getElementById('maintSubmitBtn').textContent = 'تسجيل مصروف الصيانة';
+          loadMaintenance();
+          showToast(data.message);
+        }
+      });
+    });
+
+    function loadGeneralExpenses() {
+      fetch(`/general-expenses?year=${selectedYear}&month=${selectedMonth}`)
+        .then(res => res.json())
+        .then(data => {
+          allGeneralExpenses = data;
+          renderGeneralExpensesTable(allGeneralExpenses);
+          const total = data.reduce((sum, g) => sum + parseFloat(g.amount), 0);
+          document.getElementById('statGeneralTotal').textContent = total.toFixed(2) + ' ج';
+        });
+    }
+
+    function renderGeneralExpensesTable(data) {
+      const tbody = document.querySelector('#generalExpensesTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش مصروفات في الشهر المختار</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(g => `
+        <tr>
+          <td>${g.expense_date}</td>
+          <td>${g.expense_name}</td>
+          <td>${g.amount}</td>
+          <td>${g.notes || '-'}</td>
+          <td>
+            <button class="row-btn btn-edit" onclick='editGeneralExpense(${JSON.stringify(g)})'>تعديل</button>
+            <button class="row-btn btn-delete" onclick="deleteGeneralExpense(${g.id})">حذف</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function editGeneralExpense(g) {
+      document.getElementById('genExpEditId').value = g.id;
+      document.getElementById('genExpName').value = g.expense_name;
+      document.getElementById('genExpAmount').value = g.amount;
+      document.getElementById('genExpDate').value = g.expense_date.split('T')[0];
+      document.getElementById('genExpNotes').value = g.notes || '';
+      document.getElementById('genExpSubmitBtn').textContent = 'حفظ التعديل';
+    }
+
+    function deleteGeneralExpense(id) {
+      if (!confirm('متأكد إنك عايز تمسح المصروف ده؟')) return;
+      fetch(`/general-expenses/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          showToast(data.message || data.error);
+          loadGeneralExpenses();
+        });
+    }
+
+    document.getElementById('generalExpenseForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const editId = document.getElementById('genExpEditId').value;
+      const payload = {
+        expense_name: document.getElementById('genExpName').value,
+        amount: document.getElementById('genExpAmount').value,
+        expense_date: document.getElementById('genExpDate').value,
+        notes: document.getElementById('genExpNotes').value
+      };
+
+      fetch(editId ? `/general-expenses/${editId}` : '/general-expenses', {
+        method: editId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('genExpMsg').textContent = data.message || data.error;
+        if (data.message) {
+          document.getElementById('generalExpenseForm').reset();
+          document.getElementById('genExpEditId').value = '';
+          document.getElementById('genExpSubmitBtn').textContent = 'تسجيل المصروف';
+          loadGeneralExpenses();
+          showToast(data.message);
+        }
+      });
+    });
+
+    initMonthPicker();
+    loadTuktuksDropdown();
+    loadDriversDropdown();
+    loadMaintenance();
+    loadGeneralExpenses();
+  </script>
+
+  <footer class="dev-footer">
+    <div class="dev-brand">
+      <svg class="dev-mark" viewBox="0 0 68 68" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 34 6 L 58 20 L 58 48 L 34 62 L 10 48 L 10 20 Z" fill="none" stroke="#EA4F1E" stroke-width="3"/>
+        <path d="M 26 22 L 26 46 M 26 22 L 44 22 M 26 33 L 40 33" stroke="#EA4F1E" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div class="dev-brand-text">
+        <div class="dev-brand-name">FUTURE</div>
+        <div class="dev-brand-sub">COMPANY FOR SOLUTIONS</div>
+      </div>
+    </div>
+    <div class="dev-divider"></div>
+    <div class="dev-info">
+      <div class="dev-name">Dr. Romany Shenoda</div>
+      <div class="dev-role">تطوير وصيانة الأنظمة</div>
+    </div>
+    <a href="https://wa.me/201066696216" target="_blank" class="dev-contact">
+      <span>📱</span> 01066696216
+    </a>
+  </footer>
+
+</body>
+</html>

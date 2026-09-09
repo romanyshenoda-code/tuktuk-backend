@@ -44,7 +44,6 @@
     .tab-btn[data-tab="performance"] { --tab-color: var(--purple); }
     .tab-btn[data-tab="settings"] { --tab-color: var(--asphalt); }
     .tab-btn[data-tab="holidays"] { --tab-color: var(--amber); }
-    .tab-btn[data-tab="maintenance"] { --tab-color: var(--rust); }
     .tab-btn[data-tab="reports"] { --tab-color: var(--orange); }
     .tab-btn[data-tab="cleanup"] { --tab-color: #6B4A8A; }
 
@@ -279,7 +278,6 @@
       <button class="tab-btn" data-tab="performance">أداء السواقين</button>
       <button class="tab-btn" data-tab="settings">الإعدادات</button>
       <button class="tab-btn" data-tab="holidays">المناسبات والأعياد</button>
-      <button class="tab-btn" data-tab="maintenance">الصيانة والمصروفات</button>
       <button class="tab-btn" data-tab="reports">صافي الربح والفوترة</button>
       <button class="tab-btn" data-tab="cleanup">الصيانة والتنظيف</button>
     </div>
@@ -465,59 +463,6 @@
     </div>
 
     <!-- تبويب الصيانة -->
-    <div class="tab-panel" id="tab-maintenance" style="--tab-color: var(--rust);">
-      <div class="section-head"><h2><span class="dot"></span>صيانة التوكتوكات</h2></div>
-      <form id="maintenanceForm" class="panel">
-        <input type="hidden" id="maintEditId">
-        <div class="fields-row">
-          <div class="field-group"><label>التوكتوك</label><select id="maintTuktuk"></select></div>
-          <div class="field-group"><label>السائق وقت المصروف</label><select id="maintDriver"><option value="">بدون سائق محدد</option></select></div>
-          <div class="field-group">
-            <label>نوع المصروف</label>
-            <select id="maintType">
-              <option value="scheduled">صيانة دورية</option>
-              <option value="repair">إصلاح عطل</option>
-            </select>
-          </div>
-          <div class="field-group"><label>وصف المصروف</label><input type="text" id="maintDesc" placeholder="مثال: تغيير زيت"></div>
-          <div class="field-group"><label>التكلفة (جنيه)</label><input type="number" id="maintCost" placeholder="مثال: 250"></div>
-          <div class="field-group"><label>تاريخ المصروف</label><input type="date" id="maintDate"></div>
-          <button type="submit" class="submit-btn" id="maintSubmitBtn">تسجيل مصروف الصيانة</button>
-        </div>
-      </form>
-      <div id="maintMsg" class="form-msg"></div>
-
-      <div class="section-head">
-        <h2><span class="dot"></span>سجل الصيانة (الشهر المختار)</h2>
-        <input type="text" id="maintSearch" class="search-input" placeholder="بحث برقم التوكتوك أو السائق..." oninput="filterMaintenance()">
-      </div>
-      <div class="panel table-scroll" style="padding:0;">
-        <table id="maintenanceTable">
-          <thead><tr><th>التاريخ</th><th>التوكتوك</th><th>السائق</th><th>النوع</th><th>الوصف</th><th>التكلفة</th><th>إجراء</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div class="section-head"><h2><span class="dot"></span>مصروفات أخرى (إيجار، كافتيريا، إلخ)</h2></div>
-      <form id="generalExpenseForm" class="panel">
-        <input type="hidden" id="genExpEditId">
-        <div class="fields-row">
-          <div class="field-group"><label>اسم المصروف</label><input type="text" id="genExpName" placeholder="مثال: إيجار المحل"></div>
-          <div class="field-group"><label>المبلغ (جنيه)</label><input type="number" id="genExpAmount" placeholder="مثال: 3000"></div>
-          <div class="field-group"><label>تاريخ المصروف</label><input type="date" id="genExpDate"></div>
-          <div class="field-group"><label>ملاحظات (اختياري)</label><input type="text" id="genExpNotes" placeholder="تفاصيل إضافية"></div>
-          <button type="submit" class="submit-btn" id="genExpSubmitBtn">تسجيل المصروف</button>
-        </div>
-      </form>
-      <div id="genExpMsg" class="form-msg"></div>
-      <div class="panel table-scroll" style="padding:0;">
-        <table id="generalExpensesTable">
-          <thead><tr><th>التاريخ</th><th>اسم المصروف</th><th>المبلغ</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-
     <!-- تبويب التقارير -->
     <div class="tab-panel" id="tab-reports" style="--tab-color: var(--orange);">
       <div class="net-hero">
@@ -767,8 +712,6 @@
   <script>
     let allDrivers = [];
     let allPayrollRows = [];
-    let allMaintenance = [];
-    let allGeneralExpenses = [];
     let allPerformance = [];
     let selectedRestDays = [];
     let selectedCustomRestDays = [];
@@ -819,7 +762,6 @@
 
     function refreshAll() {
       loadPayroll();
-      if (loadedTabs.maintenance) { loadMaintenance(); loadGeneralExpenses(); }
       if (loadedTabs.performance) loadPerformance();
       if (loadedTabs.reports) loadYearlyChart();
     }
@@ -840,7 +782,6 @@
           if (tab === 'performance') loadPerformance();
           if (tab === 'reports') loadYearlyChart();
           if (tab === 'holidays') loadHolidayEvents();
-          if (tab === 'maintenance') { loadMaintenance(); loadGeneralExpenses(); }
           if (tab === 'cleanup') loadStorageInfo();
         }
       });
@@ -1374,181 +1315,6 @@
         document.getElementById('maintDriver').innerHTML = '<option value="">بدون سائق محدد</option>' + data.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
       });
     }
-
-    function loadMaintenance() {
-      fetch(`/tuktuk-maintenance?year=${selectedYear}&month=${selectedMonth}`)
-        .then(res => res.json())
-        .then(data => {
-          allMaintenance = data;
-          renderMaintenanceTable(allMaintenance);
-        });
-    }
-
-    function renderMaintenanceTable(data) {
-      const tbody = document.querySelector('#maintenanceTable tbody');
-      if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش سجل صيانة في الشهر المختار</td></tr>`;
-        return;
-      }
-      const typeLabel = { scheduled: 'دورية', repair: 'إصلاح عطل' };
-      tbody.innerHTML = data.map(m => `
-        <tr>
-          <td>${m.maintenance_date}</td>
-          <td>${m.tuktuk_number}</td>
-          <td>${m.driver_name || '-'}</td>
-          <td>${typeLabel[m.maintenance_type]}</td>
-          <td>${m.description}</td>
-          <td>${m.cost}</td>
-          <td>
-            <button class="row-btn btn-edit" onclick='editMaintenance(${JSON.stringify(m)})'>تعديل</button>
-            <button class="row-btn btn-delete" onclick="deleteMaintenance(${m.id})">حذف</button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function filterMaintenance() {
-      const q = document.getElementById('maintSearch').value.trim();
-      if (!q) { renderMaintenanceTable(allMaintenance); return; }
-      renderMaintenanceTable(allMaintenance.filter(m =>
-        String(m.tuktuk_number).includes(q) || (m.driver_name && m.driver_name.includes(q))
-      ));
-    }
-
-    function editMaintenance(m) {
-      document.getElementById('maintEditId').value = m.id;
-      document.getElementById('maintTuktuk').value = m.tuktuk_id;
-      document.getElementById('maintDriver').value = m.driver_id || '';
-      document.getElementById('maintType').value = m.maintenance_type;
-      document.getElementById('maintDesc').value = m.description;
-      document.getElementById('maintCost').value = m.cost;
-      document.getElementById('maintDate').value = m.maintenance_date.split('T')[0];
-      document.getElementById('maintSubmitBtn').textContent = 'حفظ التعديل';
-    }
-
-    function deleteMaintenance(id) {
-      if (!confirm('متأكد إنك عايز تمسح مصروف الصيانة ده؟')) return;
-      fetch(`/tuktuk-maintenance/${id}`, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(data => {
-          showToast(data.message || data.error);
-          loadMaintenance();
-          loadPayroll();
-          loadYearlyChart();
-        });
-    }
-
-    document.getElementById('maintenanceForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const editId = document.getElementById('maintEditId').value;
-      const payload = {
-        tuktuk_id: document.getElementById('maintTuktuk').value,
-        driver_id: document.getElementById('maintDriver').value || null,
-        maintenance_type: document.getElementById('maintType').value,
-        description: document.getElementById('maintDesc').value,
-        cost: document.getElementById('maintCost').value,
-        maintenance_date: document.getElementById('maintDate').value
-      };
-
-      fetch(editId ? `/tuktuk-maintenance/${editId}` : '/tuktuk-maintenance', {
-        method: editId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('maintMsg').textContent = data.message || data.error;
-        if (data.message) {
-          document.getElementById('maintenanceForm').reset();
-          document.getElementById('maintEditId').value = '';
-          document.getElementById('maintSubmitBtn').textContent = 'تسجيل مصروف الصيانة';
-          loadMaintenance();
-          loadPayroll();
-          loadYearlyChart();
-          showToast(data.message);
-        }
-      });
-    });
-
-    function loadGeneralExpenses() {
-      fetch(`/general-expenses?year=${selectedYear}&month=${selectedMonth}`)
-        .then(res => res.json())
-        .then(data => {
-          allGeneralExpenses = data;
-          renderGeneralExpensesTable(allGeneralExpenses);
-        });
-    }
-
-    function renderGeneralExpensesTable(data) {
-      const tbody = document.querySelector('#generalExpensesTable tbody');
-      if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش مصروفات في الشهر المختار</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = data.map(g => `
-        <tr>
-          <td>${g.expense_date}</td>
-          <td>${g.expense_name}</td>
-          <td>${g.amount}</td>
-          <td>${g.notes || '-'}</td>
-          <td>
-            <button class="row-btn btn-edit" onclick='editGeneralExpense(${JSON.stringify(g)})'>تعديل</button>
-            <button class="row-btn btn-delete" onclick="deleteGeneralExpense(${g.id})">حذف</button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function editGeneralExpense(g) {
-      document.getElementById('genExpEditId').value = g.id;
-      document.getElementById('genExpName').value = g.expense_name;
-      document.getElementById('genExpAmount').value = g.amount;
-      document.getElementById('genExpDate').value = g.expense_date.split('T')[0];
-      document.getElementById('genExpNotes').value = g.notes || '';
-      document.getElementById('genExpSubmitBtn').textContent = 'حفظ التعديل';
-    }
-
-    function deleteGeneralExpense(id) {
-      if (!confirm('متأكد إنك عايز تمسح المصروف ده؟')) return;
-      fetch(`/general-expenses/${id}`, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(data => {
-          showToast(data.message || data.error);
-          loadGeneralExpenses();
-          loadPayroll();
-          loadYearlyChart();
-        });
-    }
-
-    document.getElementById('generalExpenseForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const editId = document.getElementById('genExpEditId').value;
-      const payload = {
-        expense_name: document.getElementById('genExpName').value,
-        amount: document.getElementById('genExpAmount').value,
-        expense_date: document.getElementById('genExpDate').value,
-        notes: document.getElementById('genExpNotes').value
-      };
-
-      fetch(editId ? `/general-expenses/${editId}` : '/general-expenses', {
-        method: editId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('genExpMsg').textContent = data.message || data.error;
-        if (data.message) {
-          document.getElementById('generalExpenseForm').reset();
-          document.getElementById('genExpEditId').value = '';
-          document.getElementById('genExpSubmitBtn').textContent = 'تسجيل المصروف';
-          loadGeneralExpenses();
-          loadPayroll();
-          loadYearlyChart();
-          showToast(data.message);
-        }
-      });
-    });
 
     function renderDonut(payroll, incentive, maintenance, general) {
       incentive = incentive || 0;
