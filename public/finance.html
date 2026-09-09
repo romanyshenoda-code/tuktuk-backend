@@ -247,6 +247,17 @@
     /* صافي الربح الديناميكي */
     .net-hero .big-num.positive { color: #1F6F63; }
     .net-hero .big-num.negative { color: #B23A1E; }
+
+    /* كارت المصروفات بخط أحمر وتفصيل صغير */
+    .stat-card.exp { border-top-color: var(--rust); }
+    .exp-breakdown {
+      display: flex; flex-direction: column; gap: 3px; margin-top: 8px;
+      border-top: 1px dashed var(--line); padding-top: 8px;
+    }
+    .exp-breakdown .exp-row {
+      display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted);
+    }
+    .exp-breakdown .exp-row .exp-val { font-weight: 700; color: var(--ink); }
   </style>
 </head>
 <body>
@@ -269,7 +280,17 @@
 
     <div class="stats-row">
       <div class="stat-card rev"><div class="num" id="statRevenue">-</div><div class="lbl">إجمالي الإيرادات</div></div>
-      <div class="stat-card exp"><div class="num" id="statExpenses">-</div><div class="lbl">إجمالي المصروفات</div></div>
+      <div class="stat-card exp">
+        <div class="num" id="statExpenses">-</div>
+        <div class="lbl">إجمالي المصروفات</div>
+        <div class="exp-breakdown">
+          <div class="exp-row"><span>مرتبات</span><span class="exp-val" id="expSalary">-</span></div>
+          <div class="exp-row"><span>عمولات</span><span class="exp-val" id="expCommission">-</span></div>
+          <div class="exp-row"><span>حوافز</span><span class="exp-val" id="expIncentives">-</span></div>
+          <div class="exp-row"><span>صيانة</span><span class="exp-val" id="expMaintenance">-</span></div>
+          <div class="exp-row"><span>مصروفات أخرى</span><span class="exp-val" id="expGeneral">-</span></div>
+        </div>
+      </div>
       <div class="stat-card net"><div class="num" id="statNet">-</div><div class="lbl">صافي الربح</div></div>
     </div>
 
@@ -1007,15 +1028,21 @@
         .then(res => res.json())
         .then(results => {
         allPayrollRows = results;
+        let totalSalary = 0, totalCommission = 0;
         results.forEach(p => {
           totalGross += parseFloat(p.gross_pay || 0);
           totalRevenue += parseFloat(p.total_revenue || 0);
           totalIncentives += parseFloat(p.total_incentives || 0);
+          totalSalary += parseFloat(p.salary_part || 0);
+          totalCommission += parseFloat(p.commission_part || 0);
         });
         document.getElementById('statRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
         document.getElementById('repRevenue').textContent = totalRevenue.toFixed(2) + ' ج';
         document.getElementById('repPayroll').textContent = totalGross.toFixed(2) + ' ج';
         document.getElementById('reportPeriodLabel').textContent = `صافي الربح لشهر ${monthNames[selectedMonth - 1]} ${selectedYear}`;
+        document.getElementById('expSalary').textContent = totalSalary.toFixed(0) + ' ج';
+        document.getElementById('expCommission').textContent = totalCommission.toFixed(0) + ' ج';
+        document.getElementById('expIncentives').textContent = totalIncentives.toFixed(0) + ' ج';
         loadFinancialSummary(totalRevenue, totalGross, totalIncentives);
         renderPayrollTable(allPayrollRows);
       })
@@ -1197,6 +1224,8 @@
 
           document.getElementById('repMaintenance').textContent = totalMaintenance.toFixed(2) + ' ج';
           document.getElementById('repGeneral').textContent = totalGeneral.toFixed(2) + ' ج';
+          document.getElementById('expMaintenance').textContent = totalMaintenance.toFixed(0) + ' ج';
+          document.getElementById('expGeneral').textContent = totalGeneral.toFixed(0) + ' ج';
           document.getElementById('repTotalExpenses').textContent = totalExpenses.toFixed(2) + ' ج';
 
           const bigNumEl = document.getElementById('reportNetProfit');
