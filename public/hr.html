@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>الموارد البشرية - Ginger</title>
+  <title>شؤون الموظفين - Ginger</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -11,51 +11,25 @@
     :root {
       --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
       --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
-      --gold: #C9A227;
+      --gold: #C9A227; --purple: #5B4B8A;
     }
     * { box-sizing: border-box; }
     body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+
     .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
     .topbar img { height: 38px; }
     .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
     .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; }
     .logout-link { margin-inline-start: auto; color: var(--sand); opacity: 0.75; font-size: 13px; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); padding: 6px 12px; border-radius: 20px; }
     .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
-    .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
-    .section-head h2 { font-size: 18px; margin: 0; display: flex; align-items: center; gap: 8px; }
-    .section-head h2 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--section-color, var(--nile)); }
+
     input, select, textarea { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
     input:focus, select:focus, textarea:focus { outline: 2px solid var(--nile); outline-offset: 1px; }
-    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 30px; }
-    form.panel { padding: 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    button.submit-btn { padding: 10px 20px; background: var(--nile); color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
-    th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; }
-    tbody tr:nth-child(even) { background: #FAF7F0; }
-    tbody tr:hover { background: #F3E9DA; }
-    td { border-bottom: 1px solid var(--line); }
-    .table-scroll { overflow-x: auto; }
-    .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
-    .btn-approve { background: var(--nile); }
-    .btn-reject { background: var(--rust); }
-    .btn-delete { background: #8B1A1A; }
-    .btn-edit { background: var(--amber); }
-    .btn-incentive { background: var(--gold); }
-    .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
-    .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
 
-    .status-badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11px; font-weight: 700; color: white; }
-    .status-pending { background: var(--amber); }
-    .status-approved { background: var(--nile); }
-    .status-rejected { background: var(--rust); }
-    .amount-gold { color: var(--gold); font-weight: 800; }
-    .amount-red { color: var(--rust); font-weight: 800; }
-
-    /* شريط الفلاتر الموحّد */
+    /* شريط الفلاتر */
     .filters-bar {
       background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
-      padding: 14px 16px; margin-bottom: 22px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+      padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
     }
     .filter-group { display: flex; flex-direction: column; min-width: 110px; }
     .filter-group label { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
@@ -64,11 +38,130 @@
       padding: 10px 16px; background: var(--line); color: var(--ink); border: none; border-radius: 8px;
       font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer; height: 41px;
     }
+    .filter-reset:hover { background: #D8CFBC; }
 
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+    /* التبويبات */
+    .tabs-bar { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 22px; border-bottom: 2px solid var(--line); }
+    .tab-btn {
+      background: none; border: none; padding: 12px 20px; font-family: inherit; font-size: 14px; font-weight: 700;
+      color: var(--muted); cursor: pointer; white-space: nowrap; position: relative; top: 2px;
+      border-bottom: 3px solid transparent; transition: color 0.2s, border-color 0.2s;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .tab-btn:hover { color: var(--ink); }
+    .tab-btn.active { color: var(--tab-color, var(--nile)); border-bottom-color: var(--tab-color, var(--nile)); }
+    .tab-btn[data-tab="money"] { --tab-color: var(--gold); }
+    .tab-btn[data-tab="leaves"] { --tab-color: var(--amber); }
+    .tab-btn[data-tab="advances"] { --tab-color: var(--asphalt); }
+    .tab-badge {
+      background: var(--rust); color: white; font-size: 10.5px; font-weight: 800;
+      min-width: 19px; height: 19px; border-radius: 10px; display: none;
+      align-items: center; justify-content: center; padding: 0 5px;
+      animation: badgePulse 1.8s infinite;
+    }
+    .tab-badge.show { display: inline-flex; }
+    @keyframes badgePulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.12); }
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fadeSlide 0.32s cubic-bezier(.2,.8,.3,1); }
+    @keyframes fadeSlide { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .section-head h2 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 8px; }
+    .section-head h2 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--section-color, var(--nile)); }
+    .row-count { font-size: 12px; color: var(--muted); font-weight: 700; }
+
+    /* نماذج التسجيل السريع */
+    .quick-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 26px; }
+    @media (max-width: 760px) { .quick-forms { grid-template-columns: 1fr; } }
+    .quick-form {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 18px;
+      border-top: 4px solid var(--qf-color, var(--nile));
+      animation: riseIn 0.4s ease backwards;
+    }
+    .quick-form:nth-child(2) { animation-delay: 0.08s; }
+    @keyframes riseIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .quick-form h3 { margin: 0 0 14px; font-size: 15.5px; display: flex; align-items: center; gap: 7px; }
+    .qf-field { margin-bottom: 10px; }
+    .qf-field label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .qf-field input, .qf-field select { width: 100%; }
+    .qf-row { display: flex; gap: 8px; }
+    .qf-row > * { flex: 1; }
+    .qf-btn {
+      width: 100%; padding: 11px; color: white; border: none; border-radius: 8px;
+      font-family: inherit; font-weight: 800; font-size: 14px; cursor: pointer; margin-top: 6px;
+      transition: filter 0.15s, transform 0.1s;
+    }
+    .qf-btn:hover { filter: brightness(0.94); }
+    .qf-btn:active { transform: scale(0.985); }
+
+    /* البحث الذكي في السواقين */
+    .driver-picker { position: relative; }
+    .driver-picker input { width: 100%; }
+    .driver-results {
+      position: absolute; top: 100%; inset-inline-start: 0; inset-inline-end: 0; z-index: 40;
+      background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+      max-height: 210px; overflow-y: auto; display: none; margin-top: 4px;
+      box-shadow: 0 8px 22px rgba(30,27,22,0.14);
+    }
+    .driver-results.open { display: block; animation: dropIn 0.18s ease; }
+    @keyframes dropIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+    .driver-item { padding: 10px 13px; font-size: 13.5px; cursor: pointer; border-bottom: 1px solid #F5F0E6; display: flex; justify-content: space-between; align-items: center; }
+    .driver-item:last-child { border-bottom: none; }
+    .driver-item:hover, .driver-item.highlighted { background: #F3E9DA; }
+    .driver-item .d-id { font-size: 11px; color: var(--muted); font-weight: 700; }
+    .driver-empty { padding: 14px; text-align: center; font-size: 12.5px; color: var(--muted); }
+    .picked-driver { font-size: 12px; color: var(--nile); font-weight: 700; margin-top: 4px; min-height: 15px; }
+
+    /* الجداول */
+    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 26px; }
+    .table-box { max-height: 400px; overflow-y: auto; }
+    .table-box::-webkit-scrollbar { width: 7px; }
+    .table-box::-webkit-scrollbar-track { background: #FAF7F0; }
+    .table-box::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+    .table-box::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
+    th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; position: sticky; top: 0; z-index: 5; }
+    tbody tr { animation: rowIn 0.3s ease backwards; }
+    tbody tr:nth-child(1) { animation-delay: 0.02s; }
+    tbody tr:nth-child(2) { animation-delay: 0.04s; }
+    tbody tr:nth-child(3) { animation-delay: 0.06s; }
+    tbody tr:nth-child(4) { animation-delay: 0.08s; }
+    tbody tr:nth-child(5) { animation-delay: 0.1s; }
+    @keyframes rowIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    tbody tr:nth-child(even) { background: #FAF7F0; }
+    tbody tr:hover { background: #F3E9DA; }
+    td { border-bottom: 1px solid var(--line); }
+
+    .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; transition: filter 0.15s; }
+    .row-btn:hover { filter: brightness(0.92); }
+    .btn-approve { background: var(--nile); }
+    .btn-reject { background: var(--rust); }
+    .btn-delete { background: #8B1A1A; }
+    .btn-edit { background: var(--amber); }
+    .empty-row td { text-align: center; color: var(--muted); padding: 30px; }
+    .form-msg { padding: 8px 2px 0; font-size: 12.5px; font-weight: 700; color: var(--nile); min-height: 16px; }
+    .form-msg.error-msg { color: var(--rust); }
+
+    .status-badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11px; font-weight: 700; color: white; }
+    .status-pending { background: var(--amber); }
+    .status-approved { background: var(--nile); }
+    .status-rejected { background: var(--rust); }
+    .amount-gold { color: var(--gold); font-weight: 800; }
+    .amount-red { color: var(--rust); font-weight: 800; }
+
+    /* المودالات */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; animation: fadeIn 0.18s ease; }
     .modal-backdrop.open { display: flex; }
-    .modal-box { background: var(--paper); border-radius: 16px; padding: 26px; width: 100%; max-width: 400px; border-top: 5px solid var(--amber); }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal-box { background: var(--paper); border-radius: 16px; padding: 26px; width: 100%; max-width: 400px; border-top: 5px solid var(--amber); animation: popIn 0.24s cubic-bezier(.2,.9,.3,1.15); }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.93) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
     .modal-box.danger { border-top-color: var(--rust); }
+    .modal-box.gold { border-top-color: var(--gold); }
     .modal-box h3 { margin: 0 0 8px; font-size: 17px; }
     .modal-box p { font-size: 13.5px; color: var(--muted); margin: 0 0 16px; line-height: 1.6; }
     .modal-box input, .modal-box textarea, .modal-box select { width: 100%; margin-bottom: 10px; }
@@ -77,18 +170,14 @@
     .btn-modal-confirm { background: var(--nile); color: white; }
     .btn-modal-danger { background: var(--rust); color: white; }
     .btn-modal-cancel { background: var(--line); color: var(--ink); }
-    .btn-modal-save-gold { background: var(--gold); color: white; }
-    .btn-modal-save-amber { background: var(--amber); color: white; }
+    .btn-modal-gold { background: var(--gold); color: white; }
+    .btn-modal-amber { background: var(--amber); color: white; }
 
-    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transition: opacity 0.25s; pointer-events: none; max-width: 90%; text-align: center; }
-    .toast.show { opacity: 1; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; max-width: 90%; text-align: center; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
     .toast.error { background: var(--rust); }
 
-    .dev-footer {
-      margin-top: 40px; padding: 20px 24px; background: #FFFFFF;
-      border-top: 1px solid #E4DCCB;
-      display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center;
-    }
+    .dev-footer { margin-top: 40px; padding: 20px 24px; background: #FFFFFF; border-top: 1px solid #E4DCCB; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center; }
     .dev-brand { display: flex; align-items: center; gap: 11px; }
     .dev-mark { width: 40px; height: 40px; flex-shrink: 0; }
     .dev-brand-text { line-height: 1.25; }
@@ -98,34 +187,8 @@
     .dev-info { text-align: center; }
     .dev-name { font-size: 13px; font-weight: 800; color: #16305C; }
     .dev-role { font-size: 10.5px; color: #8A8272; margin-top: 1px; }
-    .dev-contact {
-      display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
-      background: #25D366; color: white; padding: 8px 16px; border-radius: 22px;
-      font-size: 13px; font-weight: 700; transition: filter 0.15s;
-    }
-    .dev-contact:hover { filter: brightness(0.93); }
-    @media (max-width: 560px) {
-      .dev-footer { flex-direction: column; gap: 13px; padding: 22px 16px; }
-      .dev-divider { display: none; }
-    }
-
-    /* صناديق الجداول بارتفاع محدود وسكرول */
-    .table-box { max-height: 340px; overflow-y: auto; }
-    .table-box::-webkit-scrollbar { width: 7px; }
-    .table-box::-webkit-scrollbar-track { background: #FAF7F0; }
-    .table-box::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
-    .table-box::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-    .table-box thead th { position: sticky; top: 0; z-index: 5; }
-    .row-count { font-size: 12px; color: var(--muted); font-weight: 700; }
-
-    /* نماذج التسجيل السريع */
-    .quick-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 26px; }
-    @media (max-width: 760px) { .quick-forms { grid-template-columns: 1fr; } }
-    .quick-form { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; border-top: 4px solid var(--qf-color, var(--nile)); }
-    .quick-form h3 { margin: 0 0 12px; font-size: 15px; }
-    .quick-form .qf-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .quick-form select, .quick-form input { flex: 1; min-width: 100px; }
-    .quick-form button { padding: 10px 18px; color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
+    .dev-contact { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; background: #25D366; color: white; padding: 8px 16px; border-radius: 22px; font-size: 13px; font-weight: 700; }
+    @media (max-width: 560px) { .dev-footer { flex-direction: column; gap: 13px; } .dev-divider { display: none; } }
   </style>
 </head>
 <body>
@@ -133,13 +196,12 @@
   <div class="topbar">
     <a href="/index.html" class="back-link">→ الرئيسية</a>
     <img src="/logo.png" alt="Ginger">
-    <h1>الموارد البشرية</h1>
+    <h1>شؤون الموظفين</h1>
     <a href="/api/logout" class="logout-link">خروج</a>
   </div>
 
   <div class="container">
 
-    <div class="section-head"><h2>فلترة كل الجداول</h2></div>
     <div class="filters-bar">
       <div class="filter-group">
         <label>السنة</label>
@@ -147,90 +209,137 @@
       </div>
       <div class="filter-group">
         <label>الشهر</label>
-        <select id="filterMonth">
-          <option value="">كل الشهور</option>
-        </select>
+        <select id="filterMonth"></select>
       </div>
       <div class="filter-group">
         <label>اليوم</label>
-        <select id="filterDay">
-          <option value="">كل الأيام</option>
-        </select>
+        <select id="filterDay"></select>
       </div>
       <div class="filter-group filter-search">
-        <label>بحث بالاسم أو رقم السائق</label>
+        <label>بحث في الجداول (اسم أو رقم السائق)</label>
         <input type="text" id="filterSearch" placeholder="اكتب اسم السائق أو رقمه...">
       </div>
       <button class="filter-reset" onclick="resetFilters()">مسح الفلاتر</button>
     </div>
 
-    <div class="quick-forms">
-      <form id="deductionForm" class="quick-form" style="--qf-color: var(--rust);">
-        <h3>تسجيل خصم سريع</h3>
-        <div class="qf-row">
-          <select id="deductionDriver"></select>
-          <input type="number" id="deductionAmount" placeholder="المبلغ">
-        </div>
-        <div class="qf-row" style="margin-top: 8px;">
-          <input type="text" id="deductionReason" placeholder="سبب الخصم">
-          <button type="submit" style="background: var(--rust);">تسجيل</button>
-        </div>
-        <div id="deductionMsg" class="form-msg"></div>
-      </form>
-
-      <form id="incentiveForm" class="quick-form" style="--qf-color: var(--gold);">
-        <h3>تسجيل حافز سريع</h3>
-        <div class="qf-row">
-          <select id="incentiveDriver"></select>
-          <input type="number" id="incentiveAmount" placeholder="المبلغ">
-        </div>
-        <div class="qf-row" style="margin-top: 8px;">
-          <input type="text" id="incentiveReason" placeholder="سبب الحافز">
-          <button type="submit" style="background: var(--gold);">تسجيل</button>
-        </div>
-        <div id="incentiveMsg" class="form-msg"></div>
-      </form>
+    <div class="tabs-bar">
+      <button class="tab-btn active" data-tab="money">💰 خصومات وحوافز</button>
+      <button class="tab-btn" data-tab="leaves">📅 موافقات الإجازات <span class="tab-badge" id="badgeLeaves">0</span></button>
+      <button class="tab-btn" data-tab="advances">💵 موافقات السلف <span class="tab-badge" id="badgeAdvances">0</span></button>
     </div>
 
-    <div class="section-head" style="--section-color: var(--amber);"><h2><span class="dot"></span>طلبات الإجازة</h2><span class="row-count" id="countLeave"></span></div>
-    <div class="panel table-scroll table-box">
-      <table id="leaveTable">
-        <thead><tr><th>السائق</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
-        <tbody><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
-      </table>
+    <!-- تبويب الخصومات والحوافز -->
+    <div class="tab-panel active" id="tab-money">
+
+      <div class="quick-forms">
+        <form id="deductionForm" class="quick-form" style="--qf-color: var(--rust);">
+          <h3>🔻 تسجيل خصم</h3>
+          <div class="qf-field">
+            <label>السائق</label>
+            <div class="driver-picker">
+              <input type="text" id="deductionDriverSearch" placeholder="ابحث بالاسم أو الرقم..." autocomplete="off">
+              <input type="hidden" id="deductionDriver">
+              <div class="driver-results" id="deductionResults"></div>
+            </div>
+            <div class="picked-driver" id="deductionPicked"></div>
+          </div>
+          <div class="qf-row">
+            <div class="qf-field" style="margin-bottom:0;">
+              <label>المبلغ</label>
+              <input type="number" id="deductionAmount" placeholder="0">
+            </div>
+            <div class="qf-field" style="margin-bottom:0;">
+              <label>السبب</label>
+              <input type="text" id="deductionReason" placeholder="سبب الخصم">
+            </div>
+          </div>
+          <button type="submit" class="qf-btn" style="background: var(--rust);">تسجيل الخصم</button>
+          <div id="deductionMsg" class="form-msg"></div>
+        </form>
+
+        <form id="incentiveForm" class="quick-form" style="--qf-color: var(--gold);">
+          <h3>🔺 تسجيل حافز</h3>
+          <div class="qf-field">
+            <label>السائق</label>
+            <div class="driver-picker">
+              <input type="text" id="incentiveDriverSearch" placeholder="ابحث بالاسم أو الرقم..." autocomplete="off">
+              <input type="hidden" id="incentiveDriver">
+              <div class="driver-results" id="incentiveResults"></div>
+            </div>
+            <div class="picked-driver" id="incentivePicked"></div>
+          </div>
+          <div class="qf-row">
+            <div class="qf-field" style="margin-bottom:0;">
+              <label>المبلغ</label>
+              <input type="number" id="incentiveAmount" placeholder="0">
+            </div>
+            <div class="qf-field" style="margin-bottom:0;">
+              <label>السبب</label>
+              <input type="text" id="incentiveReason" placeholder="سبب الحافز">
+            </div>
+          </div>
+          <button type="submit" class="qf-btn" style="background: var(--gold);">تسجيل الحافز</button>
+          <div id="incentiveMsg" class="form-msg"></div>
+        </form>
+      </div>
+
+      <div class="section-head" style="--section-color: var(--rust);">
+        <h2><span class="dot"></span>سجل الخصومات</h2>
+        <span class="row-count" id="countDed"></span>
+      </div>
+      <div class="panel table-box">
+        <table id="deductionsTable">
+          <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="section-head" style="--section-color: var(--gold);">
+        <h2><span class="dot"></span>سجل الحوافز</h2>
+        <span class="row-count" id="countInc"></span>
+      </div>
+      <div class="panel table-box">
+        <table id="incentivesTable">
+          <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="section-head" style="--section-color: var(--asphalt);"><h2><span class="dot"></span>طلبات السلف</h2><span class="row-count" id="countAdv"></span></div>
-    <div class="panel table-scroll table-box">
-      <table id="advancesTable">
-        <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
-        <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
-      </table>
+    <!-- تبويب موافقات الإجازات -->
+    <div class="tab-panel" id="tab-leaves">
+      <div class="section-head" style="--section-color: var(--amber);">
+        <h2><span class="dot"></span>طلبات الإجازة</h2>
+        <span class="row-count" id="countLeave"></span>
+      </div>
+      <div class="panel table-box">
+        <table id="leaveTable">
+          <thead><tr><th>السائق</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
-    <div class="section-head" style="--section-color: var(--rust);"><h2><span class="dot"></span>سجل الخصومات</h2><span class="row-count" id="countDed"></span></div>
-    <div class="panel table-scroll table-box">
-      <table id="deductionsTable">
-        <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
-        <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
-      </table>
-    </div>
-
-    <div class="section-head" style="--section-color: var(--gold);"><h2><span class="dot"></span>سجل الحوافز</h2><span class="row-count" id="countInc"></span></div>
-    <div class="panel table-scroll table-box">
-      <table id="incentivesTable">
-        <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
-        <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
-      </table>
+    <!-- تبويب موافقات السلف -->
+    <div class="tab-panel" id="tab-advances">
+      <div class="section-head" style="--section-color: var(--asphalt);">
+        <h2><span class="dot"></span>طلبات السلف</h2>
+        <span class="row-count" id="countAdv"></span>
+      </div>
+      <div class="panel table-box">
+        <table id="advancesTable">
+          <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
   </div>
 
-  <!-- بوب أب الموافقة/الرفض بملاحظة -->
   <div class="modal-backdrop" id="noteModal">
     <div class="modal-box">
       <h3 id="noteModalTitle">مراجعة الطلب</h3>
-      <p id="noteModalSub">اكتب ملاحظة للسائق (اختياري)</p>
+      <p>اكتب ملاحظة للسائق (اختياري)</p>
       <textarea id="adminNote" rows="3" placeholder="ملاحظة الأدمن..."></textarea>
       <input type="hidden" id="noteRequestId">
       <input type="hidden" id="noteRequestType">
@@ -242,7 +351,6 @@
     </div>
   </div>
 
-  <!-- بوب أب التأكيد على الحذف -->
   <div class="modal-backdrop" id="confirmModal">
     <div class="modal-box danger">
       <h3 id="confirmTitle">⚠️ تأكيد</h3>
@@ -254,7 +362,6 @@
     </div>
   </div>
 
-  <!-- بوب أب تعديل الخصم -->
   <div class="modal-backdrop" id="editDeductionModal">
     <div class="modal-box">
       <h3>تعديل الخصم</h3>
@@ -264,15 +371,14 @@
       <input type="text" id="editDeductionReason" placeholder="السبب">
       <div class="modal-actions">
         <button type="button" class="btn-modal-cancel" onclick="closeEditDeduction()">إلغاء</button>
-        <button type="button" class="btn-modal-save-amber" onclick="saveEditDeduction()">حفظ</button>
+        <button type="button" class="btn-modal-amber" onclick="saveEditDeduction()">حفظ</button>
       </div>
       <div id="editDeductionMsg" class="form-msg"></div>
     </div>
   </div>
 
-  <!-- بوب أب تعديل الحافز -->
   <div class="modal-backdrop" id="editIncentiveModal">
-    <div class="modal-box">
+    <div class="modal-box gold">
       <h3>تعديل الحافز</h3>
       <input type="hidden" id="editIncentiveId">
       <select id="editIncentiveDriver"></select>
@@ -280,7 +386,7 @@
       <input type="text" id="editIncentiveReason" placeholder="السبب">
       <div class="modal-actions">
         <button type="button" class="btn-modal-cancel" onclick="closeEditIncentive()">إلغاء</button>
-        <button type="button" class="btn-modal-save-gold" onclick="saveEditIncentive()">حفظ</button>
+        <button type="button" class="btn-modal-gold" onclick="saveEditIncentive()">حفظ</button>
       </div>
       <div id="editIncentiveMsg" class="form-msg"></div>
     </div>
@@ -298,9 +404,9 @@
     setInterval(checkAdminSession, 15000);
 
     const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
-
-    // البيانات الخام (قبل الفلترة) لكل جدول
     let rawLeave = [], rawAdvances = [], rawDeductions = [], rawIncentives = [];
+    let allDrivers = [];
+    const now = new Date();
 
     function showToast(msg, isError) {
       const t = document.getElementById('toast');
@@ -315,16 +421,22 @@
       const btn = document.getElementById('confirmActionBtn');
       const newBtn = btn.cloneNode(true);
       btn.parentNode.replaceChild(newBtn, btn);
-      newBtn.addEventListener('click', () => {
-        closeConfirm();
-        onConfirm();
-      });
+      newBtn.addEventListener('click', () => { closeConfirm(); onConfirm(); });
       document.getElementById('confirmModal').classList.add('open');
     }
     function closeConfirm() { document.getElementById('confirmModal').classList.remove('open'); }
 
-    // ==================== الفلاتر الموحّدة ====================
-    const now = new Date();
+    // ==================== التبويبات ====================
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ==================== الفلاتر ====================
     function initFilters() {
       const yearSelect = document.getElementById('filterYear');
       const years = [];
@@ -366,13 +478,11 @@
         if (month && (d.getMonth() + 1) != month) return false;
         if (day && d.getDate() != day) return false;
       }
-
       if (search) {
         const nameMatch = driverName && driverName.toLowerCase().includes(search);
         const idMatch = driverId && String(driverId).includes(search);
         if (!nameMatch && !idMatch) return false;
       }
-
       return true;
     }
 
@@ -391,9 +501,73 @@
       document.getElementById('countAdv').textContent = fAdv.length ? `${fAdv.length} سجل` : '';
       document.getElementById('countDed').textContent = fDed.length ? `${fDed.length} سجل` : '';
       document.getElementById('countInc').textContent = fInc.length ? `${fInc.length} سجل` : '';
+
+      updateBadges();
+    }
+
+    function updateBadges() {
+      const pendingLeave = rawLeave.filter(r => r.status === 'pending').length;
+      const pendingAdv = rawAdvances.filter(r => r.status === 'pending').length;
+
+      const bl = document.getElementById('badgeLeaves');
+      bl.textContent = pendingLeave;
+      bl.classList.toggle('show', pendingLeave > 0);
+
+      const ba = document.getElementById('badgeAdvances');
+      ba.textContent = pendingAdv;
+      ba.classList.toggle('show', pendingAdv > 0);
     }
 
     function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : '-'; }
+
+    // ==================== البحث الذكي في السواقين ====================
+    function setupDriverPicker(searchId, hiddenId, resultsId, pickedId) {
+      const searchInput = document.getElementById(searchId);
+      const hiddenInput = document.getElementById(hiddenId);
+      const resultsBox = document.getElementById(resultsId);
+      const pickedLabel = document.getElementById(pickedId);
+
+      function renderResults(query) {
+        const q = query.trim().toLowerCase();
+        const filtered = q
+          ? allDrivers.filter(d => d.name.toLowerCase().includes(q) || String(d.id).includes(q))
+          : allDrivers;
+
+        if (filtered.length === 0) {
+          resultsBox.innerHTML = '<div class="driver-empty">مفيش نتائج</div>';
+        } else {
+          resultsBox.innerHTML = filtered.slice(0, 50).map(d => `
+            <div class="driver-item" data-id="${d.id}" data-name="${d.name}">
+              <span>${d.name}</span>
+              <span class="d-id">#${d.id}</span>
+            </div>
+          `).join('');
+
+          resultsBox.querySelectorAll('.driver-item').forEach(item => {
+            item.addEventListener('click', () => {
+              hiddenInput.value = item.dataset.id;
+              searchInput.value = item.dataset.name;
+              pickedLabel.textContent = `✓ ${item.dataset.name} (رقم ${item.dataset.id})`;
+              resultsBox.classList.remove('open');
+            });
+          });
+        }
+        resultsBox.classList.add('open');
+      }
+
+      searchInput.addEventListener('focus', () => renderResults(searchInput.value));
+      searchInput.addEventListener('input', () => {
+        hiddenInput.value = '';
+        pickedLabel.textContent = '';
+        renderResults(searchInput.value);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !resultsBox.contains(e.target)) {
+          resultsBox.classList.remove('open');
+        }
+      });
+    }
 
     // ==================== طلبات الإجازة ====================
     function openNoteModal(type, id, status) {
@@ -431,11 +605,9 @@
 
     function confirmDeleteRequest(type, id) {
       const typeLabel = type === 'leave' ? 'طلب الإجازة' : 'طلب السلفة';
-      showConfirm(
-        `⚠️ حذف ${typeLabel} نهائياً`,
-        `هتمسح ${typeLabel} ده نهائياً من قاعدة البيانات، والعملية دي مالهاش رجعة خالص. متأكد إنك عايز تكمل؟`,
-        () => deleteRequest(type, id)
-      );
+      showConfirm(`⚠️ حذف ${typeLabel} نهائياً`,
+        `هتمسح ${typeLabel} ده نهائياً، والعملية مالهاش رجعة. متأكد؟`,
+        () => deleteRequest(type, id));
     }
 
     function deleteRequest(type, id) {
@@ -459,7 +631,7 @@
     function renderLeaveTable(data) {
       const tbody = document.querySelector('#leaveTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش طلبات إجازة</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش طلبات إجازة في الفترة دي</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(r => `
@@ -475,7 +647,7 @@
               <button class="row-btn btn-reject" onclick="openNoteModal('leave', ${r.id}, 'rejected')">رفض</button>
             ` : '-'}
           </td>
-          <td><button class="row-btn btn-delete" onclick="confirmDeleteRequest('leave', ${r.id})">حذف نهائي</button></td>
+          <td><button class="row-btn btn-delete" onclick="confirmDeleteRequest('leave', ${r.id})">حذف</button></td>
         </tr>
       `).join('');
     }
@@ -491,7 +663,7 @@
     function renderAdvancesTable(data) {
       const tbody = document.querySelector('#advancesTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش طلبات سلف</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش طلبات سلف في الفترة دي</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(r => `
@@ -506,12 +678,12 @@
               <button class="row-btn btn-reject" onclick="openNoteModal('advance', ${r.id}, 'rejected')">رفض</button>
             ` : '-'}
           </td>
-          <td><button class="row-btn btn-delete" onclick="confirmDeleteRequest('advance', ${r.id})">حذف نهائي</button></td>
+          <td><button class="row-btn btn-delete" onclick="confirmDeleteRequest('advance', ${r.id})">حذف</button></td>
         </tr>
       `).join('');
     }
 
-    // ==================== سجل الخصومات ====================
+    // ==================== الخصومات ====================
     function loadDeductions() {
       fetch('/deductions').then(res => res.json()).then(data => {
         rawDeductions = data;
@@ -522,7 +694,7 @@
     function renderDeductionsTable(data) {
       const tbody = document.querySelector('#deductionsTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش خصومات مسجلة</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش خصومات في الفترة دي</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(r => `
@@ -532,7 +704,7 @@
           <td>${r.reason || '-'}</td>
           <td>${formatDate(r.created_at)}</td>
           <td><button class="row-btn btn-edit" onclick='openEditDeduction(${JSON.stringify(r)})'>تعديل</button></td>
-          <td><button class="row-btn btn-delete" onclick="confirmDeleteDeduction(${r.id})">حذف نهائي</button></td>
+          <td><button class="row-btn btn-delete" onclick="confirmDeleteDeduction(${r.id})">حذف</button></td>
         </tr>
       `).join('');
     }
@@ -561,32 +733,21 @@
       .then(res => res.json())
       .then(data => {
         document.getElementById('editDeductionMsg').textContent = data.message || data.error;
-        if (data.message) {
-          showToast(data.message);
-          setTimeout(closeEditDeduction, 600);
-          loadDeductions();
-        }
+        if (data.message) { showToast(data.message); setTimeout(closeEditDeduction, 600); loadDeductions(); }
       });
     }
 
     function confirmDeleteDeduction(id) {
-      showConfirm(
-        '⚠️ حذف الخصم نهائياً',
-        'هتمسح الخصم ده نهائياً، وده هيقلل قيمة الخصومات المحسوبة في مرتب السائق الشهر ده. متأكد؟',
-        () => deleteDeduction(id)
-      );
-    }
-
-    function deleteDeduction(id) {
-      fetch(`/deductions/${id}`, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(data => {
-          showToast(data.message || data.error, !data.message);
-          loadDeductions();
+      showConfirm('⚠️ حذف الخصم نهائياً',
+        'هتمسح الخصم ده نهائياً، وده هيقلل الخصومات المحسوبة في مرتب السائق. متأكد؟',
+        () => {
+          fetch(`/deductions/${id}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => { showToast(data.message || data.error, !data.message); loadDeductions(); });
         });
     }
 
-    // ==================== سجل الحوافز ====================
+    // ==================== الحوافز ====================
     function loadIncentives() {
       fetch('/incentives').then(res => res.json()).then(data => {
         rawIncentives = data;
@@ -597,7 +758,7 @@
     function renderIncentivesTable(data) {
       const tbody = document.querySelector('#incentivesTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش حوافز مسجلة</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش حوافز في الفترة دي</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(r => `
@@ -607,7 +768,7 @@
           <td>${r.reason || '-'}</td>
           <td>${formatDate(r.created_at)}</td>
           <td><button class="row-btn btn-edit" onclick='openEditIncentive(${JSON.stringify(r)})'>تعديل</button></td>
-          <td><button class="row-btn btn-delete" onclick="confirmDeleteIncentive(${r.id})">حذف نهائي</button></td>
+          <td><button class="row-btn btn-delete" onclick="confirmDeleteIncentive(${r.id})">حذف</button></td>
         </tr>
       `).join('');
     }
@@ -636,59 +797,61 @@
       .then(res => res.json())
       .then(data => {
         document.getElementById('editIncentiveMsg').textContent = data.message || data.error;
-        if (data.message) {
-          showToast(data.message);
-          setTimeout(closeEditIncentive, 600);
-          loadIncentives();
-        }
+        if (data.message) { showToast(data.message); setTimeout(closeEditIncentive, 600); loadIncentives(); }
       });
     }
 
     function confirmDeleteIncentive(id) {
-      showConfirm(
-        '⚠️ حذف الحافز نهائياً',
-        'هتمسح الحافز ده نهائياً، وده هيقلل مستحقات السائق المحسوبة الشهر ده. متأكد؟',
-        () => deleteIncentive(id)
-      );
-    }
-
-    function deleteIncentive(id) {
-      fetch(`/incentives/${id}`, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(data => {
-          showToast(data.message || data.error, !data.message);
-          loadIncentives();
+      showConfirm('⚠️ حذف الحافز نهائياً',
+        'هتمسح الحافز ده نهائياً، وده هيقلل مستحقات السائق. متأكد؟',
+        () => {
+          fetch(`/incentives/${id}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => { showToast(data.message || data.error, !data.message); loadIncentives(); });
         });
     }
 
-    // ==================== قوائم السواقين ====================
-    function loadDriversDropdown() {
+    // ==================== تحميل السواقين ====================
+    function loadDrivers() {
       fetch('/drivers').then(res => res.json()).then(data => {
+        allDrivers = data;
         const options = data.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
-        document.getElementById('deductionDriver').innerHTML = options;
-        document.getElementById('incentiveDriver').innerHTML = options;
         document.getElementById('editDeductionDriver').innerHTML = options;
         document.getElementById('editIncentiveDriver').innerHTML = options;
+
+        setupDriverPicker('deductionDriverSearch', 'deductionDriver', 'deductionResults', 'deductionPicked');
+        setupDriverPicker('incentiveDriverSearch', 'incentiveDriver', 'incentiveResults', 'incentivePicked');
       });
     }
 
     document.getElementById('deductionForm').addEventListener('submit', function(e) {
       e.preventDefault();
+      const driverId = document.getElementById('deductionDriver').value;
+      const msg = document.getElementById('deductionMsg');
+
+      if (!driverId) {
+        msg.className = 'form-msg error-msg';
+        msg.textContent = 'اختار السائق من قائمة البحث الأول';
+        return;
+      }
+
       fetch('/deductions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          driver_id: document.getElementById('deductionDriver').value,
+          driver_id: driverId,
           amount: document.getElementById('deductionAmount').value,
           reason: document.getElementById('deductionReason').value
         })
       })
       .then(res => res.json())
       .then(data => {
-        document.getElementById('deductionMsg').textContent = data.message || data.error;
+        msg.className = 'form-msg' + (data.error ? ' error-msg' : '');
+        msg.textContent = data.message || data.error;
         if (data.message) {
           document.getElementById('deductionForm').reset();
-          loadDriversDropdown();
+          document.getElementById('deductionDriver').value = '';
+          document.getElementById('deductionPicked').textContent = '';
           loadDeductions();
           showToast(data.message);
         }
@@ -697,21 +860,32 @@
 
     document.getElementById('incentiveForm').addEventListener('submit', function(e) {
       e.preventDefault();
+      const driverId = document.getElementById('incentiveDriver').value;
+      const msg = document.getElementById('incentiveMsg');
+
+      if (!driverId) {
+        msg.className = 'form-msg error-msg';
+        msg.textContent = 'اختار السائق من قائمة البحث الأول';
+        return;
+      }
+
       fetch('/incentives', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          driver_id: document.getElementById('incentiveDriver').value,
+          driver_id: driverId,
           amount: document.getElementById('incentiveAmount').value,
           reason: document.getElementById('incentiveReason').value
         })
       })
       .then(res => res.json())
       .then(data => {
-        document.getElementById('incentiveMsg').textContent = data.message || data.error;
+        msg.className = 'form-msg' + (data.error ? ' error-msg' : '');
+        msg.textContent = data.message || data.error;
         if (data.message) {
           document.getElementById('incentiveForm').reset();
-          loadDriversDropdown();
+          document.getElementById('incentiveDriver').value = '';
+          document.getElementById('incentivePicked').textContent = '';
           loadIncentives();
           showToast(data.message);
         }
@@ -719,11 +893,11 @@
     });
 
     initFilters();
+    loadDrivers();
     loadLeaveRequests();
     loadAdvances();
     loadDeductions();
     loadIncentives();
-    loadDriversDropdown();
   </script>
 
   <footer class="dev-footer">
