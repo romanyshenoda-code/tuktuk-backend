@@ -108,6 +108,24 @@
       .dev-footer { flex-direction: column; gap: 13px; padding: 22px 16px; }
       .dev-divider { display: none; }
     }
+
+    /* صناديق الجداول بارتفاع محدود وسكرول */
+    .table-box { max-height: 340px; overflow-y: auto; }
+    .table-box::-webkit-scrollbar { width: 7px; }
+    .table-box::-webkit-scrollbar-track { background: #FAF7F0; }
+    .table-box::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+    .table-box::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    .table-box thead th { position: sticky; top: 0; z-index: 5; }
+    .row-count { font-size: 12px; color: var(--muted); font-weight: 700; }
+
+    /* نماذج التسجيل السريع */
+    .quick-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 26px; }
+    @media (max-width: 760px) { .quick-forms { grid-template-columns: 1fr; } }
+    .quick-form { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; border-top: 4px solid var(--qf-color, var(--nile)); }
+    .quick-form h3 { margin: 0 0 12px; font-size: 15px; }
+    .quick-form .qf-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .quick-form select, .quick-form input { flex: 1; min-width: 100px; }
+    .quick-form button { padding: 10px 18px; color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -146,55 +164,65 @@
       <button class="filter-reset" onclick="resetFilters()">مسح الفلاتر</button>
     </div>
 
-    <div class="section-head" style="--section-color: var(--amber);"><h2><span class="dot"></span>طلبات الإجازة</h2></div>
-    <div class="panel table-scroll">
+    <div class="quick-forms">
+      <form id="deductionForm" class="quick-form" style="--qf-color: var(--rust);">
+        <h3>تسجيل خصم سريع</h3>
+        <div class="qf-row">
+          <select id="deductionDriver"></select>
+          <input type="number" id="deductionAmount" placeholder="المبلغ">
+        </div>
+        <div class="qf-row" style="margin-top: 8px;">
+          <input type="text" id="deductionReason" placeholder="سبب الخصم">
+          <button type="submit" style="background: var(--rust);">تسجيل</button>
+        </div>
+        <div id="deductionMsg" class="form-msg"></div>
+      </form>
+
+      <form id="incentiveForm" class="quick-form" style="--qf-color: var(--gold);">
+        <h3>تسجيل حافز سريع</h3>
+        <div class="qf-row">
+          <select id="incentiveDriver"></select>
+          <input type="number" id="incentiveAmount" placeholder="المبلغ">
+        </div>
+        <div class="qf-row" style="margin-top: 8px;">
+          <input type="text" id="incentiveReason" placeholder="سبب الحافز">
+          <button type="submit" style="background: var(--gold);">تسجيل</button>
+        </div>
+        <div id="incentiveMsg" class="form-msg"></div>
+      </form>
+    </div>
+
+    <div class="section-head" style="--section-color: var(--amber);"><h2><span class="dot"></span>طلبات الإجازة</h2><span class="row-count" id="countLeave"></span></div>
+    <div class="panel table-scroll table-box">
       <table id="leaveTable">
         <thead><tr><th>السائق</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
         <tbody><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
       </table>
     </div>
 
-    <div class="section-head" style="--section-color: var(--asphalt);"><h2><span class="dot"></span>طلبات السلف</h2></div>
-    <div class="panel table-scroll">
+    <div class="section-head" style="--section-color: var(--asphalt);"><h2><span class="dot"></span>طلبات السلف</h2><span class="row-count" id="countAdv"></span></div>
+    <div class="panel table-scroll table-box">
       <table id="advancesTable">
         <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
         <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
       </table>
     </div>
 
-    <div class="section-head" style="--section-color: var(--rust);"><h2><span class="dot"></span>سجل الخصومات</h2></div>
-    <div class="panel table-scroll">
+    <div class="section-head" style="--section-color: var(--rust);"><h2><span class="dot"></span>سجل الخصومات</h2><span class="row-count" id="countDed"></span></div>
+    <div class="panel table-scroll table-box">
       <table id="deductionsTable">
         <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
         <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
       </table>
     </div>
 
-    <div class="section-head" style="--section-color: var(--gold);"><h2><span class="dot"></span>سجل الحوافز</h2></div>
-    <div class="panel table-scroll">
+    <div class="section-head" style="--section-color: var(--gold);"><h2><span class="dot"></span>سجل الحوافز</h2><span class="row-count" id="countInc"></span></div>
+    <div class="panel table-scroll table-box">
       <table id="incentivesTable">
         <thead><tr><th>السائق</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
         <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
       </table>
     </div>
-
-    <div class="section-head"><h2>تسجيل خصم</h2></div>
-    <form id="deductionForm" class="panel">
-      <select id="deductionDriver"></select>
-      <input type="number" id="deductionAmount" placeholder="المبلغ">
-      <input type="text" id="deductionReason" placeholder="سبب الخصم">
-      <button type="submit" class="submit-btn" style="background: var(--rust);">تسجيل الخصم</button>
-    </form>
-    <div id="deductionMsg" class="form-msg"></div>
-
-    <div class="section-head"><h2>تسجيل حافز</h2></div>
-    <form id="incentiveForm" class="panel">
-      <select id="incentiveDriver"></select>
-      <input type="number" id="incentiveAmount" placeholder="المبلغ">
-      <input type="text" id="incentiveReason" placeholder="سبب الحافز">
-      <button type="submit" class="submit-btn" style="background: var(--gold);">تسجيل الحافز</button>
-    </form>
-    <div id="incentiveMsg" class="form-msg"></div>
 
   </div>
 
@@ -308,6 +336,7 @@
       const monthSelect = document.getElementById('filterMonth');
       monthSelect.innerHTML = '<option value="">كل الشهور</option>' +
         monthNames.map((n, i) => `<option value="${i + 1}">${n}</option>`).join('');
+      monthSelect.value = now.getMonth() + 1;
 
       const daySelect = document.getElementById('filterDay');
       daySelect.innerHTML = '<option value="">كل الأيام</option>' +
@@ -319,7 +348,7 @@
 
     function resetFilters() {
       document.getElementById('filterYear').value = now.getFullYear();
-      document.getElementById('filterMonth').value = '';
+      document.getElementById('filterMonth').value = now.getMonth() + 1;
       document.getElementById('filterDay').value = '';
       document.getElementById('filterSearch').value = '';
       applyAllFilters();
@@ -348,10 +377,20 @@
     }
 
     function applyAllFilters() {
-      renderLeaveTable(rawLeave.filter(r => matchesFilter(r.start_date, r.driver_name, r.driver_id)));
-      renderAdvancesTable(rawAdvances.filter(r => matchesFilter(r.created_at, r.driver_name, r.driver_id)));
-      renderDeductionsTable(rawDeductions.filter(r => matchesFilter(r.created_at, r.driver_name, r.driver_id)));
-      renderIncentivesTable(rawIncentives.filter(r => matchesFilter(r.created_at, r.driver_name, r.driver_id)));
+      const fLeave = rawLeave.filter(r => matchesFilter(r.start_date, r.driver_name, r.driver_id));
+      const fAdv = rawAdvances.filter(r => matchesFilter(r.created_at, r.driver_name, r.driver_id));
+      const fDed = rawDeductions.filter(r => matchesFilter(r.created_at, r.driver_name, r.driver_id));
+      const fInc = rawIncentives.filter(r => matchesFilter(r.created_at, r.driver_name, r.driver_id));
+
+      renderLeaveTable(fLeave);
+      renderAdvancesTable(fAdv);
+      renderDeductionsTable(fDed);
+      renderIncentivesTable(fInc);
+
+      document.getElementById('countLeave').textContent = fLeave.length ? `${fLeave.length} سجل` : '';
+      document.getElementById('countAdv').textContent = fAdv.length ? `${fAdv.length} سجل` : '';
+      document.getElementById('countDed').textContent = fDed.length ? `${fDed.length} سجل` : '';
+      document.getElementById('countInc').textContent = fInc.length ? `${fInc.length} سجل` : '';
     }
 
     function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : '-'; }
@@ -413,7 +452,7 @@
     function loadLeaveRequests() {
       fetch('/leave-requests').then(res => res.json()).then(data => {
         rawLeave = data;
-        renderLeaveTable(data);
+        applyAllFilters();
       });
     }
 
@@ -445,7 +484,7 @@
     function loadAdvances() {
       fetch('/advances').then(res => res.json()).then(data => {
         rawAdvances = data;
-        renderAdvancesTable(data);
+        applyAllFilters();
       });
     }
 
@@ -476,7 +515,7 @@
     function loadDeductions() {
       fetch('/deductions').then(res => res.json()).then(data => {
         rawDeductions = data;
-        renderDeductionsTable(data);
+        applyAllFilters();
       });
     }
 
@@ -551,7 +590,7 @@
     function loadIncentives() {
       fetch('/incentives').then(res => res.json()).then(data => {
         rawIncentives = data;
-        renderIncentivesTable(data);
+        applyAllFilters();
       });
     }
 
