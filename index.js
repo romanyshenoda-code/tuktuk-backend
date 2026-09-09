@@ -322,6 +322,43 @@ app.put('/drivers/:id/photo/:type', upload.single('photo'), (req, res) => {
     res.json({ message: 'تم رفع الصورة بنجاح', filename });
   });
 });
+// رفع صور إضافية (ضهر البطاقة، ضهر الرخصة، تحليل المخدرات)
+app.put('/drivers/:id/photo2/:type', upload.single('photo'), (req, res) => {
+  const { id, type } = req.params;
+  const allowedTypes = {
+    national_id_back: 'photo_national_id_back',
+    license_back: 'photo_license_back',
+    drug_test: 'photo_drug_test'
+  };
+
+  if (!allowedTypes[type]) return res.status(400).json({ error: 'نوع الصورة غير معروف' });
+  if (!req.file) return res.status(400).json({ error: 'من فضلك ارفع صورة' });
+
+  const column = allowedTypes[type];
+  const filename = req.file.filename;
+
+  db.query(`UPDATE drivers SET ${column} = ? WHERE id = ?`, [filename, id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في رفع الصورة' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'السائق غير موجود' });
+    res.json({ message: 'تم رفع الصورة بنجاح', filename });
+  });
+});
+
+// تسجيل نتيجة تحليل المخدرات
+app.put('/drivers/:id/drug-test-result', (req, res) => {
+  const { id } = req.params;
+  const { result } = req.body;
+
+  if (!['negative', 'positive'].includes(result)) {
+    return res.status(400).json({ error: 'النتيجة يجب أن تكون سلبي أو إيجابي' });
+  }
+
+  db.query('UPDATE drivers SET drug_test_result = ? WHERE id = ?', [result, id], (err, result2) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل النتيجة' }); }
+    if (result2.affectedRows === 0) return res.status(404).json({ error: 'السائق غير موجود' });
+    res.json({ message: 'تم تسجيل نتيجة التحليل بنجاح' });
+  });
+});
 
 // تحديث تاريخ انتهاء الرخصة
 app.put('/drivers/:id/license-expiry', (req, res) => {
