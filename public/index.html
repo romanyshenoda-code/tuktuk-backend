@@ -176,24 +176,26 @@
     }
     .module-card.drivers-pro .icon {
       background: linear-gradient(135deg, var(--asphalt), #1E4373);
-      width: 54px; height: 54px; border-radius: 14px;
+      width: 40px; height: 40px; border-radius: 11px;
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 10px; font-size: 26px;
-      box-shadow: 0 4px 12px rgba(22,48,92,0.25);
+      margin: 0 auto 7px; font-size: 19px;
+      box-shadow: 0 3px 9px rgba(22,48,92,0.22);
     }
     .module-card.drivers-pro .count {
       background: linear-gradient(135deg, var(--asphalt), var(--orange));
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      font-size: 22px;
     }
+    .module-card.drivers-pro .label { font-size: 12.5px; }
 
     .drivers-sub-alerts { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
-    .mini-ring-wrap { position: relative; width: 50px; height: 50px; }
+    .mini-ring-wrap { position: relative; width: 62px; height: 62px; }
     .mini-ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-    .mini-ring-bg { fill: none; stroke: #EFE8DA; stroke-width: 7; }
-    .mini-ring-fg { fill: none; stroke-width: 7; stroke-linecap: round; stroke-dasharray: 0 145; transition: stroke-dasharray 1s cubic-bezier(.2,.8,.2,1); }
+    .mini-ring-bg { fill: none; stroke: #EFE8DA; stroke-width: 8; }
+    .mini-ring-fg { fill: none; stroke-width: 8; stroke-linecap: round; stroke-dasharray: 0 175; transition: stroke-dasharray 1s cubic-bezier(.2,.8,.2,1); }
     .mini-ring-fg.pulse { animation: donutPulse 2.2s ease-in-out infinite; }
     .mini-ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-    .mini-ring-center .num { font-size: 14px; font-weight: 800; }
+    .mini-ring-center .num { font-size: 17px; font-weight: 800; }
     .ring-license .mini-ring-fg { stroke: var(--rust); color: var(--rust); }
     .ring-license .num { color: var(--rust); }
     .ring-docs .mini-ring-fg { stroke: var(--amber); color: var(--amber); }
@@ -263,9 +265,9 @@
         <div class="drivers-sub-alerts" id="driversSubAlerts" style="display:none;">
           <div class="drivers-sub-alert">
             <div class="mini-ring-wrap ring-license">
-              <svg viewBox="0 0 50 50">
-                <circle class="mini-ring-bg" cx="25" cy="25" r="21"></circle>
-                <circle class="mini-ring-fg pulse" id="licenseRing" cx="25" cy="25" r="21"></circle>
+              <svg viewBox="0 0 62 62">
+                <circle class="mini-ring-bg" cx="31" cy="31" r="26"></circle>
+                <circle class="mini-ring-fg pulse" id="licenseRing" cx="31" cy="31" r="26"></circle>
               </svg>
               <div class="mini-ring-center"><span class="num" id="countLicenseAlert">0</span></div>
             </div>
@@ -273,9 +275,9 @@
           </div>
           <div class="drivers-sub-alert">
             <div class="mini-ring-wrap ring-docs">
-              <svg viewBox="0 0 50 50">
-                <circle class="mini-ring-bg" cx="25" cy="25" r="21"></circle>
-                <circle class="mini-ring-fg pulse" id="docsRing" cx="25" cy="25" r="21"></circle>
+              <svg viewBox="0 0 62 62">
+                <circle class="mini-ring-bg" cx="31" cy="31" r="26"></circle>
+                <circle class="mini-ring-fg pulse" id="docsRing" cx="31" cy="31" r="26"></circle>
               </svg>
               <div class="mini-ring-center"><span class="num" id="countDocsAlert">0</span></div>
             </div>
@@ -381,7 +383,7 @@
     fetch('/tuktuks').then(r => r.json()).then(d => document.getElementById('countTuktuks').textContent = d.length);
     // إحصائيات اليوم بالدايرتين المتحركتين
     function animateSmallRing(ringId, numId, value, maxForRing) {
-      const circumference = 2 * Math.PI * 21; // 131.9
+      const circumference = 2 * Math.PI * 26; // 163.4
       const ratio = maxForRing > 0 ? Math.min(value / maxForRing, 1) : 0;
       const dash = ratio * circumference;
       document.getElementById(numId).textContent = value;
