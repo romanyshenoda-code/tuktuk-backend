@@ -296,7 +296,16 @@ app.get('/drivers', (req, res) => {
 });
 
 app.put('/drivers/:id', (req, res) => {
-  // ==================== رفع صور السائق (شخصية / بطاقة / رخصة) ====================
+  const { id } = req.params;
+  const { name, phone, national_id } = req.body;
+  db.query('UPDATE drivers SET name = ?, phone = ?, national_id = ? WHERE id = ?', [name, phone, national_id, id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث بيانات السائق' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'السائق غير موجود' });
+    res.json({ message: 'تم تحديث بيانات السائق بنجاح' });
+  });
+});
+
+// ==================== رفع صور السائق (شخصية / بطاقة / رخصة) ====================
 app.put('/drivers/:id/photo/:type', upload.single('photo'), (req, res) => {
   const { id, type } = req.params;
   const allowedTypes = { personal: 'photo_personal', national_id: 'photo_national_id', license: 'photo_license' };
@@ -322,14 +331,6 @@ app.put('/drivers/:id/license-expiry', (req, res) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث التاريخ' }); }
     if (result.affectedRows === 0) return res.status(404).json({ error: 'السائق غير موجود' });
     res.json({ message: 'تم تحديث تاريخ انتهاء الرخصة بنجاح' });
-  });
-});
-  const { id } = req.params;
-  const { name, phone, national_id } = req.body;
-  db.query('UPDATE drivers SET name = ?, phone = ?, national_id = ? WHERE id = ?', [name, phone, national_id, id], (err, result) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث بيانات السائق' }); }
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'السائق غير موجود' });
-    res.json({ message: 'تم تحديث بيانات السائق بنجاح' });
   });
 });
 
