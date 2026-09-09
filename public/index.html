@@ -64,7 +64,7 @@
 
     .container h2 { font-size: 19px; margin: 0 0 16px; }
 
-    .modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; align-items: start; }
     @media (min-width: 700px) { .modules-grid { grid-template-columns: repeat(3, 1fr); } }
 
     .module-card {
@@ -426,26 +426,28 @@
       .then(r => r.json())
       .then(data => {
         const operational = data.operational || [];
+        const documents = data.documents || [];
         const counts = data.counts || { missing_docs: 0, license_expiry: 0 };
+        const allAlerts = operational.concat(documents);
 
-        // صندوق التنبيهات التشغيلية بس (حضور/صيانة/ورديات)
+        // صندوق التنبيهات: كل التنبيهات مع بعض زي الأصل
         const box = document.getElementById('alertsBox');
         const wrap = document.getElementById('alertsWrap');
         const header = document.getElementById('alertsHeader');
 
-        if (operational.length === 0) {
+        if (allAlerts.length === 0) {
           box.style.display = 'none';
         } else {
           box.style.display = 'block';
-          header.textContent = '⚠️ ' + operational.length + ' ' + (operational.length === 1 ? 'تنبيه' : 'تنبيهات') + ' تحتاج انتباهك';
-          wrap.innerHTML = operational.map(a => `
+          header.textContent = '⚠️ ' + allAlerts.length + ' ' + (allAlerts.length === 1 ? 'تنبيه' : 'تنبيهات') + ' تحتاج انتباهك';
+          wrap.innerHTML = allAlerts.map(a => `
             <div class="alert-item ${a.type}">
               ${a.type === 'danger' ? '🔴' : '⚠️'} ${a.message}
             </div>
           `).join('');
         }
 
-        // دايرتين رخص/أوراق تحت كارت السواقين
+        // دايرتين رخص/أوراق تحت كارت السواقين (ملخص إضافي)
         const subAlerts = document.getElementById('driversSubAlerts');
         if (counts.license_expiry > 0 || counts.missing_docs > 0) {
           subAlerts.style.display = 'flex';
