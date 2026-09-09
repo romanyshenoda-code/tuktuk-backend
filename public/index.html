@@ -186,15 +186,20 @@
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
 
-    .drivers-sub-alerts { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
-    .drivers-sub-alert { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .drivers-sub-alert .dsa-dot { width: 9px; height: 9px; border-radius: 50%; }
-    .drivers-sub-alert.license .dsa-dot { background: var(--rust); }
-    .drivers-sub-alert.docs .dsa-dot { background: var(--amber); }
-    .drivers-sub-alert .dsa-num { font-size: 15px; font-weight: 800; }
-    .drivers-sub-alert.license .dsa-num { color: var(--rust); }
-    .drivers-sub-alert.docs .dsa-num { color: var(--amber); }
-    .drivers-sub-alert .dsa-label { font-size: 8.5px; color: var(--muted); font-weight: 700; line-height: 1.3; }
+    .drivers-sub-alerts { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
+    .mini-ring-wrap { position: relative; width: 50px; height: 50px; }
+    .mini-ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .mini-ring-bg { fill: none; stroke: #EFE8DA; stroke-width: 7; }
+    .mini-ring-fg { fill: none; stroke-width: 7; stroke-linecap: round; stroke-dasharray: 0 145; transition: stroke-dasharray 1s cubic-bezier(.2,.8,.2,1); }
+    .mini-ring-fg.pulse { animation: donutPulse 2.2s ease-in-out infinite; }
+    .mini-ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .mini-ring-center .num { font-size: 14px; font-weight: 800; }
+    .ring-license .mini-ring-fg { stroke: var(--rust); color: var(--rust); }
+    .ring-license .num { color: var(--rust); }
+    .ring-docs .mini-ring-fg { stroke: var(--amber); color: var(--amber); }
+    .ring-docs .num { color: var(--amber); }
+    .drivers-sub-alert { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .drivers-sub-alert .dsa-label { font-size: 8px; color: var(--muted); font-weight: 700; line-height: 1.3; text-align: center; }
     .status-card .sc-title { font-size: 14px; font-weight: 800; color: var(--asphalt); margin-bottom: 2px; }
     .donut-pair { display: flex; gap: 14px; justify-content: center; }
     .mini-donut-wrap { position: relative; width: 78px; height: 78px; }
@@ -256,14 +261,24 @@
         <div class="count" id="countDrivers">-</div>
         <div class="label">السواقين</div>
         <div class="drivers-sub-alerts" id="driversSubAlerts" style="display:none;">
-          <div class="drivers-sub-alert license">
-            <span class="dsa-dot"></span>
-            <span class="dsa-num" id="countLicenseAlert">0</span>
+          <div class="drivers-sub-alert">
+            <div class="mini-ring-wrap ring-license">
+              <svg viewBox="0 0 50 50">
+                <circle class="mini-ring-bg" cx="25" cy="25" r="21"></circle>
+                <circle class="mini-ring-fg pulse" id="licenseRing" cx="25" cy="25" r="21"></circle>
+              </svg>
+              <div class="mini-ring-center"><span class="num" id="countLicenseAlert">0</span></div>
+            </div>
             <span class="dsa-label">رخص محتاجة<br>تجديد</span>
           </div>
-          <div class="drivers-sub-alert docs">
-            <span class="dsa-dot"></span>
-            <span class="dsa-num" id="countDocsAlert">0</span>
+          <div class="drivers-sub-alert">
+            <div class="mini-ring-wrap ring-docs">
+              <svg viewBox="0 0 50 50">
+                <circle class="mini-ring-bg" cx="25" cy="25" r="21"></circle>
+                <circle class="mini-ring-fg pulse" id="docsRing" cx="25" cy="25" r="21"></circle>
+              </svg>
+              <div class="mini-ring-center"><span class="num" id="countDocsAlert">0</span></div>
+            </div>
             <span class="dsa-label">أوراق<br>ناقصة</span>
           </div>
         </div>
@@ -365,6 +380,16 @@
     fetch('/drivers').then(r => r.json()).then(d => document.getElementById('countDrivers').textContent = d.length);
     fetch('/tuktuks').then(r => r.json()).then(d => document.getElementById('countTuktuks').textContent = d.length);
     // إحصائيات اليوم بالدايرتين المتحركتين
+    function animateSmallRing(ringId, numId, value, maxForRing) {
+      const circumference = 2 * Math.PI * 21; // 131.9
+      const ratio = maxForRing > 0 ? Math.min(value / maxForRing, 1) : 0;
+      const dash = ratio * circumference;
+      document.getElementById(numId).textContent = value;
+      setTimeout(() => {
+        document.getElementById(ringId).setAttribute('stroke-dasharray', `${dash} ${circumference}`);
+      }, 150);
+    }
+
     function animateDonut(ringId, numId, value, maxForRing) {
       const circumference = 2 * Math.PI * 33; // 207.3
       const ratio = maxForRing > 0 ? Math.min(value / maxForRing, 1) : 0;
@@ -426,31 +451,34 @@
       .then(r => r.json())
       .then(data => {
         const operational = data.operational || [];
+        const documents = data.documents || [];
         const counts = data.counts || { missing_docs: 0, license_expiry: 0 };
+        const allAlerts = operational.concat(documents);
 
-        // صندوق التنبيهات التشغيلية بس (حضور/صيانة/ورديات)
+        // صندوق التنبيهات: كل التنبيهات مع بعض زي الأصل
         const box = document.getElementById('alertsBox');
         const wrap = document.getElementById('alertsWrap');
         const header = document.getElementById('alertsHeader');
 
-        if (operational.length === 0) {
+        if (allAlerts.length === 0) {
           box.style.display = 'none';
         } else {
           box.style.display = 'block';
-          header.textContent = '⚠️ ' + operational.length + ' ' + (operational.length === 1 ? 'تنبيه' : 'تنبيهات') + ' تحتاج انتباهك';
-          wrap.innerHTML = operational.map(a => `
+          header.textContent = '⚠️ ' + allAlerts.length + ' ' + (allAlerts.length === 1 ? 'تنبيه' : 'تنبيهات') + ' تحتاج انتباهك';
+          wrap.innerHTML = allAlerts.map(a => `
             <div class="alert-item ${a.type}">
               ${a.type === 'danger' ? '🔴' : '⚠️'} ${a.message}
             </div>
           `).join('');
         }
 
-        // دايرتين رخص/أوراق تحت كارت السواقين
+        // دايرتين رخص/أوراق تحت كارت السواقين (ملخص إضافي)
         const subAlerts = document.getElementById('driversSubAlerts');
         if (counts.license_expiry > 0 || counts.missing_docs > 0) {
           subAlerts.style.display = 'flex';
-          document.getElementById('countLicenseAlert').textContent = counts.license_expiry;
-          document.getElementById('countDocsAlert').textContent = counts.missing_docs;
+          const totalDrivers = parseInt(document.getElementById('countDrivers').textContent) || 1;
+          animateSmallRing('licenseRing', 'countLicenseAlert', counts.license_expiry, totalDrivers);
+          animateSmallRing('docsRing', 'countDocsAlert', counts.missing_docs, totalDrivers);
         } else {
           subAlerts.style.display = 'none';
         }
