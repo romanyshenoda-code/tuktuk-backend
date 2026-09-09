@@ -13,8 +13,8 @@
       --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --muted: #8A8272; --line: #E4DCCB;
     }
     * { box-sizing: border-box; }
-    html, body { overflow-x: hidden; max-width: 100%; }
-    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+    html { overflow-x: hidden; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); overflow-x: hidden; width: 100%; }
 
     .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
     .topbar img { height: 40px; }
@@ -65,7 +65,7 @@
 
     .container h2 { font-size: 19px; margin: 0 0 16px; }
 
-    .modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .modules-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
     @media (min-width: 700px) { .modules-grid { grid-template-columns: repeat(3, 1fr); } }
 
     .module-card {
@@ -189,7 +189,7 @@
     }
     .module-card.drivers-pro .label { font-size: 12.5px; }
 
-    .drivers-sub-alerts { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
+    .drivers-sub-alerts { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; max-width: 100%; }
     .mini-ring-wrap { position: relative; width: 62px; height: 62px; }
     .mini-ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
     .mini-ring-bg { fill: none; stroke: #EFE8DA; stroke-width: 8; }
