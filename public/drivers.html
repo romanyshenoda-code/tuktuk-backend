@@ -40,6 +40,18 @@
     tbody tr:hover { background: #F3E9DA; }
     td { border-bottom: 1px solid var(--line); }
     .table-scroll { overflow-x: auto; }
+    .table-box { max-height: 480px; overflow-y: auto; }
+    .table-box::-webkit-scrollbar { width: 7px; }
+    .table-box::-webkit-scrollbar-track { background: #FAF7F0; }
+    .table-box::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+    .table-box::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    .table-box thead th { position: sticky; top: 0; z-index: 5; }
+
+    .driver-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--line); display: block; }
+    .driver-avatar-empty {
+      width: 38px; height: 38px; border-radius: 50%; background: var(--asphalt); color: white;
+      display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800;
+    }
 
     .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; color: white; background: var(--nile); }
 
@@ -196,9 +208,9 @@
         <button class="add-square" onclick="openModal('driverModal')" title="إضافة سائق">+</button>
       </div>
     </div>
-    <div class="panel table-scroll">
+    <div class="panel table-scroll table-box">
       <table id="driversTable">
-        <thead><tr><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الرقم القومي</th><th>تاريخ التعيين</th><th>الحالة</th><th>المستندات</th><th>إجراءات</th></tr></thead>
+        <thead><tr><th></th><th>الرقم</th><th>الاسم</th><th>التليفون</th><th>الرقم القومي</th><th>تاريخ التعيين</th><th>الحالة</th><th>المستندات</th><th>إجراءات</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -466,14 +478,23 @@
       `;
     }
 
+    function renderAvatar(d) {
+      if (d.photo_personal) {
+        return `<img class="driver-avatar" src="/uploads/${d.photo_personal}" onclick="openDocPreview(this.src)" style="cursor:pointer;">`;
+      }
+      const initial = d.name ? d.name.charAt(0) : '?';
+      return `<div class="driver-avatar-empty">${initial}</div>`;
+    }
+
     function renderDrivers(data) {
       const tbody = document.querySelector('#driversTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">مفيش سواقين لسه</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="9">مفيش سواقين لسه</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(d => `
         <tr>
+          <td>${renderAvatar(d)}</td>
           <td>${d.id}</td>
           <td>${d.name}</td>
           <td>${d.phone}</td>
