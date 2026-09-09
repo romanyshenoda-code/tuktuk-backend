@@ -1580,7 +1580,8 @@ app.get('/dashboard/stats', (req, res) => {
 });
 
 app.get('/dashboard/alerts', (req, res) => {
-  const alerts = [];
+  const operationalAlerts = [];
+  const documentAlerts = [];
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -1595,48 +1596,89 @@ app.get('/dashboard/alerts', (req, res) => {
 
       absentDrivers.forEach(d => {
         if (!d.last_shift) {
-          alerts.push({ type: 'warning', message: `${d.name} ماسجّلش أي حضور لحد دلوقتي` });
+          operationalAlerts.push({ type: 'warning', message: `${d.name} ماسجّلش أي حضور لحد دلوقتي` });
         } else {
           const days = Math.floor((now - new Date(d.last_shift)) / (1000 * 60 * 60 * 24));
-          alerts.push({ type: 'warning', message: `${d.name} ماسجّلش حضور من ${days} يوم` });
+          operationalAlerts.push({ type: 'warning', message: `${d.name} ماسجّلش حضور من ${days} يوم` });
         }
       });
 
       db.query(
-        `SELECT name, license_expiry, DATEDIFF(license_expiry, CURDATE()) AS days_left
-         FROM drivers WHERE license_expiry IS NOT NULL
-         AND DATEDIFF(license_expiry, CURDATE()) BETWEEN 0 AND 30`,
-        (err, licenseRows) => {
+        `SELECT id, name, national_id, national_id_back, license, license_back, drug_test_result
+         FROM (
+           SELECT id, name,
+             photo_national_id AS national_id,
+             photo_national_id_back AS national_id_back,
+             photo_license AS license,
+             photo_license_back AS license_back,
+             drug_test_result
+           FROM drivers
+         ) AS t
+         WHERE national_id IS NULL OR national_id_back IS NULL
+            OR license IS NULL OR license_back IS NULL
+            OR drug_test_result IS NULL`,
+        (err, incompleteDrivers) => {
           if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
 
-          licenseRows.forEach(d => {
-            alerts.push({ type: d.days_left <= 7 ? 'danger' : 'warning', message: `رخصة ${d.name} هتنتهي بعد ${d.days_left} يوم` });
+          incompleteDrivers.forEach(d => {
+            const missing = [];
+            if (!d.national_id || !d.national_id_back) missing.push('البطاقة');
+            if (!d.license || !d.license_back) missing.push('الرخصة');
+            if (!d.drug_test_result) missing.push('تحليل المخدرات');
+            documentAlerts.push({ type: 'warning', message: `${d.name}: ناقص ${missing.join(' و')}`, category: 'missing_docs' });
           });
 
           db.query(
-            `SELECT t.tuktuk_number, COUNT(*) AS times
-             FROM tuktuk_maintenance m JOIN tuktuks t ON m.tuktuk_id = t.id
-             WHERE YEAR(m.maintenance_date) = ? AND MONTH(m.maintenance_date) = ?
-             GROUP BY t.id, t.tuktuk_number HAVING times >= 3`,
-            [year, month],
-            (err, repeatMaint) => {
+            `SELECT name, license_expiry, DATEDIFF(license_expiry, CURDATE()) AS days_left
+             FROM drivers WHERE license_expiry IS NOT NULL
+             AND DATEDIFF(license_expiry, CURDATE()) BETWEEN 0 AND 30`,
+            (err, licenseRows) => {
               if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
 
-              repeatMaint.forEach(t => {
-                alerts.push({ type: 'danger', message: `توكتوك ${t.tuktuk_number} دخل الصيانة ${t.times} مرات الشهر ده` });
+              licenseRows.forEach(d => {
+                documentAlerts.push({
+                  type: d.days_left <= 7 ? 'danger' : 'warning',
+                  message: `رخصة ${d.name} هتنتهي بعد ${d.days_left} يوم`,
+                  category: 'license_expiry'
+                });
               });
 
               db.query(
-                `SELECT d.name, s.check_in_time FROM shifts s JOIN drivers d ON s.driver_id = d.id
-                 WHERE s.status = 'open' AND s.check_in_time < DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
-                (err, longShifts) => {
+                `SELECT t.tuktuk_number, COUNT(*) AS times
+                 FROM tuktuk_maintenance m JOIN tuktuks t ON m.tuktuk_id = t.id
+                 WHERE YEAR(m.maintenance_date) = ? AND MONTH(m.maintenance_date) = ?
+                 GROUP BY t.id, t.tuktuk_number HAVING times >= 3`,
+                [year, month],
+                (err, repeatMaint) => {
                   if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
 
-                  longShifts.forEach(s => {
-                    alerts.push({ type: 'danger', message: `${s.name} عنده وردية مفتوحة من أكتر من 24 ساعة` });
+                  repeatMaint.forEach(t => {
+                    operationalAlerts.push({ type: 'danger', message: `توكتوك ${t.tuktuk_number} دخل الصيانة ${t.times} مرات الشهر ده` });
                   });
 
-                  res.json(alerts);
+                  db.query(
+                    `SELECT d.name, s.check_in_time FROM shifts s JOIN drivers d ON s.driver_id = d.id
+                     WHERE s.status = 'open' AND s.check_in_time < DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+                    (err, longShifts) => {
+                      if (err) { console.error(err); return res.status(500).json({ error: 'خطأ في التنبيهات' }); }
+
+                      longShifts.forEach(s => {
+                        operationalAlerts.push({ type: 'danger', message: `${s.name} عنده وردية مفتوحة من أكتر من 24 ساعة` });
+                      });
+
+                      const missingDocsCount = documentAlerts.filter(a => a.category === 'missing_docs').length;
+                      const licenseExpiryCount = documentAlerts.filter(a => a.category === 'license_expiry').length;
+
+                      res.json({
+                        operational: operationalAlerts,
+                        documents: documentAlerts,
+                        counts: {
+                          missing_docs: missingDocsCount,
+                          license_expiry: licenseExpiryCount
+                        }
+                      });
+                    }
+                  );
                 }
               );
             }

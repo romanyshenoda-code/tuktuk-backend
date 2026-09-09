@@ -45,6 +45,23 @@
     .alert-item.warning { border-inline-start: 3px solid var(--amber); color: #8A5F12; }
     .alert-item.danger { border-inline-start: 3px solid var(--rust); color: #8B2A15; }
 
+    /* الدايرتين فوق صندوق التنبيهات */
+    .alert-counters { display: flex; gap: 8px; margin-bottom: 6px; }
+    .alert-counter {
+      flex: 1; display: flex; align-items: center; gap: 8px; padding: 7px 11px;
+      background: var(--paper); border: 1px solid var(--line); border-radius: 10px; font-size: 11px;
+    }
+    .alert-counter .ac-num {
+      width: 24px; height: 24px; border-radius: 50%; color: white; font-weight: 800; font-size: 12px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .alert-counter.docs .ac-num { background: var(--rust); }
+    .alert-counter.license .ac-num { background: var(--amber); }
+    .alert-counter .ac-label { color: var(--muted); font-weight: 700; }
+
+    /* عناوين فرعية داخل صندوق التنبيهات */
+    .alerts-subhead { padding: 5px 13px; font-size: 10px; font-weight: 800; color: var(--muted); background: #F5F0E6; }
+
     .container h2 { font-size: 19px; margin: 0 0 16px; }
 
     .modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
@@ -191,6 +208,17 @@
         <div class="qs-value" id="qsAvgOrders">-</div>
         <div class="qs-label">متوسط أوردر/يوم</div>
       </div>
+    </div>
+
+    <div class="alert-counters" id="alertCounters" style="display:none;">
+      <a href="/drivers.html" class="alert-counter docs" style="text-decoration:none;color:inherit;">
+        <span class="ac-num" id="countMissingDocs">0</span>
+        <span class="ac-label">مستندات ناقصة</span>
+      </a>
+      <a href="/drivers.html" class="alert-counter license" style="text-decoration:none;color:inherit;">
+        <span class="ac-num" id="countLicenseExpiry">0</span>
+        <span class="ac-label">رخص قربت تنتهي</span>
+      </a>
     </div>
 
     <div class="alerts-box" id="alertsBox" style="display:none;">
@@ -361,24 +389,50 @@
     // تنبيهات
     fetch('/dashboard/alerts')
       .then(r => r.json())
-      .then(alerts => {
+      .then(data => {
+        const operational = data.operational || [];
+        const documents = data.documents || [];
+        const counts = data.counts || { missing_docs: 0, license_expiry: 0 };
+
+        const countersBox = document.getElementById('alertCounters');
+        if (counts.missing_docs > 0 || counts.license_expiry > 0) {
+          countersBox.style.display = 'flex';
+          document.getElementById('countMissingDocs').textContent = counts.missing_docs;
+          document.getElementById('countLicenseExpiry').textContent = counts.license_expiry;
+        } else {
+          countersBox.style.display = 'none';
+        }
+
         const box = document.getElementById('alertsBox');
         const wrap = document.getElementById('alertsWrap');
         const header = document.getElementById('alertsHeader');
 
-        if (!alerts || alerts.length === 0) {
+        const totalCount = operational.length + documents.length;
+        if (totalCount === 0) {
           box.style.display = 'none';
           return;
         }
 
         box.style.display = 'block';
-        header.textContent = '⚠️ ' + alerts.length + ' ' + (alerts.length === 1 ? 'تنبيه' : 'تنبيهات') + ' تحتاج انتباهك';
+        header.textContent = '⚠️ ' + totalCount + ' ' + (totalCount === 1 ? 'تنبيه' : 'تنبيهات') + ' تحتاج انتباهك';
 
-        wrap.innerHTML = alerts.map(a => `
+        const renderItem = a => `
           <div class="alert-item ${a.type}">
             ${a.type === 'danger' ? '🔴' : '⚠️'} ${a.message}
           </div>
-        `).join('');
+        `;
+
+        let html = '';
+        if (operational.length > 0) {
+          html += '<div class="alerts-subhead">حضور وصيانة</div>';
+          html += operational.map(renderItem).join('');
+        }
+        if (documents.length > 0) {
+          html += '<div class="alerts-subhead">مستندات ورخص السواقين</div>';
+          html += documents.map(renderItem).join('');
+        }
+
+        wrap.innerHTML = html;
       })
       .catch(() => {});
   </script>
