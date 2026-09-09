@@ -164,7 +164,8 @@
 
     .module-card.drivers-pro {
       background: linear-gradient(155deg, var(--paper) 0%, #FAF5EC 100%);
-      border: 1px solid var(--line);
+      border-inline: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
       position: relative;
     }
     .module-card.drivers-pro::before {
@@ -184,6 +185,16 @@
       background: linear-gradient(135deg, var(--asphalt), var(--orange));
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
+
+    .drivers-sub-alerts { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+    .drivers-sub-alert { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .drivers-sub-alert .dsa-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .drivers-sub-alert.license .dsa-dot { background: var(--rust); }
+    .drivers-sub-alert.docs .dsa-dot { background: var(--amber); }
+    .drivers-sub-alert .dsa-num { font-size: 15px; font-weight: 800; }
+    .drivers-sub-alert.license .dsa-num { color: var(--rust); }
+    .drivers-sub-alert.docs .dsa-num { color: var(--amber); }
+    .drivers-sub-alert .dsa-label { font-size: 8.5px; color: var(--muted); font-weight: 700; line-height: 1.3; }
     .status-card .sc-title { font-size: 14px; font-weight: 800; color: var(--asphalt); margin-bottom: 2px; }
     .donut-pair { display: flex; gap: 14px; justify-content: center; }
     .mini-donut-wrap { position: relative; width: 78px; height: 78px; }
@@ -241,10 +252,21 @@
     <h2>اختار القسم اللي عايز تديره</h2>
     <div class="modules-grid">
       <a href="/drivers.html" class="module-card drivers-pro">
-        <div id="driversAlertDot"></div>
         <div class="icon">🧑‍✈️</div>
         <div class="count" id="countDrivers">-</div>
         <div class="label">السواقين</div>
+        <div class="drivers-sub-alerts" id="driversSubAlerts" style="display:none;">
+          <div class="drivers-sub-alert license">
+            <span class="dsa-dot"></span>
+            <span class="dsa-num" id="countLicenseAlert">0</span>
+            <span class="dsa-label">رخص محتاجة<br>تجديد</span>
+          </div>
+          <div class="drivers-sub-alert docs">
+            <span class="dsa-dot"></span>
+            <span class="dsa-num" id="countDocsAlert">0</span>
+            <span class="dsa-label">أوراق<br>ناقصة</span>
+          </div>
+        </div>
       </a>
       <a href="/admins.html" class="module-card">
         <div class="icon">🛡️</div>
@@ -404,46 +426,33 @@
       .then(r => r.json())
       .then(data => {
         const operational = data.operational || [];
-        const documents = data.documents || [];
+        const counts = data.counts || { missing_docs: 0, license_expiry: 0 };
 
+        // صندوق التنبيهات التشغيلية بس (حضور/صيانة/ورديات)
         const box = document.getElementById('alertsBox');
         const wrap = document.getElementById('alertsWrap');
         const header = document.getElementById('alertsHeader');
 
-        const totalCount = operational.length + documents.length;
-        if (totalCount === 0) {
+        if (operational.length === 0) {
           box.style.display = 'none';
-          return;
+        } else {
+          box.style.display = 'block';
+          header.textContent = '⚠️ ' + operational.length + ' ' + (operational.length === 1 ? 'تنبيه' : 'تنبيهات') + ' تحتاج انتباهك';
+          wrap.innerHTML = operational.map(a => `
+            <div class="alert-item ${a.type}">
+              ${a.type === 'danger' ? '🔴' : '⚠️'} ${a.message}
+            </div>
+          `).join('');
         }
 
-        box.style.display = 'block';
-        header.textContent = '⚠️ ' + totalCount + ' ' + (totalCount === 1 ? 'تنبيه' : 'تنبيهات') + ' تحتاج انتباهك';
-
-        const renderItem = a => `
-          <div class="alert-item ${a.type}">
-            ${a.type === 'danger' ? '🔴' : '⚠️'} ${a.message}
-          </div>
-        `;
-
-        let html = '';
-        if (operational.length > 0) {
-          html += '<div class="alerts-subhead">حضور وصيانة</div>';
-          html += operational.map(renderItem).join('');
-        }
-        if (documents.length > 0) {
-          html += '<div class="alerts-subhead">مستندات ورخص السواقين</div>';
-          html += documents.map(renderItem).join('');
-        }
-
-        wrap.innerHTML = html;
-
-        // شارة تحذير على كارت السواقين (نفس نمط شارة شؤون الموظفين)
-        const docsAlertCount = documents.length;
-        if (docsAlertCount > 0) {
-          const dot = document.createElement('div');
-          dot.className = 'alert-dot';
-          dot.textContent = docsAlertCount;
-          document.getElementById('driversAlertDot').appendChild(dot);
+        // دايرتين رخص/أوراق تحت كارت السواقين
+        const subAlerts = document.getElementById('driversSubAlerts');
+        if (counts.license_expiry > 0 || counts.missing_docs > 0) {
+          subAlerts.style.display = 'flex';
+          document.getElementById('countLicenseAlert').textContent = counts.license_expiry;
+          document.getElementById('countDocsAlert').textContent = counts.missing_docs;
+        } else {
+          subAlerts.style.display = 'none';
         }
       })
       .catch(() => {});
