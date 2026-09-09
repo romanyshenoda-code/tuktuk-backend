@@ -200,6 +200,8 @@
     .ring-license .num { color: var(--rust); }
     .ring-docs .mini-ring-fg { stroke: var(--amber); color: var(--amber); }
     .ring-docs .num { color: var(--amber); }
+    .ring-maint .mini-ring-fg { stroke: var(--rust); color: var(--rust); }
+    .ring-maint .num { color: var(--rust); }
     .drivers-sub-alert { display: flex; flex-direction: column; align-items: center; gap: 3px; }
     .drivers-sub-alert .dsa-label { font-size: 8px; color: var(--muted); font-weight: 700; line-height: 1.3; text-align: center; }
     .status-card .sc-title { font-size: 14px; font-weight: 800; color: var(--asphalt); margin-bottom: 2px; }
@@ -290,10 +292,22 @@
         <div class="count" id="countAdmins">-</div>
         <div class="label">مشرفين</div>
       </a>
-      <a href="/tuktuks.html" class="module-card">
+      <a href="/tuktuks.html" class="module-card tuktuks-pro">
         <div class="icon">🛺</div>
         <div class="count" id="countTuktuks">-</div>
         <div class="label">التوكتوكات</div>
+        <div class="drivers-sub-alerts" id="tuktuksSubAlerts" style="display:none;">
+          <div class="drivers-sub-alert">
+            <div class="mini-ring-wrap ring-maint">
+              <svg viewBox="0 0 62 62">
+                <circle class="mini-ring-bg" cx="31" cy="31" r="26"></circle>
+                <circle class="mini-ring-fg pulse" id="maintRing" cx="31" cy="31" r="26"></circle>
+              </svg>
+              <div class="mini-ring-center"><span class="num" id="countMaintAlert">0</span></div>
+            </div>
+            <span class="dsa-label">توكتوكات<br>في الصيانة</span>
+          </div>
+        </div>
       </a>
 
       <a href="/shifts.html" class="status-card top-nile">
@@ -380,7 +394,18 @@
     checkAdminSession();
     setInterval(checkAdminSession, 15000);
     fetch('/drivers').then(r => r.json()).then(d => document.getElementById('countDrivers').textContent = d.length);
-    fetch('/tuktuks').then(r => r.json()).then(d => document.getElementById('countTuktuks').textContent = d.length);
+    fetch('/tuktuks').then(r => r.json()).then(d => {
+      document.getElementById('countTuktuks').textContent = d.length;
+
+      const maintCount = d.filter(t => t.status === 'maintenance').length;
+      const subAlerts = document.getElementById('tuktuksSubAlerts');
+      if (maintCount > 0) {
+        subAlerts.style.display = 'flex';
+        animateSmallRing('maintRing', 'countMaintAlert', maintCount, d.length || 1);
+      } else {
+        subAlerts.style.display = 'none';
+      }
+    });
     // إحصائيات اليوم بالدايرتين المتحركتين
     function animateSmallRing(ringId, numId, value, maxForRing) {
       const circumference = 2 * Math.PI * 26; // 163.4
