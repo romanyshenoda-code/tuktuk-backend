@@ -166,7 +166,6 @@
       background: linear-gradient(155deg, var(--paper) 0%, #FAF5EC 100%);
       border: 1px solid var(--line);
       position: relative;
-      overflow: hidden;
     }
     .module-card.drivers-pro::before {
       content: '';
@@ -242,6 +241,7 @@
     <h2>اختار القسم اللي عايز تديره</h2>
     <div class="modules-grid">
       <a href="/drivers.html" class="module-card drivers-pro">
+        <div id="driversAlertDot"></div>
         <div class="icon">🧑‍✈️</div>
         <div class="count" id="countDrivers">-</div>
         <div class="label">السواقين</div>
@@ -436,6 +436,15 @@
         }
 
         wrap.innerHTML = html;
+
+        // شارة تحذير على كارت السواقين (نفس نمط شارة شؤون الموظفين)
+        const docsAlertCount = documents.length;
+        if (docsAlertCount > 0) {
+          const dot = document.createElement('div');
+          dot.className = 'alert-dot';
+          dot.textContent = docsAlertCount;
+          document.getElementById('driversAlertDot').appendChild(dot);
+        }
       })
       .catch(() => {});
   </script>
