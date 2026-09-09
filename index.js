@@ -279,13 +279,39 @@ app.put('/settings/:key', (req, res) => {
 });
 
 // ==================== السواقين (مع تشفير) ====================
-app.post('/drivers', (req, res) => {
-  const { name, phone, national_id, password } = req.body;
+app.post('/drivers', upload.fields([
+  { name: 'photo_personal', maxCount: 1 },
+  { name: 'photo_national_id', maxCount: 1 },
+  { name: 'photo_national_id_back', maxCount: 1 },
+  { name: 'photo_license', maxCount: 1 },
+  { name: 'photo_license_back', maxCount: 1 },
+  { name: 'photo_drug_test', maxCount: 1 }
+]), (req, res) => {
+  const { name, phone, national_id, password, license_expiry, drug_test_result } = req.body;
   const hashed = bcrypt.hashSync(password, 10);
-  db.query('INSERT INTO drivers (name, phone, national_id, password) VALUES (?, ?, ?, ?)', [name, phone, national_id, hashed], (err, result) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حفظ السائق' }); }
-    res.status(201).json({ message: 'تم تسجيل السائق بنجاح', driver_id: result.insertId });
-  });
+
+  const files = req.files || {};
+  const getFile = (field) => files[field] && files[field][0] ? files[field][0].filename : null;
+
+  const photo_personal = getFile('photo_personal');
+  const photo_national_id = getFile('photo_national_id');
+  const photo_national_id_back = getFile('photo_national_id_back');
+  const photo_license = getFile('photo_license');
+  const photo_license_back = getFile('photo_license_back');
+  const photo_drug_test = getFile('photo_drug_test');
+
+  db.query(
+    `INSERT INTO drivers
+      (name, phone, national_id, password, photo_personal, photo_national_id, photo_national_id_back,
+       photo_license, photo_license_back, license_expiry, photo_drug_test, drug_test_result)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [name, phone, national_id, hashed, photo_personal, photo_national_id, photo_national_id_back,
+     photo_license, photo_license_back, license_expiry || null, photo_drug_test, drug_test_result || null],
+    (err, result) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حفظ السائق' }); }
+      res.status(201).json({ message: 'تم تسجيل السائق بنجاح', driver_id: result.insertId });
+    }
+  );
 });
 
 app.get('/drivers', (req, res) => {

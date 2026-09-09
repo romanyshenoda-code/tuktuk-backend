@@ -160,6 +160,13 @@
     .doc-check.drug-neg { background: var(--nile); }
     .doc-check.drug-pos { background: var(--rust); }
 
+    .docs-status-labeled { display: flex; gap: 8px; align-items: flex-start; }
+    .docs-status-labeled .dsl-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .docs-status-labeled .dsl-item span.dsl-label { font-size: 8.5px; color: var(--muted); font-weight: 700; }
+
+    /* توسيع مودال الإضافة ليشمل كل الحقول */
+    #driverModal .modal-box { max-width: 460px; max-height: 88vh; overflow-y: auto; }
+
     /* قسم تحليل المخدرات والصور الإضافية */
     .drug-result-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
     .drug-result-row select { flex: 1; }
@@ -209,6 +216,36 @@
           <button type="button" class="toggle-eye" id="eyeNewPassword" onclick="togglePasswordVisibility('newPassword', 'eyeNewPassword')">👁️</button>
         </div>
         <div class="hint">السائق هيستخدم رقمه والباسورد ده لدخول صفحته الشخصية</div>
+
+        <div class="docs-section">
+          <h4>الصورة الشخصية</h4>
+          <input type="file" id="newPhotoPersonal" accept="image/*">
+
+          <h4 style="margin-top:14px;">البطاقة الشخصية</h4>
+          <div class="doc-pair">
+            <div><label class="dsl-label" style="display:block;margin-bottom:3px;">وش البطاقة</label><input type="file" id="newPhotoNationalId" accept="image/*"></div>
+            <div><label class="dsl-label" style="display:block;margin-bottom:3px;">ضهر البطاقة</label><input type="file" id="newPhotoNationalIdBack" accept="image/*"></div>
+          </div>
+
+          <h4 style="margin-top:14px;">رخصة القيادة</h4>
+          <div class="doc-pair">
+            <div><label class="dsl-label" style="display:block;margin-bottom:3px;">وش الرخصة</label><input type="file" id="newPhotoLicense" accept="image/*"></div>
+            <div><label class="dsl-label" style="display:block;margin-bottom:3px;">ضهر الرخصة</label><input type="file" id="newPhotoLicenseBack" accept="image/*"></div>
+          </div>
+          <div class="license-expiry-row">
+            <label>تاريخ انتهاء الرخصة</label>
+            <input type="date" id="newLicenseExpiry">
+          </div>
+
+          <h4 style="margin-top:14px;">تحليل المخدرات</h4>
+          <input type="file" id="newPhotoDrugTest" accept="image/*">
+          <select id="newDrugTestResult" style="margin-top:8px;">
+            <option value="">لسه معملش تحليل</option>
+            <option value="negative">سلبي</option>
+            <option value="positive">إيجابي</option>
+          </select>
+        </div>
+
         <div class="modal-actions">
           <button type="button" class="btn-modal-cancel" onclick="closeModal('driverModal')">إلغاء</button>
           <button type="submit" class="btn-modal-save">حفظ السائق</button>
@@ -403,15 +440,27 @@
     function renderDocsStatus(d) {
       const idOk = d.photo_national_id && d.photo_national_id_back;
       const licOk = d.photo_license && d.photo_license_back;
-      const drugIcon = d.drug_test_result === 'negative' ? '<span class="doc-check drug-neg" title="تحليل سلبي">✓</span>'
-        : d.drug_test_result === 'positive' ? '<span class="doc-check drug-pos" title="تحليل إيجابي">!</span>'
-        : '<span class="doc-check missing" title="لسه معملش تحليل">-</span>';
+      const drugSymbol = d.drug_test_result === 'negative' ? '✓'
+        : d.drug_test_result === 'positive' ? '!' : '-';
+      const drugClass = d.drug_test_result === 'negative' ? 'drug-neg'
+        : d.drug_test_result === 'positive' ? 'drug-pos' : 'missing';
+      const drugTitle = d.drug_test_result === 'negative' ? 'تحليل سلبي'
+        : d.drug_test_result === 'positive' ? 'تحليل إيجابي' : 'لسه معملش تحليل';
 
       return `
-        <div class="docs-status">
-          <span class="doc-check ${idOk ? 'ok' : 'missing'}" title="البطاقة">${idOk ? '✓' : '✕'}</span>
-          <span class="doc-check ${licOk ? 'ok' : 'missing'}" title="الرخصة">${licOk ? '✓' : '✕'}</span>
-          ${drugIcon}
+        <div class="docs-status-labeled">
+          <div class="dsl-item">
+            <span class="doc-check ${idOk ? 'ok' : 'missing'}" title="البطاقة: ${idOk ? 'مكتملة' : 'ناقصة'}">${idOk ? '✓' : '✕'}</span>
+            <span class="dsl-label">بطاقة</span>
+          </div>
+          <div class="dsl-item">
+            <span class="doc-check ${licOk ? 'ok' : 'missing'}" title="الرخصة: ${licOk ? 'مكتملة' : 'ناقصة'}">${licOk ? '✓' : '✕'}</span>
+            <span class="dsl-label">رخصة</span>
+          </div>
+          <div class="dsl-item">
+            <span class="doc-check ${drugClass}" title="${drugTitle}">${drugSymbol}</span>
+            <span class="dsl-label">تحليل</span>
+          </div>
         </div>
       `;
     }
@@ -609,26 +658,44 @@
 
     document.getElementById('addDriverForm').addEventListener('submit', function(e) {
       e.preventDefault();
-      const name = document.getElementById('newName').value;
-      const phone = document.getElementById('newPhone').value;
-      const national_id = document.getElementById('newNationalId').value;
-      const password = document.getElementById('newPassword').value;
+      const msg = document.getElementById('addDriverMsg');
+      msg.textContent = 'جاري الحفظ...';
 
-      fetch('/drivers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, national_id, password })
-      })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('addDriverMsg').textContent = data.message || data.error;
-        if (data.message) {
-          document.getElementById('addDriverForm').reset();
-          loadDrivers();
-          showToast(data.message);
-          setTimeout(() => closeModal('driverModal'), 700);
-        }
+      const formData = new FormData();
+      formData.append('name', document.getElementById('newName').value);
+      formData.append('phone', document.getElementById('newPhone').value);
+      formData.append('national_id', document.getElementById('newNationalId').value);
+      formData.append('password', document.getElementById('newPassword').value);
+      formData.append('license_expiry', document.getElementById('newLicenseExpiry').value);
+      formData.append('drug_test_result', document.getElementById('newDrugTestResult').value);
+
+      const fileFields = [
+        ['newPhotoPersonal', 'photo_personal'],
+        ['newPhotoNationalId', 'photo_national_id'],
+        ['newPhotoNationalIdBack', 'photo_national_id_back'],
+        ['newPhotoLicense', 'photo_license'],
+        ['newPhotoLicenseBack', 'photo_license_back'],
+        ['newPhotoDrugTest', 'photo_drug_test']
+      ];
+      fileFields.forEach(([inputId, fieldName]) => {
+        const file = document.getElementById(inputId).files[0];
+        if (file) formData.append(fieldName, file);
       });
+
+      fetch('/drivers', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+          msg.textContent = data.message || data.error;
+          if (data.message) {
+            document.getElementById('addDriverForm').reset();
+            loadDrivers();
+            showToast(data.message);
+            setTimeout(() => closeModal('driverModal'), 900);
+          } else {
+            showToast(data.error, true);
+          }
+        })
+        .catch(() => { msg.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
     });
 
     document.getElementById('editDriverForm').addEventListener('submit', function(e) {
