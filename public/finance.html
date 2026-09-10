@@ -336,7 +336,7 @@
       <button class="tab-btn active" data-tab="payroll">كشف مرتبات السواقين</button>
       <button class="tab-btn" data-tab="performance">أداء السواقين</button>
       <button class="tab-btn" data-tab="admin-payroll">كشف مرتبات المشرفين</button>
-      <button class="tab-btn" data-tab="admin-performance">أداء المشرفين</button>
+      <button class="tab-btn" data-tab="admin-performance">طلبات وشؤون المشرفين</button>
       <button class="tab-btn" data-tab="settings">الإعدادات</button>
       <button class="tab-btn" data-tab="holidays">المناسبات والأعياد</button>
       <button class="tab-btn" data-tab="reports">صافي الربح والفوترة</button>
@@ -387,8 +387,8 @@
       </div>
       <div class="panel table-scroll table-box" style="padding:0;">
         <table id="adminPayrollTable">
-          <thead><tr><th>المشرف</th><th>المرتب الشهري</th><th>أيام العمل</th><th>حضور فعلي</th><th>مستحق</th><th>حوافز</th><th>خصومات وسلف</th><th>الصافي</th><th>تعديل المرتب</th></tr></thead>
-          <tbody><tr class="empty-row"><td colspan="9">جاري التحميل...</td></tr></tbody>
+          <thead><tr><th>المشرف</th><th>المرتب الشهري</th><th>أيام العمل</th><th>أيام إجازة</th><th>أيام العمل بعد الإجازة</th><th>حضور فعلي</th><th>مستحق</th><th>حوافز</th><th>خصومات وسلف</th><th>الصافي</th><th>تعديل المرتب</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="11">جاري التحميل...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -424,6 +424,22 @@
           <button type="submit" class="admin-req-btn" style="background: var(--gold);">تسجيل الحافز</button>
           <div id="adminIncentiveMsg" class="form-msg"></div>
         </form>
+      </div>
+
+      <div class="section-head" style="--tab-color: var(--rust);"><h2><span class="dot"></span>سجل خصومات المشرفين</h2></div>
+      <div class="panel table-scroll table-box" style="padding:0;">
+        <table id="adminDeductionsTable">
+          <thead><tr><th>المشرف</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="section-head" style="--tab-color: var(--gold);"><h2><span class="dot"></span>سجل حوافز المشرفين</h2></div>
+      <div class="panel table-scroll table-box" style="padding:0;">
+        <table id="adminIncentivesTable">
+          <thead><tr><th>المشرف</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+        </table>
       </div>
 
       <div class="section-head" style="--tab-color: var(--amber);"><h2><span class="dot"></span>موافقات إجازات المشرفين</h2></div>
@@ -776,6 +792,36 @@
   </div>
 
   <!-- مودال التخصيص -->
+  <div class="modal-backdrop" id="editAdminDeductionModal">
+    <div class="modal-box">
+      <h3>تعديل خصم المشرف</h3>
+      <input type="hidden" id="editAdminDeductionId">
+      <select id="editAdminDeductionAdmin"></select>
+      <input type="number" id="editAdminDeductionAmount" placeholder="المبلغ">
+      <input type="text" id="editAdminDeductionReason" placeholder="السبب">
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancel" onclick="closeModal('editAdminDeductionModal')">إلغاء</button>
+        <button type="button" class="btn-modal-save" onclick="saveEditAdminDeduction()">حفظ</button>
+      </div>
+      <div id="editAdminDeductionMsg" class="form-msg"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="editAdminIncentiveModal">
+    <div class="modal-box">
+      <h3>تعديل حافز المشرف</h3>
+      <input type="hidden" id="editAdminIncentiveId">
+      <select id="editAdminIncentiveAdmin"></select>
+      <input type="number" id="editAdminIncentiveAmount" placeholder="المبلغ">
+      <input type="text" id="editAdminIncentiveReason" placeholder="السبب">
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancel" onclick="closeModal('editAdminIncentiveModal')">إلغاء</button>
+        <button type="button" class="btn-modal-save" onclick="saveEditAdminIncentive()">حفظ</button>
+      </div>
+      <div id="editAdminIncentiveMsg" class="form-msg"></div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="adminSalaryModal">
     <div class="modal-box">
       <h3>تعديل مرتب المشرف</h3>
@@ -951,7 +997,7 @@
           loadedTabs[tab] = true;
           if (tab === 'performance') loadPerformance();
           if (tab === 'admin-payroll') loadAdminPayroll();
-          if (tab === 'admin-performance') { loadAdminsForPicker(); loadAdminLeaveRequests(); loadAdminAdvanceRequests(); }
+          if (tab === 'admin-performance') { loadAdminsForPicker(); loadAdminDeductions(); loadAdminIncentives(); loadAdminLeaveRequests(); loadAdminAdvanceRequests(); }
           if (tab === 'reports') loadYearlyChart();
           if (tab === 'holidays') loadHolidayEvents();
           if (tab === 'cleanup') loadStorageInfo();
@@ -1290,7 +1336,7 @@
     function renderAdminPayrollTable(rows) {
       const tbody = document.querySelector('#adminPayrollTable tbody');
       if (rows.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="9">مفيش مشرفين مسجّلين</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="11">مفيش مشرفين مسجّلين</td></tr>`;
         return;
       }
       tbody.innerHTML = rows.map(a => `
@@ -1298,6 +1344,8 @@
           <td>${a.admin_name}</td>
           <td class="amt-blue">${a.monthly_salary} ج</td>
           <td><span class="day-badge required">${a.working_days}</span></td>
+          <td><span class="day-badge holiday">${a.leave_days || 0}</span></td>
+          <td><span class="day-badge required">${a.working_days - (a.leave_days || 0)}</span></td>
           <td><span class="day-badge present">${a.days_present}</span></td>
           <td class="amt-blue">${a.earned_salary} ج</td>
           <td class="amt-green">${a.total_incentives} ج</td>
@@ -1320,6 +1368,8 @@
         'المشرف': a.admin_name,
         'المرتب الشهري': parseFloat(a.monthly_salary),
         'أيام العمل': a.working_days,
+        'أيام إجازة': a.leave_days || 0,
+        'أيام العمل بعد الإجازة': a.working_days - (a.leave_days || 0),
         'الحضور الفعلي': a.days_present,
         'المستحق': parseFloat(a.earned_salary),
         'حوافز': parseFloat(a.total_incentives),
@@ -1438,6 +1488,127 @@
     });
 
     const adminStatusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+
+
+    // ==================== سجل خصومات المشرفين ====================
+    let allAdminDeductions = [];
+
+    function loadAdminDeductions() {
+      fetch('/admin-deductions').then(res => res.json()).then(data => {
+        allAdminDeductions = data;
+        renderAdminDeductionsTable(data);
+      });
+    }
+
+    function renderAdminDeductionsTable(data) {
+      const tbody = document.querySelector('#adminDeductionsTable tbody');
+      if (data.length === 0) { tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش خصومات مسجلة</td></tr>`; return; }
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td>${r.admin_name}</td>
+          <td class="amt-red">${r.amount} ج</td>
+          <td>${r.reason || '-'}</td>
+          <td>${formatDate(r.created_at)}</td>
+          <td><button class="row-btn btn-edit" onclick='openEditAdminDeduction(${JSON.stringify(r)})'>تعديل</button></td>
+          <td><button class="row-btn btn-delete" onclick="deleteAdminDeduction(${r.id})">حذف</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function openEditAdminDeduction(r) {
+      fetch('/admins').then(res => res.json()).then(admins => {
+        document.getElementById('editAdminDeductionAdmin').innerHTML = admins.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+        document.getElementById('editAdminDeductionAdmin').value = r.admin_id;
+      });
+      document.getElementById('editAdminDeductionId').value = r.id;
+      document.getElementById('editAdminDeductionAmount').value = r.amount;
+      document.getElementById('editAdminDeductionReason').value = r.reason || '';
+      document.getElementById('editAdminDeductionMsg').textContent = '';
+      openModal('editAdminDeductionModal');
+    }
+
+    function saveEditAdminDeduction() {
+      const id = document.getElementById('editAdminDeductionId').value;
+      fetch(`/admin-deductions/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          admin_id: document.getElementById('editAdminDeductionAdmin').value,
+          amount: document.getElementById('editAdminDeductionAmount').value,
+          reason: document.getElementById('editAdminDeductionReason').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('editAdminDeductionMsg').textContent = data.message || data.error;
+        if (data.message) { showToast(data.message); loadAdminDeductions(); setTimeout(() => closeModal('editAdminDeductionModal'), 600); if (loadedTabs['admin-payroll']) loadAdminPayroll(); }
+      });
+    }
+
+    function deleteAdminDeduction(id) {
+      if (!confirm('حذف الخصم نهائياً؟')) return;
+      fetch(`/admin-deductions/${id}`, { method: 'DELETE' })
+        .then(res => res.json()).then(data => { showToast(data.message || data.error, !data.message); loadAdminDeductions(); if (loadedTabs['admin-payroll']) loadAdminPayroll(); });
+    }
+
+    // ==================== سجل حوافز المشرفين ====================
+    let allAdminIncentives = [];
+
+    function loadAdminIncentives() {
+      fetch('/admin-incentives').then(res => res.json()).then(data => {
+        allAdminIncentives = data;
+        renderAdminIncentivesTable(data);
+      });
+    }
+
+    function renderAdminIncentivesTable(data) {
+      const tbody = document.querySelector('#adminIncentivesTable tbody');
+      if (data.length === 0) { tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش حوافز مسجلة</td></tr>`; return; }
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td>${r.admin_name}</td>
+          <td class="amt-gold">${r.amount} ج</td>
+          <td>${r.reason || '-'}</td>
+          <td>${formatDate(r.created_at)}</td>
+          <td><button class="row-btn btn-edit" onclick='openEditAdminIncentive(${JSON.stringify(r)})'>تعديل</button></td>
+          <td><button class="row-btn btn-delete" onclick="deleteAdminIncentive(${r.id})">حذف</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function openEditAdminIncentive(r) {
+      fetch('/admins').then(res => res.json()).then(admins => {
+        document.getElementById('editAdminIncentiveAdmin').innerHTML = admins.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+        document.getElementById('editAdminIncentiveAdmin').value = r.admin_id;
+      });
+      document.getElementById('editAdminIncentiveId').value = r.id;
+      document.getElementById('editAdminIncentiveAmount').value = r.amount;
+      document.getElementById('editAdminIncentiveReason').value = r.reason || '';
+      document.getElementById('editAdminIncentiveMsg').textContent = '';
+      openModal('editAdminIncentiveModal');
+    }
+
+    function saveEditAdminIncentive() {
+      const id = document.getElementById('editAdminIncentiveId').value;
+      fetch(`/admin-incentives/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          admin_id: document.getElementById('editAdminIncentiveAdmin').value,
+          amount: document.getElementById('editAdminIncentiveAmount').value,
+          reason: document.getElementById('editAdminIncentiveReason').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('editAdminIncentiveMsg').textContent = data.message || data.error;
+        if (data.message) { showToast(data.message); loadAdminIncentives(); setTimeout(() => closeModal('editAdminIncentiveModal'), 600); if (loadedTabs['admin-payroll']) loadAdminPayroll(); }
+      });
+    }
+
+    function deleteAdminIncentive(id) {
+      if (!confirm('حذف الحافز نهائياً؟')) return;
+      fetch(`/admin-incentives/${id}`, { method: 'DELETE' })
+        .then(res => res.json()).then(data => { showToast(data.message || data.error, !data.message); loadAdminIncentives(); if (loadedTabs['admin-payroll']) loadAdminPayroll(); });
+    }
 
     function loadAdminLeaveRequests() {
       fetch('/admin-leave-requests').then(res => res.json()).then(data => {
