@@ -81,6 +81,7 @@
     .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
     .btn-edit { background: var(--amber); }
     .btn-delete { background: var(--rust); }
+    .btn-active { background: var(--nile); }
     .btn-payslip { background: var(--asphalt); }
     .btn-excel { background: #1D6F42; }
     .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
@@ -266,6 +267,34 @@
       display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted);
     }
     .exp-breakdown .exp-row .exp-val { font-weight: 700; color: var(--ink); }
+
+    /* قسم طلبات المشرفين */
+    .admin-req-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+    @media (max-width: 760px) { .admin-req-forms { grid-template-columns: 1fr; } }
+    .admin-req-form {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px;
+      border-top: 4px solid var(--arf-color, var(--nile));
+    }
+    .admin-req-form h4 { margin: 0 0 12px; font-size: 14.5px; }
+    .admin-picker { position: relative; margin-bottom: 8px; }
+    .admin-picker input { width: 100%; }
+    .admin-picker-results {
+      position: absolute; top: 100%; inset-inline-start: 0; inset-inline-end: 0; z-index: 40;
+      background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+      max-height: 180px; overflow-y: auto; display: none; margin-top: 4px;
+      box-shadow: 0 8px 22px rgba(30,27,22,0.14);
+    }
+    .admin-picker-results.open { display: block; }
+    .admin-picker-item { padding: 9px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #F5F0E6; }
+    .admin-picker-item:last-child { border-bottom: none; }
+    .admin-picker-item:hover { background: #F3E9DA; }
+    .admin-picked-label { font-size: 11.5px; color: var(--nile); font-weight: 700; margin-bottom: 6px; min-height: 15px; }
+    .admin-req-btn { width: 100%; padding: 10px; color: white; border: none; border-radius: 7px; font-family: inherit; font-weight: 800; font-size: 13.5px; cursor: pointer; }
+
+    .status-badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11px; font-weight: 700; color: white; }
+    .status-pending { background: var(--amber); }
+    .status-approved { background: var(--nile); }
+    .status-rejected { background: var(--rust); }
   </style>
 </head>
 <body>
@@ -366,10 +395,53 @@
 
     <!-- تبويب أداء المشرفين -->
     <div class="tab-panel" id="tab-admin-performance" style="--tab-color: #7A5C9E;">
-      <div class="section-head"><h2><span class="dot"></span>أداء المشرفين</h2></div>
-      <div class="panel" style="padding: 40px; text-align: center; color: var(--muted);">
-        هنحدد محتوى التبويب ده لاحقاً
+
+      <div class="admin-req-forms">
+        <form id="adminDeductionForm" class="admin-req-form" style="--arf-color: var(--rust);">
+          <h4>🔻 تسجيل خصم لمشرف</h4>
+          <div class="admin-picker">
+            <input type="text" id="adminDeductionSearch" placeholder="ابحث باسم المشرف..." autocomplete="off">
+            <input type="hidden" id="adminDeductionId">
+            <div class="admin-picker-results" id="adminDeductionResults"></div>
+          </div>
+          <div class="admin-picked-label" id="adminDeductionPicked"></div>
+          <input type="number" id="adminDeductionAmount" placeholder="المبلغ" style="margin-bottom:8px;">
+          <input type="text" id="adminDeductionReason" placeholder="سبب الخصم" style="margin-bottom:10px;">
+          <button type="submit" class="admin-req-btn" style="background: var(--rust);">تسجيل الخصم</button>
+          <div id="adminDeductionMsg" class="form-msg"></div>
+        </form>
+
+        <form id="adminIncentiveForm" class="admin-req-form" style="--arf-color: var(--gold);">
+          <h4>🔺 تسجيل حافز لمشرف</h4>
+          <div class="admin-picker">
+            <input type="text" id="adminIncentiveSearch" placeholder="ابحث باسم المشرف..." autocomplete="off">
+            <input type="hidden" id="adminIncentiveId">
+            <div class="admin-picker-results" id="adminIncentiveResults"></div>
+          </div>
+          <div class="admin-picked-label" id="adminIncentivePicked"></div>
+          <input type="number" id="adminIncentiveAmount" placeholder="المبلغ" style="margin-bottom:8px;">
+          <input type="text" id="adminIncentiveReason" placeholder="سبب الحافز" style="margin-bottom:10px;">
+          <button type="submit" class="admin-req-btn" style="background: var(--gold);">تسجيل الحافز</button>
+          <div id="adminIncentiveMsg" class="form-msg"></div>
+        </form>
       </div>
+
+      <div class="section-head" style="--tab-color: var(--amber);"><h2><span class="dot"></span>موافقات إجازات المشرفين</h2></div>
+      <div class="panel table-scroll table-box" style="padding:0;">
+        <table id="adminLeaveTable">
+          <thead><tr><th>المشرف</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="section-head" style="--tab-color: var(--asphalt);"><h2><span class="dot"></span>موافقات سلف المشرفين</h2></div>
+      <div class="panel table-scroll table-box" style="padding:0;">
+        <table id="adminAdvanceTable">
+          <thead><tr><th>المشرف</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
+
     </div>
 
     <!-- تبويب الإعدادات -->
@@ -879,6 +951,7 @@
           loadedTabs[tab] = true;
           if (tab === 'performance') loadPerformance();
           if (tab === 'admin-payroll') loadAdminPayroll();
+          if (tab === 'admin-performance') { loadAdminsForPicker(); loadAdminLeaveRequests(); loadAdminAdvanceRequests(); }
           if (tab === 'reports') loadYearlyChart();
           if (tab === 'holidays') loadHolidayEvents();
           if (tab === 'cleanup') loadStorageInfo();
@@ -1258,6 +1331,189 @@
       XLSX.utils.book_append_sheet(wb, ws, 'كشف مرتبات المشرفين');
       XLSX.writeFile(wb, `كشف_مرتبات_المشرفين_${monthNames[selectedMonth - 1]}_${selectedYear}.xlsx`);
       showToast('تم تصدير الملف بنجاح');
+    }
+
+
+    function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : '-'; }
+
+    // ==================== طلبات المشرفين (خصم/حافز/إجازة/سلفة) ====================
+    let allAdminsForPicker = [];
+    let allAdminLeave = [];
+    let allAdminAdvances = [];
+
+    function loadAdminsForPicker() {
+      fetch('/admins').then(res => res.json()).then(data => {
+        allAdminsForPicker = data;
+        setupAdminPicker('adminDeductionSearch', 'adminDeductionId', 'adminDeductionResults', 'adminDeductionPicked');
+        setupAdminPicker('adminIncentiveSearch', 'adminIncentiveId', 'adminIncentiveResults', 'adminIncentivePicked');
+      });
+    }
+
+    function setupAdminPicker(searchId, hiddenId, resultsId, pickedId) {
+      const searchInput = document.getElementById(searchId);
+      const hiddenInput = document.getElementById(hiddenId);
+      const resultsBox = document.getElementById(resultsId);
+      const pickedLabel = document.getElementById(pickedId);
+
+      function renderResults(query) {
+        const q = query.trim().toLowerCase();
+        const filtered = q ? allAdminsForPicker.filter(a => a.name.toLowerCase().includes(q)) : allAdminsForPicker;
+        if (filtered.length === 0) {
+          resultsBox.innerHTML = '<div class="admin-picker-item">مفيش نتائج</div>';
+        } else {
+          resultsBox.innerHTML = filtered.map(a => `
+            <div class="admin-picker-item" data-id="${a.id}" data-name="${a.name}">${a.name}</div>
+          `).join('');
+          resultsBox.querySelectorAll('.admin-picker-item').forEach(item => {
+            item.addEventListener('click', () => {
+              hiddenInput.value = item.dataset.id;
+              searchInput.value = item.dataset.name;
+              pickedLabel.textContent = `✓ ${item.dataset.name}`;
+              resultsBox.classList.remove('open');
+            });
+          });
+        }
+        resultsBox.classList.add('open');
+      }
+
+      searchInput.addEventListener('focus', () => renderResults(searchInput.value));
+      searchInput.addEventListener('input', () => { hiddenInput.value = ''; pickedLabel.textContent = ''; renderResults(searchInput.value); });
+      document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !resultsBox.contains(e.target)) resultsBox.classList.remove('open');
+      });
+    }
+
+    document.getElementById('adminDeductionForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const admin_id = document.getElementById('adminDeductionId').value;
+      const msg = document.getElementById('adminDeductionMsg');
+      if (!admin_id) { msg.textContent = 'اختار المشرف من قائمة البحث الأول'; return; }
+
+      fetch('/admin-deductions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          admin_id,
+          amount: document.getElementById('adminDeductionAmount').value,
+          reason: document.getElementById('adminDeductionReason').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        msg.textContent = data.message || data.error;
+        if (data.message) {
+          showToast(data.message);
+          document.getElementById('adminDeductionForm').reset();
+          document.getElementById('adminDeductionPicked').textContent = '';
+          if (loadedTabs['admin-payroll']) loadAdminPayroll();
+        } else { showToast(data.error, true); }
+      });
+    });
+
+    document.getElementById('adminIncentiveForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const admin_id = document.getElementById('adminIncentiveId').value;
+      const msg = document.getElementById('adminIncentiveMsg');
+      if (!admin_id) { msg.textContent = 'اختار المشرف من قائمة البحث الأول'; return; }
+
+      fetch('/admin-incentives', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          admin_id,
+          amount: document.getElementById('adminIncentiveAmount').value,
+          reason: document.getElementById('adminIncentiveReason').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        msg.textContent = data.message || data.error;
+        if (data.message) {
+          showToast(data.message);
+          document.getElementById('adminIncentiveForm').reset();
+          document.getElementById('adminIncentivePicked').textContent = '';
+          if (loadedTabs['admin-payroll']) loadAdminPayroll();
+        } else { showToast(data.error, true); }
+      });
+    });
+
+    const adminStatusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+
+    function loadAdminLeaveRequests() {
+      fetch('/admin-leave-requests').then(res => res.json()).then(data => {
+        allAdminLeave = data;
+        renderAdminLeaveTable(data);
+      });
+    }
+
+    function renderAdminLeaveTable(data) {
+      const tbody = document.querySelector('#adminLeaveTable tbody');
+      if (data.length === 0) { tbody.innerHTML = `<tr class="empty-row"><td colspan="7">مفيش طلبات إجازة</td></tr>`; return; }
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td>${r.admin_name}</td>
+          <td>${formatDate(r.start_date)}</td>
+          <td>${formatDate(r.end_date)}</td>
+          <td>${r.reason || '-'}</td>
+          <td><span class="status-badge status-${r.status}">${adminStatusText[r.status]}</span></td>
+          <td>${r.status === 'pending' ? `
+            <button class="row-btn btn-active" onclick="reviewAdminLeave(${r.id}, 'approved')">موافقة</button>
+            <button class="row-btn" style="background:var(--rust);" onclick="reviewAdminLeave(${r.id}, 'rejected')">رفض</button>
+          ` : '-'}</td>
+          <td><button class="row-btn btn-delete" onclick="deleteAdminLeave(${r.id})">حذف</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function reviewAdminLeave(id, status) {
+      if (!confirm(status === 'approved' ? 'تأكيد الموافقة على طلب الإجازة؟' : 'تأكيد رفض طلب الإجازة؟')) return;
+      fetch(`/admin-leave-requests/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status })
+      }).then(res => res.json()).then(data => { showToast(data.message || data.error, !data.message); loadAdminLeaveRequests(); });
+    }
+
+    function deleteAdminLeave(id) {
+      if (!confirm('حذف طلب الإجازة نهائياً؟')) return;
+      fetch(`/admin-leave-requests/${id}`, { method: 'DELETE' })
+        .then(res => res.json()).then(data => { showToast(data.message || data.error, !data.message); loadAdminLeaveRequests(); });
+    }
+
+    function loadAdminAdvanceRequests() {
+      fetch('/admin-advances').then(res => res.json()).then(data => {
+        allAdminAdvances = data;
+        renderAdminAdvanceTable(data);
+      });
+    }
+
+    function renderAdminAdvanceTable(data) {
+      const tbody = document.querySelector('#adminAdvanceTable tbody');
+      if (data.length === 0) { tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش طلبات سلف</td></tr>`; return; }
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td>${r.admin_name}</td>
+          <td>${r.amount} ج</td>
+          <td>${r.reason || '-'}</td>
+          <td><span class="status-badge status-${r.status}">${adminStatusText[r.status]}</span></td>
+          <td>${r.status === 'pending' ? `
+            <button class="row-btn btn-active" onclick="reviewAdminAdvance(${r.id}, 'approved')">موافقة</button>
+            <button class="row-btn" style="background:var(--rust);" onclick="reviewAdminAdvance(${r.id}, 'rejected')">رفض</button>
+          ` : '-'}</td>
+          <td><button class="row-btn btn-delete" onclick="deleteAdminAdvance(${r.id})">حذف</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function reviewAdminAdvance(id, status) {
+      if (!confirm(status === 'approved' ? 'تأكيد الموافقة على طلب السلفة؟' : 'تأكيد رفض طلب السلفة؟')) return;
+      fetch(`/admin-advances/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status })
+      }).then(res => res.json()).then(data => { showToast(data.message || data.error, !data.message); loadAdminAdvanceRequests(); });
+    }
+
+    function deleteAdminAdvance(id) {
+      if (!confirm('حذف طلب السلفة نهائياً؟')) return;
+      fetch(`/admin-advances/${id}`, { method: 'DELETE' })
+        .then(res => res.json()).then(data => { showToast(data.message || data.error, !data.message); loadAdminAdvanceRequests(); });
     }
 
     function toggleAdminSalaryField() {
