@@ -483,14 +483,50 @@ app.get('/tuktuks', (req, res) => {
   });
 });
 
-app.put('/tuktuks/:id/status', (req, res) => {
+// تعديل كامل لبيانات التوكتوك (رقم، حالة، QR)
+app.put('/tuktuks/:id', (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
-  if (!['active', 'maintenance'].includes(status)) return res.status(400).json({ error: 'حالة غير صحيحة' });
-  db.query('UPDATE tuktuks SET status = ? WHERE id = ?', [status, id], (err) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث حالة التوكتوك' }); }
-    res.json({ message: 'تم تحديث حالة التوكتوك بنجاح' });
-  });
+  const { tuktuk_number, qr_code, status } = req.body;
+
+  if (!tuktuk_number || !qr_code) {
+    return res.status(400).json({ error: 'رقم التوكتوك وكود QR مطلوبين' });
+  }
+
+  const finalStatus = ['active', 'maintenance'].includes(status) ? status : 'active';
+
+  db.query(
+    'UPDATE tuktuks SET tuktuk_number = ?, qr_code = ?, status = ? WHERE id = ?',
+    [tuktuk_number, qr_code, finalStatus, id],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        if (err.code === 'ER_DUP_ENTRY') {
+          return res.status(400).json({ error: 'رقم التوكتوك أو كود QR ده مستخدم بالفعل لتوكتوك تاني' });
+        }
+        return res.status(500).json({ error: 'حصل خطأ في تحديث بيانات التوكتوك' });
+      }
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'التوكتوك غير موجود' });
+      res.json({ message: 'تم تحديث بيانات التوكتوك بنجاح' });
+    }
+  );
+});
+
+// جلب آخر سائق ركب كل توكتوك (لعرضه كعمود في الجدول)
+app.get('/tuktuks/last-drivers', (req, res) => {
+  db.query(
+    `SELECT s.tuktuk_id, d.name AS driver_name, s.check_in_time
+     FROM shifts s
+     JOIN drivers d ON s.driver_id = d.id
+     JOIN (
+       SELECT tuktuk_id, MAX(check_in_time) AS max_time
+       FROM shifts
+       GROUP BY tuktuk_id
+     ) latest ON s.tuktuk_id = latest.tuktuk_id AND s.check_in_time = latest.max_time`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب آخر السواقين' }); }
+      res.json(results);
+    }
+  );
 });
 
 app.delete('/tuktuks/:id', (req, res) => {
