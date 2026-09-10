@@ -46,6 +46,15 @@
     .result { margin-top: 14px; font-size: 13.5px; background: var(--sand); padding: 10px 12px; border-radius: 8px; min-height: 14px; color: #6B6455; }
     .shift-time { font-size: 12.5px; color: var(--muted); margin-top: 14px; }
 
+    .login-card input {
+      width: 100%; padding: 13px; margin-bottom: 10px; border: 1px solid var(--line);
+      border-radius: 9px; font-family: inherit; font-size: 14px; background: var(--sand);
+    }
+    .login-card input:focus { outline: 2px solid var(--nile); background: var(--paper); }
+    .password-wrap { position: relative; }
+    .password-wrap input { padding-inline-end: 42px !important; }
+    .toggle-eye { position: absolute; top: 50%; transform: translateY(-50%); inset-inline-end: 12px; cursor: pointer; font-size: 17px; background: none; border: none; padding: 0; }
+
     .dev-footer {
       margin-top: 40px; padding: 20px 24px; background: #FFFFFF;
       border-top: 1px solid #E4DCCB;
@@ -81,10 +90,25 @@
 
   <div class="wrap">
 
+    <div class="card login-card" id="loginCard">
+      <div class="icon-big">🔐</div>
+      <h3>تسجيل الدخول</h3>
+      <p>ادخل بيانات حسابك للمتابعة</p>
+      <form id="quickLoginForm">
+        <input type="text" id="quickUsername" placeholder="اسم المستخدم" required autocomplete="username">
+        <div class="password-wrap">
+          <input type="password" id="quickPassword" placeholder="كلمة المرور" required autocomplete="current-password">
+          <button type="button" class="toggle-eye" onclick="toggleQuickPass()">👁️</button>
+        </div>
+        <button type="submit" class="action-btn btn-nile">دخول</button>
+      </form>
+      <div class="result" id="resultLogin">جاهز</div>
+    </div>
+
     <div class="status-banner status-closed hidden" id="statusClosed">🔴 لسه ما سجّلتش حضورك النهاردة</div>
     <div class="status-banner status-open hidden" id="statusOpen">🟢 وردية شغالة دلوقتي</div>
 
-    <div class="card" id="checkinCard">
+    <div class="card hidden" id="checkinCard">
       <div class="icon-big">✅</div>
       <h3>تسجيل حضور</h3>
       <p>هيتسجل موقعك وقت الحضور تلقائياً</p>
@@ -106,10 +130,56 @@
   <script>
     let currentAdminId = null;
 
-    fetch('/api/admin-session').then(res => res.json()).then(data => {
-      if (!data.loggedIn) { window.location.href = '/login.html'; return; }
-      currentAdminId = data.adminId;
+    function toggleQuickPass() {
+      const input = document.getElementById('quickPassword');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function showAttendanceUI() {
+      document.getElementById('loginCard').classList.add('hidden');
       checkShiftStatus();
+    }
+
+    // نتأكد الأول لو فيه جلسة شغالة بالفعل (من تسجيل دخول سابق في index.html مثلاً)
+    fetch('/api/admin-session').then(res => res.json()).then(data => {
+      if (data.loggedIn) {
+        currentAdminId = data.adminId;
+        showAttendanceUI();
+      } else {
+        document.getElementById('loginCard').classList.remove('hidden');
+      }
+    }).catch(() => {
+      document.getElementById('loginCard').classList.remove('hidden');
+    });
+
+    document.getElementById('quickLoginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const username = document.getElementById('quickUsername').value;
+      const password = document.getElementById('quickPassword').value;
+      const resultDiv = document.getElementById('resultLogin');
+      resultDiv.textContent = 'جاري تسجيل الدخول...';
+
+      fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.message) {
+          resultDiv.textContent = '';
+          // نجيب adminId بعد نجاح الدخول
+          fetch('/api/admin-session').then(res => res.json()).then(sessionData => {
+            if (sessionData.loggedIn) {
+              currentAdminId = sessionData.adminId;
+              showAttendanceUI();
+            }
+          });
+        } else {
+          resultDiv.textContent = data.error || 'حصل خطأ في تسجيل الدخول';
+        }
+      })
+      .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
     });
 
     function checkShiftStatus() {
