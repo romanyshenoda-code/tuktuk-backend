@@ -39,6 +39,7 @@
     .badge-active { background: var(--nile); }
     .badge-maintenance { background: var(--rust); }
     .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
+    .btn-edit { background: var(--asphalt); }
     .btn-fix { background: var(--amber); }
     .btn-active { background: var(--nile); }
     .btn-delete { background: var(--rust); }
@@ -115,7 +116,7 @@
     </div>
     <div class="panel table-scroll">
       <table id="tuktuksTable">
-        <thead><tr><th>الرقم</th><th>رقم التوكتوك</th><th>QR Code</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <thead><tr><th>الرقم</th><th>رقم التوكتوك</th><th>QR Code</th><th>الحالة</th><th>آخر سائق</th><th>إجراء</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -134,6 +135,27 @@
         </div>
       </form>
       <div id="addTuktukMsg" class="form-msg"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="editTuktukModal">
+    <div class="modal-box">
+      <h3>تعديل بيانات التوكتوك</h3>
+      <div class="modal-sub">تقدر تغيّر الرقم أو كود QR أو الحالة</div>
+      <form id="editTuktukForm">
+        <input type="hidden" id="editTuktukId">
+        <input type="text" id="editTuktukNumber" placeholder="رقم التوكتوك" required>
+        <input type="text" id="editQrCode" placeholder="كود QR" required>
+        <select id="editTuktukStatus">
+          <option value="active">نشط</option>
+          <option value="maintenance">فيه عطل</option>
+        </select>
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" onclick="closeModal('editTuktukModal')">إلغاء</button>
+          <button type="submit" class="btn-modal-save">حفظ التعديلات</button>
+        </div>
+      </form>
+      <div id="editTuktukMsg" class="form-msg"></div>
     </div>
   </div>
 
@@ -179,17 +201,24 @@
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
     document.querySelectorAll('.modal-backdrop').forEach(b => b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); }));
 
+    let lastDriversMap = {};
+
     function loadTuktuks() {
-      fetch('/tuktuks').then(res => res.json()).then(data => {
-        allTuktuks = data;
-        renderTuktuks(data);
+      fetch('/tuktuks/last-drivers').then(res => res.json()).then(drivers => {
+        lastDriversMap = {};
+        drivers.forEach(d => { lastDriversMap[d.tuktuk_id] = d.driver_name; });
+
+        fetch('/tuktuks').then(res => res.json()).then(data => {
+          allTuktuks = data;
+          renderTuktuks(data);
+        });
       });
     }
 
     function renderTuktuks(data) {
       const tbody = document.querySelector('#tuktuksTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش توكتوكات لسه</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">مفيش توكتوكات لسه</td></tr>`;
         return;
       }
       tbody.innerHTML = data.map(t => `
@@ -198,7 +227,9 @@
           <td>${t.tuktuk_number}</td>
           <td>${t.qr_code}</td>
           <td><span class="badge badge-${t.status}">${t.status === 'active' ? 'نشط' : 'فيه عطل'}</span></td>
+          <td>${lastDriversMap[t.id] || '-'}</td>
           <td>
+            <button class="row-btn btn-edit" onclick='openEditTuktuk(${JSON.stringify(t)})'>تعديل</button>
             ${t.status === 'active'
               ? `<button class="row-btn btn-fix" onclick="toggleTuktukStatus(${t.id}, 'maintenance')">تسجيل عطل</button>`
               : `<button class="row-btn btn-active" onclick="toggleTuktukStatus(${t.id}, 'active')">إعادة تفعيل</button>`}
@@ -238,6 +269,44 @@
           loadTuktuks();
         });
     }
+
+    function openEditTuktuk(t) {
+      document.getElementById('editTuktukId').value = t.id;
+      document.getElementById('editTuktukNumber').value = t.tuktuk_number;
+      document.getElementById('editQrCode').value = t.qr_code;
+      document.getElementById('editTuktukStatus').value = t.status;
+      document.getElementById('editTuktukMsg').textContent = '';
+      openModal('editTuktukModal');
+    }
+
+    document.getElementById('editTuktukForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const id = document.getElementById('editTuktukId').value;
+
+      fetch(`/tuktuks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tuktuk_number: document.getElementById('editTuktukNumber').value,
+          qr_code: document.getElementById('editQrCode').value,
+          status: document.getElementById('editTuktukStatus').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('editTuktukMsg').textContent = data.message || data.error;
+        if (data.message) {
+          showToast(data.message);
+          loadTuktuks();
+          setTimeout(() => closeModal('editTuktukModal'), 700);
+        } else {
+          showToast(data.error, true);
+        }
+      })
+      .catch(() => {
+        document.getElementById('editTuktukMsg').textContent = 'حصل خطأ في الاتصال بالسيرفر';
+      });
+    });
 
     document.getElementById('addTuktukForm').addEventListener('submit', function(e) {
       e.preventDefault();
