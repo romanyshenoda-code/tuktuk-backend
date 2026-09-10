@@ -99,6 +99,18 @@
     .amt-gold { color: var(--gold); }
     .amt-red { color: var(--rust); }
 
+    .leave-table-box { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 26px; }
+    .leave-table-box table { width: 100%; border-collapse: collapse; }
+    .leave-table-box th, .leave-table-box td { padding: 10px 14px; text-align: right; font-size: 13px; }
+    .leave-table-box th { background: var(--amber); color: white; font-weight: 700; font-size: 12px; }
+    .leave-table-box tbody tr:nth-child(even) { background: #FAF7F0; }
+    .leave-table-box td { border-bottom: 1px solid var(--line); }
+    .leave-empty { text-align: center; color: var(--muted); padding: 22px; font-size: 13px; }
+    .leave-status { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; color: white; }
+    .leave-status.pending { background: var(--amber); }
+    .leave-status.approved { background: var(--nile); }
+    .leave-status.rejected { background: var(--rust); }
+
     .dev-footer { margin-top: 40px; padding: 20px 24px; background: #FFFFFF; border-top: 1px solid #E4DCCB; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center; }
     .dev-brand { display: flex; align-items: center; gap: 11px; }
     .dev-mark { width: 40px; height: 40px; flex-shrink: 0; }
@@ -171,6 +183,14 @@
     </div>
 
     <div class="highlight-row" id="highlightsRow"></div>
+
+    <div class="section-head" style="--section-color: var(--amber);"><h3><span class="dot"></span>سجل الإجازات (الشهر المختار)</h3></div>
+    <div class="leave-table-box">
+      <table>
+        <thead><tr><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th></tr></thead>
+        <tbody id="leaveTableBody"></tbody>
+      </table>
+    </div>
 
     <div class="section-head" style="--section-color: var(--gold);"><h3><span class="dot"></span>الإجمالي التراكمي (من التسجيل لحد نهاية الشهر ده)</h3></div>
     <div class="cumulative-box">
@@ -272,11 +292,29 @@
         ${statBox(m.delivery_count, 'توصيل', 'var(--nile)')}
         ${statBox(m.full_trip_count, 'رحلات كاملة', 'var(--nile)')}
         ${statBox(m.avg_daily_orders, 'متوسط يومي', 'var(--amber)')}
+        ${statBox(m.total_leave_days || 0, 'أيام إجازة', 'var(--amber)')}
         ${statBox(m.total_earning + ' ج', 'مستحقات', 'var(--asphalt)')}
         ${statBox(m.total_incentives + ' ج', 'حوافز', 'var(--gold)')}
         ${statBox((parseFloat(m.total_deductions) + parseFloat(m.total_advances)).toFixed(2) + ' ج', 'خصومات وسلف', 'var(--rust)')}
         ${statBox(m.net_pay + ' ج', 'الصافي', 'var(--ink)')}
       `;
+
+      // جدول الإجازات
+      const leaveBody = document.getElementById('leaveTableBody');
+      const leaves = m.leave_requests || [];
+      const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليها', rejected: 'مرفوضة' };
+      if (leaves.length === 0) {
+        leaveBody.innerHTML = `<tr><td colspan="4" class="leave-empty">مفيش إجازات مسجّلة في الشهر ده</td></tr>`;
+      } else {
+        leaveBody.innerHTML = leaves.map(l => `
+          <tr>
+            <td>${formatDate(l.start_date)}</td>
+            <td>${formatDate(l.end_date)}</td>
+            <td>${l.reason || '-'}</td>
+            <td><span class="leave-status ${l.status}">${statusText[l.status]}</span></td>
+          </tr>
+        `).join('');
+      }
 
       // الرسم البياني
       drawChart(m.daily_data);
@@ -370,7 +408,8 @@
       const summarySheet = [{
         'الاسم': d.name, 'التليفون': d.phone, 'الرقم القومي': d.national_id || '-',
         'ورديات الشهر': m.shifts_count, 'أوردرات الشهر': m.total_orders,
-        'متوسط يومي': m.avg_daily_orders, 'مستحقات الشهر': m.total_earning,
+        'متوسط يومي': m.avg_daily_orders, 'أيام إجازة': m.total_leave_days || 0,
+        'مستحقات الشهر': m.total_earning,
         'حوافز الشهر': m.total_incentives, 'خصومات الشهر': m.total_deductions,
         'سلف الشهر': m.total_advances, 'صافي الشهر': m.net_pay,
         'إجمالي المستحقات التراكمي': cum.total_earning, 'إجمالي الحوافز التراكمي': cum.total_incentives,
@@ -381,9 +420,16 @@
         'اليوم': day.day, 'عدد الأوردرات': day.orders, 'الإيراد': day.revenue.toFixed(2)
       }));
 
+      const statusTextXls = { pending: 'قيد المراجعة', approved: 'موافق عليها', rejected: 'مرفوضة' };
+      const leaveSheet = (m.leave_requests || []).map(l => ({
+        'من': formatDate(l.start_date), 'إلى': formatDate(l.end_date),
+        'السبب': l.reason || '-', 'الحالة': statusTextXls[l.status]
+      }));
+
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summarySheet), 'الملخص');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dailySheet), 'النشاط اليومي');
+      if (leaveSheet.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(leaveSheet), 'الإجازات');
       XLSX.writeFile(wb, `ملف_${d.name}_${monthNames[selectedMonth - 1]}_${selectedYear}.xlsx`);
     }
 
