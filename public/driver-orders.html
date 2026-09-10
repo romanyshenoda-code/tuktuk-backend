@@ -14,24 +14,56 @@
     }
     * { box-sizing: border-box; }
     body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
-    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
-    .topbar img { height: 34px; }
-    .topbar h1 { margin: 0; font-size: 15.5px; font-weight: 700; }
-    .back-link { color: var(--sand); opacity: 0.85; font-size: 13px; text-decoration: none; margin-inline-end: auto; }
-    .wrap { max-width: 480px; margin: 0 auto; padding: 18px 16px; }
-    .card { background: var(--paper); border-radius: 14px; padding: 20px; margin-bottom: 16px; border-inline-start: 5px solid var(--line); }
-    .card.accent-nile { border-inline-start-color: var(--nile); }
-    .card.accent-amber { border-inline-start-color: var(--amber); }
-    .card h3 { margin: 0 0 14px; font-size: 16px; }
-    select, input { width: 100%; padding: 12px 14px; margin: 6px 0; border: 1px solid var(--line); border-radius: 8px; font-size: 15px; font-family: inherit; background: var(--sand); }
-    input:focus, select:focus { outline: 2px solid var(--orange); background: var(--paper); }
-    button.action-btn { width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 10px; color: white; }
-    .btn-nile { background: var(--nile); }
-    .btn-amber { background: var(--amber); }
-    .btn-photo { background: var(--asphalt); color: white; font-size: 13.5px; padding: 11px; }
-    .photo-preview { max-width: 130px; margin: 10px auto; display: block; border-radius: 10px; }
-    .optional-label { color: var(--muted); font-size: 12px; margin-top: 4px; }
-    .result { margin-top: 12px; font-size: 13.5px; background: var(--sand); padding: 10px 12px; border-radius: 8px; min-height: 14px; color: #6B6455; }
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
+    .topbar img { height: 36px; }
+    .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; margin-inline-end: auto; }
+    .container { max-width: 1150px; margin: 0 auto; padding: 24px; }
+    .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .section-head h2 { font-size: 18px; margin: 0; }
+    input { padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--paper); color: var(--ink); }
+    input:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
+    .search-input { width: 240px; }
+    .panel { background: var(--paper); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 14px; text-align: right; font-size: 13.5px; }
+    th { background: var(--asphalt); color: var(--sand); font-weight: 600; font-size: 12px; }
+    tbody tr:nth-child(even) { background: #FAF7F0; }
+    tbody tr:hover { background: #F3E9DA; }
+    td { border-bottom: 1px solid var(--line); }
+    .table-scroll { overflow-x: auto; }
+    .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; color: white; }
+    .badge-open { background: var(--nile); }
+    .badge-closed { background: var(--muted); }
+    .badge-cancelled { background: var(--rust); }
+    .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
+    .btn-cancel { background: var(--rust); }
+    .btn-delete { background: var(--ink); }
+    .empty-row td { text-align: center; color: var(--muted); padding: 26px; }
+
+    .thumb { width: 46px; height: 46px; object-fit: cover; border-radius: 7px; cursor: pointer; border: 1px solid var(--line); transition: transform 0.15s; }
+    .thumb:hover { transform: scale(1.12); }
+    .no-thumb { font-size: 11.5px; color: var(--muted); }
+
+    .confirm-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; animation: fadeIn 0.18s ease; }
+    .confirm-backdrop.open { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .confirm-box { background: var(--paper); border-radius: 16px; padding: 24px; width: 100%; max-width: 340px; border-top: 5px solid var(--rust); text-align: center; animation: popIn 0.22s cubic-bezier(.2,.9,.3,1.2); }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.92) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .confirm-box p { font-size: 14.5px; margin: 0 0 18px; line-height: 1.6; }
+    .confirm-actions { display: flex; gap: 8px; }
+    .confirm-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
+    .btn-confirm-yes { background: var(--rust); color: white; }
+    .btn-confirm-no { background: var(--line); color: var(--ink); }
+
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 400; padding: 20px; cursor: zoom-out; }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 100%; max-height: 90vh; border-radius: 10px; }
+    .lightbox .close-hint { position: absolute; top: 20px; right: 24px; color: white; font-size: 14px; opacity: 0.7; }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 13px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 300; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; max-width: 90%; text-align: center; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+    .toast.error { background: var(--rust); }
 
     .dev-footer {
       margin-top: 40px; padding: 20px 24px; background: #FFFFFF;
@@ -57,172 +89,325 @@
       .dev-footer { flex-direction: column; gap: 13px; padding: 22px 16px; }
       .dev-divider { display: none; }
     }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(22,19,15,0.55); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; animation: fadeIn 0.18s ease; }
+    .modal-backdrop.open { display: flex; }
+    .modal-box { background: var(--paper); border-radius: 16px; padding: 26px; width: 100%; max-width: 380px; border-top: 5px solid var(--amber); animation: popIn 0.22s cubic-bezier(.2,.9,.3,1.2); }
+    .modal-box h3 { margin: 0 0 4px; font-size: 18px; }
+    .modal-box .modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 18px; line-height: 1.6; }
+    .modal-box input { width: 100%; margin-bottom: 10px; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
+    .modal-actions button { flex: 1; padding: 11px; border: none; border-radius: 8px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 14px; }
+    .btn-modal-save { background: var(--amber); color: white; }
+    .btn-modal-cancel { background: var(--line); color: var(--ink); }
+    .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+
+    /* زرار الطباعة الفردي */
+    .btn-print { background: var(--asphalt); }
+
+    /* شريط الطباعة الجماعية */
+    .bulk-print-bar {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+    }
+    .bulk-print-bar .field-group { display: flex; flex-direction: column; }
+    .bulk-print-bar .field-group label { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .bulk-print-bar select, .bulk-print-bar input { padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-family: inherit; font-size: 13.5px; }
+    .bulk-print-btn {
+      padding: 10px 18px; background: var(--orange); color: white; border: none; border-radius: 8px;
+      font-family: inherit; font-weight: 800; font-size: 13.5px; cursor: pointer; height: 39px;
+    }
+
+    /* قالب الفاتورة (مخفي، يُستخدم وقت الطباعة بس) */
+    .invoice-print-area { display: none; }
+    @media print {
+      body * { visibility: hidden; }
+      .invoice-print-area, .invoice-print-area * { visibility: visible; }
+      .invoice-print-area { display: block; position: absolute; top: 0; left: 0; width: 100%; }
+    }
+    .invoice-card {
+      width: 78mm; margin: 0 auto 6mm; padding: 4mm; font-family: 'Cairo', sans-serif;
+      border-bottom: 1px dashed #999; page-break-after: always;
+    }
+    .invoice-card:last-child { page-break-after: auto; }
+    .invoice-card .inv-logo { text-align: center; margin-bottom: 3mm; }
+    .invoice-card .inv-logo img { height: 12mm; }
+    .invoice-card .inv-title { text-align: center; font-size: 13px; font-weight: 800; color: #16305C; margin-bottom: 1mm; }
+    .invoice-card .inv-sub { text-align: center; font-size: 9px; color: #8A8272; margin-bottom: 3mm; }
+    .invoice-card .inv-divider { border-top: 1px dashed #999; margin: 2mm 0; }
+    .invoice-card .inv-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1mm 0; }
+    .invoice-card .inv-row span:first-child { color: #555; }
+    .invoice-card .inv-row span:last-child { font-weight: 700; }
+    .invoice-card .inv-total { display: flex; justify-content: space-between; font-size: 14px; font-weight: 800; margin-top: 2mm; padding-top: 2mm; border-top: 1px solid #333; }
+    .invoice-card .inv-footer { text-align: center; font-size: 8.5px; color: #999; margin-top: 3mm; }
   </style>
 </head>
 <body>
 
   <div class="topbar">
-    <a href="/driver.html" class="back-link">→ الرئيسية</a>
+    <a href="/index.html" class="back-link">→ الرئيسية</a>
     <img src="/logo.png" alt="Ginger">
     <h1>الأوردرات</h1>
   </div>
 
-  <div class="wrap">
-
-    <div class="card accent-nile">
-      <h3>فتح أوردر</h3>
-      <select id="orderType">
-        <option value="delivery">توصيل عميل</option>
-        <option value="full_trip">رحلة كاملة</option>
-      </select>
-      <button class="action-btn btn-nile" onclick="openOrder()">فتح الأوردر</button>
-      <div class="result" id="resultOrderOpen">جاهز</div>
+  <div class="container">
+    <div class="section-head"><h2>الأوردرات الشغالة الآن</h2></div>
+    <div class="panel table-scroll">
+      <table id="activeOrdersTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>وقت الفتح</th><th>إجراء</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
 
-    <div class="card accent-amber">
-      <h3>قفل أوردر</h3>
-      <input type="number" id="orderIdClose" placeholder="رقم الأوردر">
-      <button class="btn-photo" onclick="capturePhoto('photoInputOrderClose')">📷 صورة توثيق الوصول</button>
-      <input type="file" id="photoInputOrderClose" accept="image/*" capture="environment" style="display:none">
-      <img id="photoPreviewOrderClose" class="photo-preview" style="display:none">
-      <div class="optional-label">صورة اختيارية لتوثيق وصول الأوردر</div>
-      <button class="action-btn btn-amber" onclick="closeOrder()">قفل الأوردر</button>
-      <div class="result" id="resultOrderClose">جاهز</div>
+    <div class="bulk-print-bar">
+      <div class="field-group">
+        <label>تاريخ الفواتير</label>
+        <input type="date" id="bulkPrintDate">
+      </div>
+      <div class="field-group">
+        <label>السائق</label>
+        <select id="bulkPrintDriver"><option value="">اختار سائق...</option></select>
+      </div>
+      <button class="bulk-print-btn" onclick="bulkPrintInvoices()">🖨️ طباعة فواتير اليوم</button>
+    </div>
+
+    <div class="section-head">
+      <h2>سجل كل الأوردرات</h2>
+      <input type="text" id="orderSearch" class="search-input" placeholder="بحث باسم السائق..." oninput="filterOrders()">
+    </div>
+    <div class="panel table-scroll">
+      <table id="ordersTable">
+        <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>وقت الفتح</th><th>وقت الغلق</th><th>مدة الرحلة</th><th>المسافة (كم)</th><th>السعر</th><th>مستحقات السائق</th><th>صورة التسليم</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
 
   </div>
 
+  <div class="confirm-backdrop" id="confirmBackdrop">
+    <div class="confirm-box">
+      <p id="confirmMessage"></p>
+      <div class="confirm-actions">
+        <button class="btn-confirm-no" onclick="closeConfirm(false)">إلغاء</button>
+        <button class="btn-confirm-yes" onclick="closeConfirm(true)">تأكيد</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <div class="close-hint">اضغط في أي مكان للإغلاق</div>
+    <img id="lightboxImg" src="" alt="">
+  </div>
+
+  <div class="toast" id="toast"></div>
+
   <script>
-    let currentDriverId = null;
-    let currentShiftId = null;
-
-    fetch('/api/driver-session').then(res => res.json()).then(data => {
-      if (!data.loggedIn) { window.location.href = '/driver-login.html'; return; }
-      currentDriverId = data.driverId;
-      fetch('/shifts/open/' + currentDriverId).then(res => res.json()).then(d => {
-        if (d.id) currentShiftId = d.id;
+        function checkAdminSession() {
+      fetch('/api/admin-session').then(res => res.json()).then(data => {
+        if (!data.loggedIn) window.location.href = '/login.html';
       });
-    });
+    }
+    checkAdminSession();
+    setInterval(checkAdminSession, 15000);
+    let allOrders = [];
+    let confirmResolve = null;
 
-        let compressedOrderPhoto = null;
-
-    function capturePhoto(inputId) { document.getElementById(inputId).click(); }
-
-    document.getElementById('photoInputOrderClose').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const preview = document.getElementById('photoPreviewOrderClose');
-
-      compressImage(file, function(blob, dataUrl) {
-        compressedOrderPhoto = blob;
-        preview.src = dataUrl;
-        preview.style.display = 'block';
-      });
-    });
-
-    // ضغط الصورة قبل الرفع
-    function compressImage(file, callback) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-          const MAX_SIZE = 1000;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_SIZE) { height = height * (MAX_SIZE / width); width = MAX_SIZE; }
-          } else {
-            if (height > MAX_SIZE) { width = width * (MAX_SIZE / height); height = MAX_SIZE; }
-          }
-
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(function(blob) {
-            callback(blob, canvas.toDataURL('image/jpeg', 0.7));
-          }, 'image/jpeg', 0.7);
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
+    function showConfirm(message) {
+      document.getElementById('confirmMessage').textContent = message;
+      document.getElementById('confirmBackdrop').classList.add('open');
+      return new Promise(resolve => { confirmResolve = resolve; });
+    }
+    function closeConfirm(result) {
+      document.getElementById('confirmBackdrop').classList.remove('open');
+      if (confirmResolve) confirmResolve(result);
+    }
+    function showToast(message, isError) {
+      const t = document.getElementById('toast');
+      t.textContent = message;
+      t.className = 'toast show' + (isError ? ' error' : '');
+      setTimeout(() => { t.className = 'toast'; }, 2500);
     }
 
-    function openOrder() {
-      const resultDiv = document.getElementById('resultOrderOpen');
-      const order_type = document.getElementById('orderType').value;
+    function openLightbox(src) {
+      document.getElementById('lightboxImg').src = src;
+      document.getElementById('lightbox').classList.add('open');
+    }
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+    }
 
-      if (!currentShiftId) { resultDiv.textContent = 'لازم تسجل حضور وتفتح وردية الأول'; return; }
-      if (!navigator.geolocation) { resultDiv.textContent = 'المتصفح مش بيدعم تحديد الموقع'; return; }
+        function formatDateTime(d) { return d ? new Date(d).toLocaleString('en-GB') : '-'; }
 
-      resultDiv.textContent = 'جاري تحديد موقعك...';
+    function formatDuration(start, end) {
+      if (!start || !end) return '-';
+      const diffMs = new Date(end) - new Date(start);
+      if (diffMs < 0) return '-';
+      const totalMinutes = Math.floor(diffMs / 60000);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      if (hours > 0) return `${hours} س ${minutes} د`;
+      return `${minutes} دقيقة`;
+    }
 
-      navigator.geolocation.getCurrentPosition(function(position) {
-        resultDiv.textContent = 'جاري فتح الأوردر...';
+    function loadActiveOrders() {
+      fetch('/orders/active').then(res => res.json()).then(data => {
+        const tbody = document.querySelector('#activeOrdersTable tbody');
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="5">مفيش أوردرات شغالة دلوقتي</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = data.map(o => `
+          <tr>
+            <td>${o.id}</td>
+            <td>${o.driver_name}</td>
+            <td>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'}</td>
+            <td>${formatDateTime(o.start_time)}</td>
+            <td><button class="row-btn btn-cancel" onclick="cancelOrder(${o.id})">إلغاء الأوردر</button></td>
+          </tr>
+        `).join('');
+      });
+    }
 
-        fetch('/orders/open', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            shift_id: currentShiftId,
-            driver_id: currentDriverId,
-            order_type: order_type,
-            start_lat: position.coords.latitude,
-            start_lng: position.coords.longitude
-          })
-        })
+    function loadOrders() {
+      fetch('/orders').then(res => res.json()).then(data => {
+        allOrders = data;
+        filterOrders();
+      });
+    }
+
+    function renderOrders(data) {
+      const tbody = document.querySelector('#ordersTable tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="12">مفيش أوردرات مسجلة</td></tr>`;
+        return;
+      }
+      const statusLabel = { open: 'مفتوح', closed: 'مقفول', cancelled: 'ملغي' };
+      tbody.innerHTML = data.map(o => `
+        <tr>
+          <td>${o.id}</td>
+          <td>${o.driver_name}</td>
+          <td>${o.order_type === 'delivery' ? 'توصيل' : 'رحلة كاملة'}</td>
+          <td>${formatDateTime(o.start_time)}</td>
+          <td>${formatDateTime(o.end_time)}</td>
+          <td>${formatDuration(o.start_time, o.end_time)}</td>
+          <td>${o.distance_km || '-'}</td>
+          <td>${o.price || '-'}</td>
+          <td>${o.driver_earning || '-'}</td>
+          <td>
+            ${o.delivery_photo
+              ? `<img src="/uploads/${o.delivery_photo}" class="thumb" onclick="openLightbox('/uploads/${o.delivery_photo}')" alt="صورة التسليم">`
+              : `<span class="no-thumb">مفيش صورة</span>`}
+          </td>
+          <td><span class="badge badge-${o.status}">${statusLabel[o.status]}</span></td>
+          <td>
+            ${o.status === 'closed' ? `<button class="row-btn btn-print" onclick='printSingleInvoice(${JSON.stringify(o)})'>🖨️ طباعة</button>` : ''}
+            <button class="row-btn btn-delete" onclick="deleteOrder(${o.id})">حذف نهائي</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function filterOrders() {
+      const q = document.getElementById('orderSearch').value.trim();
+      if (!q) { renderOrders(allOrders); return; }
+      renderOrders(allOrders.filter(o => o.driver_name.includes(q)));
+    }
+
+    async function cancelOrder(id) {
+      const confirmed = await showConfirm('متأكد إنك عايز تلغي الأوردر ده؟');
+      if (!confirmed) return;
+
+      fetch(`/orders/${id}/cancel`, { method: 'POST' })
         .then(res => res.json())
         .then(data => {
-          if (data.error) {
-            resultDiv.textContent = 'خطأ: ' + data.error;
-          } else {
-            resultDiv.textContent = data.message + ' - رقم الأوردر: ' + data.order_id;
-            document.getElementById('orderIdClose').value = data.order_id;
-          }
-        })
-        .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
-      }, function(error) {
-        resultDiv.textContent = 'حصل خطأ في تحديد الموقع: ' + error.message;
+          showToast(data.message || data.error, !data.message);
+          loadActiveOrders();
+          loadOrders();
+        });
+    }
+
+    async function deleteOrder(id) {
+      const confirmed = await showConfirm('متأكد إنك عايز تمسح الأوردر ده نهائياً؟ الإجراء ده مينفعش يترجع فيه.');
+      if (!confirmed) return;
+
+      fetch(`/orders/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          showToast(data.message || data.error, !data.message);
+          loadOrders();
+        });
+    }
+
+
+    // ==================== نظام الفوترة ====================
+    const invoiceTypeLabel = { delivery: 'توصيل', full_trip: 'رحلة كاملة' };
+
+    function buildInvoiceHtml(o) {
+      const dateStr = formatDateTime(o.start_time);
+      return `
+        <div class="invoice-card">
+          <div class="inv-logo"><img src="/logo.png" alt="Ginger"></div>
+          <div class="inv-title">GINGER — فاتورة أوردر</div>
+          <div class="inv-sub">SPICE UP THE ORDINARY</div>
+          <div class="inv-divider"></div>
+          <div class="inv-row"><span>رقم الفاتورة</span><span>#${o.id}</span></div>
+          <div class="inv-row"><span>التاريخ</span><span>${dateStr}</span></div>
+          <div class="inv-row"><span>السائق</span><span>${o.driver_name}</span></div>
+          <div class="inv-row"><span>نوع الأوردر</span><span>${invoiceTypeLabel[o.order_type] || o.order_type}</span></div>
+          <div class="inv-divider"></div>
+          <div class="inv-total"><span>المبلغ الإجمالي</span><span>${o.price || 0} ج</span></div>
+          <div class="inv-footer">Dr. Romany Shenoda — Future Company for Solutions</div>
+        </div>
+      `;
+    }
+
+    function printSingleInvoice(o) {
+      document.getElementById('invoicePrintArea').innerHTML = buildInvoiceHtml(o);
+      window.print();
+    }
+
+    function loadDriversForBulkPrint() {
+      fetch('/drivers').then(res => res.json()).then(data => {
+        document.getElementById('bulkPrintDriver').innerHTML =
+          '<option value="">اختار سائق...</option>' +
+          data.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
       });
     }
 
-    function closeOrder() {
-      const resultDiv = document.getElementById('resultOrderClose');
-      const order_id = document.getElementById('orderIdClose').value;
-      const photoFile = document.getElementById('photoInputOrderClose').files[0];
+    function bulkPrintInvoices() {
+      const dateVal = document.getElementById('bulkPrintDate').value;
+      const driverId = document.getElementById('bulkPrintDriver').value;
 
-      if (!order_id) { resultDiv.textContent = 'من فضلك اكتب رقم الأوردر'; return; }
-      if (!navigator.geolocation) { resultDiv.textContent = 'المتصفح مش بيدعم تحديد الموقع'; return; }
+      if (!dateVal) { showToast('اختار التاريخ الأول', true); return; }
+      if (!driverId) { showToast('اختار السائق الأول', true); return; }
 
-      resultDiv.textContent = 'جاري تحديد موقعك...';
-
-      navigator.geolocation.getCurrentPosition(function(position) {
-        const formData = new FormData();
-        formData.append('order_id', order_id);
-        formData.append('end_lat', position.coords.latitude);
-        formData.append('end_lng', position.coords.longitude);
-                if (compressedOrderPhoto) formData.append('photo', compressedOrderPhoto, 'delivery.jpg');
-        else if (photoFile) formData.append('photo', photoFile);
-
-        resultDiv.textContent = 'جاري قفل الأوردر...';
-
-        fetch('/orders/close', { method: 'POST', body: formData })
-          .then(res => res.json())
-          .then(data => {
-            if (data.error) {
-              resultDiv.textContent = 'خطأ: ' + data.error;
-            } else {
-              resultDiv.textContent =
-                data.message + ' | المسافة: ' + data.distance_km + ' كم | السعر: ' + data.price + ' جنيه | مستحقاتك: ' + data.driver_earning + ' جنيه';
-            }
-          })
-          .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
-      }, function(error) {
-        resultDiv.textContent = 'حصل خطأ في تحديد الموقع: ' + error.message;
+      const dayOrders = allOrders.filter(o => {
+        if (o.status !== 'closed' || !o.end_time) return false;
+        if (String(o.driver_id) !== String(driverId)) return false;
+        const orderDate = new Date(o.end_time).toISOString().split('T')[0];
+        return orderDate === dateVal;
       });
+
+      if (dayOrders.length === 0) {
+        showToast('مفيش أوردرات مقفولة للسائق ده في اليوم ده', true);
+        return;
+      }
+
+      document.getElementById('invoicePrintArea').innerHTML = dayOrders.map(buildInvoiceHtml).join('');
+      window.print();
     }
+
+    document.getElementById('bulkPrintDate').valueAsDate = new Date();
+    loadDriversForBulkPrint();
+
+    loadActiveOrders();
+    loadOrders();
+
+    // تحديث تلقائي دوري للأوردرات الشغالة والسجل الكامل، من غير حاجة لـ Refresh يدوي
+    setInterval(() => {
+      loadActiveOrders();
+      loadOrders();
+    }, 10000);
   </script>
   <footer class="dev-footer">
     <div class="dev-brand">
@@ -244,6 +429,8 @@
       <span>📱</span> 01066696216
     </a>
   </footer>
+
+  <div class="invoice-print-area" id="invoicePrintArea"></div>
 
 </body>
 </html>
