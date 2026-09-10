@@ -1,4 +1,27 @@
-fetch('/maintenance/storage-info')
+if (d.message) {
+          msg.className = 'form-msg';
+          msg.textContent = d.message;
+          const lbl = document.getElementById(labelId);
+          lbl.textContent = checked ? 'إجبارية' : 'اختيارية';
+          lbl.style.color = checked ? 'var(--nile)' : 'var(--muted)';
+          showToast(d.message);
+        } else {
+          msg.className = 'form-msg error-msg';
+          msg.textContent = d.error;
+          showToast(d.error, true);
+          loadPhotoSettings();
+        }
+      })
+      .catch(() => {
+        msg.className = 'form-msg error-msg';
+        msg.textContent = 'حصل خطأ في الاتصال بالسيرفر';
+        loadPhotoSettings();
+      });
+    }
+
+    // ==================== أدوات الصيانة والتنظيف ====================
+    function loadStorageInfo() {
+      fetch('/maintenance/storage-info')
         .then(r => r.json())
         .then(d => {
           document.getElementById('storageFiles').textContent = d.files;
@@ -103,4 +126,3 @@ fetch('/maintenance/storage-info')
   </footer>
 
 </body>
-</html>
