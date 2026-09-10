@@ -835,10 +835,38 @@ app.get('/orders/history/:driver_id', (req, res) => {
 // ==================== طلبات الإجازة ====================
 app.post('/leave-requests', (req, res) => {
   const { driver_id, start_date, end_date, reason } = req.body;
-  db.query('INSERT INTO leave_requests (driver_id, start_date, end_date, reason) VALUES (?, ?, ?, ?)', [driver_id, start_date, end_date, reason], (err, result) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل طلب الإجازة' }); }
-    res.status(201).json({ message: 'تم إرسال طلب الإجازة بنجاح', request_id: result.insertId });
-  });
+
+  // التأكد من وجود البيانات الأساسية
+  if (!driver_id || !start_date || !end_date) {
+    return res.status(400).json({
+      error: 'من فضلك حدد تاريخ بداية ونهاية الإجازة'
+    });
+  }
+
+  // منع أن يكون تاريخ النهاية قبل تاريخ البداية
+  if (end_date < start_date) {
+    return res.status(400).json({
+      error: 'تاريخ نهاية الإجازة لازم يكون بعد أو نفس تاريخ البداية'
+    });
+  }
+
+  db.query(
+    'INSERT INTO leave_requests (driver_id, start_date, end_date, reason) VALUES (?, ?, ?, ?)',
+    [driver_id, start_date, end_date, reason || null],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({
+          error: 'حصل خطأ في تسجيل طلب الإجازة'
+        });
+      }
+
+      res.status(201).json({
+        message: 'تم إرسال طلب الإجازة بنجاح',
+        request_id: result.insertId
+      });
+    }
+  );
 });
 
 app.get('/leave-requests', (req, res) => {
