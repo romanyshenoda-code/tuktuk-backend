@@ -13,7 +13,14 @@
       --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
       --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
       --purple: #5B4B8A;
+      --gold: #C9A227;
     }
+    .sub-tabs-bar { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 20px; border-bottom: 2px solid var(--line); }
+    .sub-tab-btn { background: none; border: none; padding: 10px 16px; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; white-space: nowrap; position: relative; top: 2px; border-bottom: 3px solid transparent; }
+    .sub-tab-btn:hover { color: var(--ink); }
+    .sub-tab-btn.active { color: var(--stc-color, var(--nile)); border-bottom-color: var(--stc-color, var(--nile)); }
+    .sub-tab-panel { display: none; }
+    .sub-tab-panel.active { display: block; }
     * { box-sizing: border-box; }
     body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
     .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--nile); }
@@ -396,66 +403,81 @@
     <!-- تبويب أداء المشرفين -->
     <div class="tab-panel" id="tab-admin-performance" style="--tab-color: #7A5C9E;">
 
-      <div class="admin-req-forms">
-        <form id="adminDeductionForm" class="admin-req-form" style="--arf-color: var(--rust);">
-          <h4>🔻 تسجيل خصم لمشرف</h4>
-          <div class="admin-picker">
-            <input type="text" id="adminDeductionSearch" placeholder="ابحث باسم المشرف..." autocomplete="off">
-            <input type="hidden" id="adminDeductionId">
-            <div class="admin-picker-results" id="adminDeductionResults"></div>
-          </div>
-          <div class="admin-picked-label" id="adminDeductionPicked"></div>
-          <input type="number" id="adminDeductionAmount" placeholder="المبلغ" style="margin-bottom:8px;">
-          <input type="text" id="adminDeductionReason" placeholder="سبب الخصم" style="margin-bottom:10px;">
-          <button type="submit" class="admin-req-btn" style="background: var(--rust);">تسجيل الخصم</button>
-          <div id="adminDeductionMsg" class="form-msg"></div>
-        </form>
-
-        <form id="adminIncentiveForm" class="admin-req-form" style="--arf-color: var(--rust);">
-          <h4>🔺 تسجيل حافز لمشرف</h4>
-          <div class="admin-picker">
-            <input type="text" id="adminIncentiveSearch" placeholder="ابحث باسم المشرف..." autocomplete="off">
-            <input type="hidden" id="adminIncentiveId">
-            <div class="admin-picker-results" id="adminIncentiveResults"></div>
-          </div>
-          <div class="admin-picked-label" id="adminIncentivePicked"></div>
-          <input type="number" id="adminIncentiveAmount" placeholder="المبلغ" style="margin-bottom:8px;">
-          <input type="text" id="adminIncentiveReason" placeholder="سبب الحافز" style="margin-bottom:10px;">
-          <button type="submit" class="admin-req-btn" style="background: var(--gold);">تسجيل الحافز</button>
-          <div id="adminIncentiveMsg" class="form-msg"></div>
-        </form>
+      <div class="sub-tabs-bar">
+        <button class="sub-tab-btn active" data-subtab="admin-money" style="--stc-color: var(--gold);">💰 خصومات وحوافز</button>
+        <button class="sub-tab-btn" data-subtab="admin-leaves" style="--stc-color: var(--amber);">📅 موافقات الإجازات</button>
+        <button class="sub-tab-btn" data-subtab="admin-advances" style="--stc-color: var(--asphalt);">💵 موافقات السلف</button>
       </div>
 
-      <div class="section-head" style="--tab-color: var(--rust);"><h2><span class="dot"></span>سجل خصومات المشرفين</h2></div>
-      <div class="panel table-scroll table-box" style="padding:0;">
-        <table id="adminDeductionsTable">
-          <thead><tr><th>المشرف</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
-          <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
-        </table>
+      <!-- تبويب فرعي: خصومات وحوافز -->
+      <div class="sub-tab-panel active" id="subtab-admin-money">
+        <div class="admin-req-forms">
+          <form id="adminDeductionForm" class="admin-req-form" style="--arf-color: var(--rust);">
+            <h4>🔻 تسجيل خصم لمشرف</h4>
+            <div class="admin-picker">
+              <input type="text" id="adminDeductionSearch" placeholder="ابحث باسم المشرف..." autocomplete="off">
+              <input type="hidden" id="adminDeductionId">
+              <div class="admin-picker-results" id="adminDeductionResults"></div>
+            </div>
+            <div class="admin-picked-label" id="adminDeductionPicked"></div>
+            <input type="number" id="adminDeductionAmount" placeholder="المبلغ" style="margin-bottom:8px;">
+            <input type="text" id="adminDeductionReason" placeholder="سبب الخصم" style="margin-bottom:10px;">
+            <button type="submit" class="admin-req-btn" style="background: var(--rust);">تسجيل الخصم</button>
+            <div id="adminDeductionMsg" class="form-msg"></div>
+          </form>
+
+          <form id="adminIncentiveForm" class="admin-req-form" style="--arf-color: var(--gold);">
+            <h4>🔺 تسجيل حافز لمشرف</h4>
+            <div class="admin-picker">
+              <input type="text" id="adminIncentiveSearch" placeholder="ابحث باسم المشرف..." autocomplete="off">
+              <input type="hidden" id="adminIncentiveId">
+              <div class="admin-picker-results" id="adminIncentiveResults"></div>
+            </div>
+            <div class="admin-picked-label" id="adminIncentivePicked"></div>
+            <input type="number" id="adminIncentiveAmount" placeholder="المبلغ" style="margin-bottom:8px;">
+            <input type="text" id="adminIncentiveReason" placeholder="سبب الحافز" style="margin-bottom:10px;">
+            <button type="submit" class="admin-req-btn" style="background: var(--gold);">تسجيل الحافز</button>
+            <div id="adminIncentiveMsg" class="form-msg"></div>
+          </form>
+        </div>
+
+        <div class="section-head" style="--tab-color: var(--rust);"><h2><span class="dot"></span>سجل خصومات المشرفين</h2></div>
+        <div class="panel table-scroll table-box" style="padding:0;">
+          <table id="adminDeductionsTable">
+            <thead><tr><th>المشرف</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
+            <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="section-head" style="--tab-color: var(--gold);"><h2><span class="dot"></span>سجل حوافز المشرفين</h2></div>
+        <div class="panel table-scroll table-box" style="padding:0;">
+          <table id="adminIncentivesTable">
+            <thead><tr><th>المشرف</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
+            <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="section-head" style="--tab-color: var(--gold);"><h2><span class="dot"></span>سجل حوافز المشرفين</h2></div>
-      <div class="panel table-scroll table-box" style="padding:0;">
-        <table id="adminIncentivesTable">
-          <thead><tr><th>المشرف</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>تعديل</th><th>حذف</th></tr></thead>
-          <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
-        </table>
+      <!-- تبويب فرعي: موافقات الإجازات -->
+      <div class="sub-tab-panel" id="subtab-admin-leaves">
+        <div class="section-head" style="--tab-color: var(--amber);"><h2><span class="dot"></span>موافقات إجازات المشرفين</h2></div>
+        <div class="panel table-scroll table-box" style="padding:0;">
+          <table id="adminLeaveTable">
+            <thead><tr><th>المشرف</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
+            <tbody><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="section-head" style="--tab-color: var(--amber);"><h2><span class="dot"></span>موافقات إجازات المشرفين</h2></div>
-      <div class="panel table-scroll table-box" style="padding:0;">
-        <table id="adminLeaveTable">
-          <thead><tr><th>المشرف</th><th>من</th><th>إلى</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
-          <tbody><tr class="empty-row"><td colspan="7">جاري التحميل...</td></tr></tbody>
-        </table>
-      </div>
-
-      <div class="section-head" style="--tab-color: var(--asphalt);"><h2><span class="dot"></span>موافقات سلف المشرفين</h2></div>
-      <div class="panel table-scroll table-box" style="padding:0;">
-        <table id="adminAdvanceTable">
-          <thead><tr><th>المشرف</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
-          <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
-        </table>
+      <!-- تبويب فرعي: موافقات السلف -->
+      <div class="sub-tab-panel" id="subtab-admin-advances">
+        <div class="section-head" style="--tab-color: var(--asphalt);"><h2><span class="dot"></span>موافقات سلف المشرفين</h2></div>
+        <div class="panel table-scroll table-box" style="padding:0;">
+          <table id="adminAdvanceTable">
+            <thead><tr><th>المشرف</th><th>المبلغ</th><th>السبب</th><th>الحالة</th><th>إجراء</th><th>حذف</th></tr></thead>
+            <tbody><tr class="empty-row"><td colspan="6">جاري التحميل...</td></tr></tbody>
+          </table>
+        </div>
       </div>
 
     </div>
@@ -1002,6 +1024,16 @@
           if (tab === 'holidays') loadHolidayEvents();
           if (tab === 'cleanup') loadStorageInfo();
         }
+      });
+    });
+
+    // التبديل بين التبويبات الفرعية داخل "طلبات وشؤون المشرفين"
+    document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.sub-tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('subtab-' + btn.dataset.subtab).classList.add('active');
       });
     });
 
