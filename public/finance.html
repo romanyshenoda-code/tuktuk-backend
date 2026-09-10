@@ -1,36 +1,4 @@
-msg.textContent = 'جاري الحفظ...';
-
-      fetch('/settings/' + key, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: checked ? 'true' : 'false' })
-      })
-      .then(r => r.json())
-      .then(d => {
-        if (d.message) {
-          msg.className = 'form-msg';
-          msg.textContent = d.message;
-          const lbl = document.getElementById(labelId);
-          lbl.textContent = checked ? 'إجبارية' : 'اختيارية';
-          lbl.style.color = checked ? 'var(--nile)' : 'var(--muted)';
-          showToast(d.message);
-        } else {
-          msg.className = 'form-msg error-msg';
-          msg.textContent = d.error;
-          showToast(d.error, true);
-          loadPhotoSettings();
-        }
-      })
-      .catch(() => {
-        msg.className = 'form-msg error-msg';
-        msg.textContent = 'حصل خطأ في الاتصال بالسيرفر';
-        loadPhotoSettings();
-      });
-    }
-
-    // ==================== أدوات الصيانة والتنظيف ====================
-    function loadStorageInfo() {
-      fetch('/maintenance/storage-info')
+fetch('/maintenance/storage-info')
         .then(r => r.json())
         .then(d => {
           document.getElementById('storageFiles').textContent = d.files;
