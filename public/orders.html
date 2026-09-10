@@ -101,6 +101,45 @@
     .btn-modal-save { background: var(--amber); color: white; }
     .btn-modal-cancel { background: var(--line); color: var(--ink); }
     .form-msg { padding: 8px 4px 0; font-size: 13px; font-weight: 600; color: var(--nile); min-height: 14px; }
+
+    /* زرار الطباعة الفردي */
+    .btn-print { background: var(--asphalt); }
+
+    /* شريط الطباعة الجماعية */
+    .bulk-print-bar {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+    }
+    .bulk-print-bar .field-group { display: flex; flex-direction: column; }
+    .bulk-print-bar .field-group label { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .bulk-print-bar select, .bulk-print-bar input { padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-family: inherit; font-size: 13.5px; }
+    .bulk-print-btn {
+      padding: 10px 18px; background: var(--orange); color: white; border: none; border-radius: 8px;
+      font-family: inherit; font-weight: 800; font-size: 13.5px; cursor: pointer; height: 39px;
+    }
+
+    /* قالب الفاتورة (مخفي، يُستخدم وقت الطباعة بس) */
+    .invoice-print-area { display: none; }
+    @media print {
+      body * { visibility: hidden; }
+      .invoice-print-area, .invoice-print-area * { visibility: visible; }
+      .invoice-print-area { display: block; position: absolute; top: 0; left: 0; width: 100%; }
+    }
+    .invoice-card {
+      width: 78mm; margin: 0 auto 6mm; padding: 4mm; font-family: 'Cairo', sans-serif;
+      border-bottom: 1px dashed #999; page-break-after: always;
+    }
+    .invoice-card:last-child { page-break-after: auto; }
+    .invoice-card .inv-logo { text-align: center; margin-bottom: 3mm; }
+    .invoice-card .inv-logo img { height: 12mm; }
+    .invoice-card .inv-title { text-align: center; font-size: 13px; font-weight: 800; color: #16305C; margin-bottom: 1mm; }
+    .invoice-card .inv-sub { text-align: center; font-size: 9px; color: #8A8272; margin-bottom: 3mm; }
+    .invoice-card .inv-divider { border-top: 1px dashed #999; margin: 2mm 0; }
+    .invoice-card .inv-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1mm 0; }
+    .invoice-card .inv-row span:first-child { color: #555; }
+    .invoice-card .inv-row span:last-child { font-weight: 700; }
+    .invoice-card .inv-total { display: flex; justify-content: space-between; font-size: 14px; font-weight: 800; margin-top: 2mm; padding-top: 2mm; border-top: 1px solid #333; }
+    .invoice-card .inv-footer { text-align: center; font-size: 8.5px; color: #999; margin-top: 3mm; }
   </style>
 </head>
 <body>
@@ -118,6 +157,18 @@
         <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>وقت الفتح</th><th>إجراء</th></tr></thead>
         <tbody></tbody>
       </table>
+    </div>
+
+    <div class="bulk-print-bar">
+      <div class="field-group">
+        <label>تاريخ الفواتير</label>
+        <input type="date" id="bulkPrintDate">
+      </div>
+      <div class="field-group">
+        <label>السائق</label>
+        <select id="bulkPrintDriver"><option value="">اختار سائق...</option></select>
+      </div>
+      <button class="bulk-print-btn" onclick="bulkPrintInvoices()">🖨️ طباعة فواتير اليوم</button>
     </div>
 
     <div class="section-head">
@@ -248,7 +299,10 @@
               : `<span class="no-thumb">مفيش صورة</span>`}
           </td>
           <td><span class="badge badge-${o.status}">${statusLabel[o.status]}</span></td>
-          <td><button class="row-btn btn-delete" onclick="deleteOrder(${o.id})">حذف نهائي</button></td>
+          <td>
+            ${o.status === 'closed' ? `<button class="row-btn btn-print" onclick='printSingleInvoice(${JSON.stringify(o)})'>🖨️ طباعة</button>` : ''}
+            <button class="row-btn btn-delete" onclick="deleteOrder(${o.id})">حذف نهائي</button>
+          </td>
         </tr>
       `).join('');
     }
@@ -284,6 +338,68 @@
         });
     }
 
+
+    // ==================== نظام الفوترة ====================
+    const invoiceTypeLabel = { delivery: 'توصيل', full_trip: 'رحلة كاملة' };
+
+    function buildInvoiceHtml(o) {
+      const dateStr = formatDateTime(o.start_time);
+      return `
+        <div class="invoice-card">
+          <div class="inv-logo"><img src="/logo.png" alt="Ginger"></div>
+          <div class="inv-title">GINGER — فاتورة أوردر</div>
+          <div class="inv-sub">SPICE UP THE ORDINARY</div>
+          <div class="inv-divider"></div>
+          <div class="inv-row"><span>رقم الفاتورة</span><span>#${o.id}</span></div>
+          <div class="inv-row"><span>التاريخ</span><span>${dateStr}</span></div>
+          <div class="inv-row"><span>السائق</span><span>${o.driver_name}</span></div>
+          <div class="inv-row"><span>نوع الأوردر</span><span>${invoiceTypeLabel[o.order_type] || o.order_type}</span></div>
+          <div class="inv-divider"></div>
+          <div class="inv-total"><span>المبلغ الإجمالي</span><span>${o.price || 0} ج</span></div>
+          <div class="inv-footer">Dr. Romany Shenoda — Future Company for Solutions</div>
+        </div>
+      `;
+    }
+
+    function printSingleInvoice(o) {
+      document.getElementById('invoicePrintArea').innerHTML = buildInvoiceHtml(o);
+      window.print();
+    }
+
+    function loadDriversForBulkPrint() {
+      fetch('/drivers').then(res => res.json()).then(data => {
+        document.getElementById('bulkPrintDriver').innerHTML =
+          '<option value="">اختار سائق...</option>' +
+          data.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+      });
+    }
+
+    function bulkPrintInvoices() {
+      const dateVal = document.getElementById('bulkPrintDate').value;
+      const driverId = document.getElementById('bulkPrintDriver').value;
+
+      if (!dateVal) { showToast('اختار التاريخ الأول', true); return; }
+      if (!driverId) { showToast('اختار السائق الأول', true); return; }
+
+      const dayOrders = allOrders.filter(o => {
+        if (o.status !== 'closed' || !o.end_time) return false;
+        if (String(o.driver_id) !== String(driverId)) return false;
+        const orderDate = new Date(o.end_time).toISOString().split('T')[0];
+        return orderDate === dateVal;
+      });
+
+      if (dayOrders.length === 0) {
+        showToast('مفيش أوردرات مقفولة للسائق ده في اليوم ده', true);
+        return;
+      }
+
+      document.getElementById('invoicePrintArea').innerHTML = dayOrders.map(buildInvoiceHtml).join('');
+      window.print();
+    }
+
+    document.getElementById('bulkPrintDate').valueAsDate = new Date();
+    loadDriversForBulkPrint();
+
     loadActiveOrders();
     loadOrders();
 
@@ -313,6 +429,8 @@
       <span>📱</span> 01066696216
     </a>
   </footer>
+
+  <div class="invoice-print-area" id="invoicePrintArea"></div>
 
 </body>
 </html>
