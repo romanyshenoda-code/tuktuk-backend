@@ -1495,6 +1495,7 @@
           showToast(data.message);
           document.getElementById('adminDeductionForm').reset();
           document.getElementById('adminDeductionPicked').textContent = '';
+          loadAdminDeductions();
           if (loadedTabs['admin-payroll']) loadAdminPayroll();
         } else { showToast(data.error, true); }
       });
@@ -1522,6 +1523,7 @@
           showToast(data.message);
           document.getElementById('adminIncentiveForm').reset();
           document.getElementById('adminIncentivePicked').textContent = '';
+          loadAdminIncentives();
           if (loadedTabs['admin-payroll']) loadAdminPayroll();
         } else { showToast(data.error, true); }
       });
