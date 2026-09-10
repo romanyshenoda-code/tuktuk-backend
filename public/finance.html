@@ -42,6 +42,8 @@
     .tab-btn.active { color: var(--tab-color, var(--nile)); border-bottom-color: var(--tab-color, var(--nile)); }
     .tab-btn[data-tab="payroll"] { --tab-color: var(--nile); }
     .tab-btn[data-tab="performance"] { --tab-color: var(--purple); }
+    .tab-btn[data-tab="admin-payroll"] { --tab-color: #2E5C8A; }
+    .tab-btn[data-tab="admin-performance"] { --tab-color: #7A5C9E; }
     .tab-btn[data-tab="settings"] { --tab-color: var(--asphalt); }
     .tab-btn[data-tab="holidays"] { --tab-color: var(--amber); }
     .tab-btn[data-tab="reports"] { --tab-color: var(--orange); }
@@ -301,8 +303,10 @@
     </div>
 
     <div class="tabs-bar">
-      <button class="tab-btn active" data-tab="payroll">كشف المرتبات</button>
+      <button class="tab-btn active" data-tab="payroll">كشف مرتبات السواقين</button>
       <button class="tab-btn" data-tab="performance">أداء السواقين</button>
+      <button class="tab-btn" data-tab="admin-payroll">كشف مرتبات المشرفين</button>
+      <button class="tab-btn" data-tab="admin-performance">أداء المشرفين</button>
       <button class="tab-btn" data-tab="settings">الإعدادات</button>
       <button class="tab-btn" data-tab="holidays">المناسبات والأعياد</button>
       <button class="tab-btn" data-tab="reports">صافي الربح والفوترة</button>
@@ -338,6 +342,32 @@
           <thead><tr><th>الترتيب</th><th>السائق</th><th>أيام العمل</th><th>إجمالي الأوردرات</th><th>توصيلات</th><th>رحلات كاملة</th><th>إجمالي الإيراد</th><th>متوسط يومي</th></tr></thead>
           <tbody><tr class="empty-row"><td colspan="8">جاري التحميل...</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- تبويب كشف مرتبات المشرفين -->
+    <div class="tab-panel" id="tab-admin-payroll" style="--tab-color: #2E5C8A;">
+      <div class="section-head">
+        <h2><span class="dot"></span>كشف مرتبات المشرفين</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="adminPayrollSearch" class="search-input" placeholder="بحث باسم المشرف..." oninput="filterAdminPayroll()">
+          <button class="row-btn btn-excel" onclick="exportAdminPayrollExcel()">📊 تصدير Excel</button>
+          <button class="row-btn btn-edit" onclick="loadAdminPayroll()">تحديث</button>
+        </div>
+      </div>
+      <div class="panel table-scroll table-box" style="padding:0;">
+        <table id="adminPayrollTable">
+          <thead><tr><th>المشرف</th><th>المرتب الشهري</th><th>أيام العمل</th><th>حضور فعلي</th><th>مستحق</th><th>حوافز</th><th>خصومات وسلف</th><th>الصافي</th><th>تعديل المرتب</th></tr></thead>
+          <tbody><tr class="empty-row"><td colspan="9">جاري التحميل...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- تبويب أداء المشرفين -->
+    <div class="tab-panel" id="tab-admin-performance" style="--tab-color: #7A5C9E;">
+      <div class="section-head"><h2><span class="dot"></span>أداء المشرفين</h2></div>
+      <div class="panel" style="padding: 40px; text-align: center; color: var(--muted);">
+        هنحدد محتوى التبويب ده لاحقاً
       </div>
     </div>
 
@@ -659,6 +689,25 @@
   </div>
 
   <!-- مودال التخصيص -->
+  <div class="modal-backdrop" id="adminSalaryModal">
+    <div class="modal-box">
+      <h3>تعديل مرتب المشرف</h3>
+      <div class="modal-sub">حدّد المرتب الشهري وأيام العمل المطلوبة</div>
+      <form id="adminSalaryForm">
+        <input type="hidden" id="editAdminId">
+        <input type="text" id="editAdminNameDisplay" disabled style="background:#F5F0E6;">
+        <input type="number" id="editAdminSalary" placeholder="المرتب الشهري">
+        <input type="number" id="editAdminWorkingDays" placeholder="أيام العمل المطلوبة" value="26">
+        <input type="text" id="editAdminPhone" placeholder="رقم التليفون (اختياري)">
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" onclick="closeModal('adminSalaryModal')">إلغاء</button>
+          <button type="submit" class="btn-modal-save">حفظ</button>
+        </div>
+      </form>
+      <div id="adminSalaryMsg" class="form-msg"></div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="customizeModal">
     <div class="modal-box">
       <h3>تخصيص إعدادات السائق</h3>
@@ -790,6 +839,7 @@
     function refreshAll() {
       loadPayroll();
       if (loadedTabs.performance) loadPerformance();
+      if (loadedTabs['admin-payroll']) loadAdminPayroll();
       if (loadedTabs.reports) loadYearlyChart();
     }
 
@@ -807,6 +857,7 @@
         if (!loadedTabs[tab]) {
           loadedTabs[tab] = true;
           if (tab === 'performance') loadPerformance();
+          if (tab === 'admin-payroll') loadAdminPayroll();
           if (tab === 'reports') loadYearlyChart();
           if (tab === 'holidays') loadHolidayEvents();
           if (tab === 'cleanup') loadStorageInfo();
@@ -821,8 +872,8 @@
       setTimeout(() => { t.className = 'toast'; }, 3000);
     }
 
-    function openModal() { document.getElementById('customizeModal').classList.add('open'); }
-    function closeModal() { document.getElementById('customizeModal').classList.remove('open'); }
+    function openModal(id) { document.getElementById(id || 'customizeModal').classList.add('open'); }
+    function closeModal(id) { document.getElementById(id || 'customizeModal').classList.remove('open'); }
 
     document.querySelectorAll('#restDaysPicker .day-chip').forEach(chip => {
       chip.addEventListener('click', () => {
@@ -1090,6 +1141,107 @@
       if (!q) { renderPayrollTable(allPayrollRows); return; }
       renderPayrollTable(allPayrollRows.filter(p => p.driver_name.includes(q)));
     }
+
+    // ==================== كشف مرتبات المشرفين ====================
+    let allAdminPayrollRows = [];
+
+    function loadAdminPayroll() {
+      fetch(`/admin-payroll/calculate-all/${selectedYear}/${selectedMonth}?t=${Date.now()}`)
+        .then(res => res.json())
+        .then(results => {
+          allAdminPayrollRows = results;
+          renderAdminPayrollTable(results);
+        })
+        .catch(() => {
+          document.querySelector('#adminPayrollTable tbody').innerHTML =
+            `<tr class="empty-row"><td colspan="9">حصل خطأ في تحميل مرتبات المشرفين</td></tr>`;
+        });
+    }
+
+    function renderAdminPayrollTable(rows) {
+      const tbody = document.querySelector('#adminPayrollTable tbody');
+      if (rows.length === 0) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="9">مفيش مشرفين مسجّلين</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(a => `
+        <tr>
+          <td>${a.admin_name}</td>
+          <td class="amt-blue">${a.monthly_salary} ج</td>
+          <td><span class="day-badge required">${a.working_days}</span></td>
+          <td><span class="day-badge present">${a.days_present}</span></td>
+          <td class="amt-blue">${a.earned_salary} ج</td>
+          <td class="amt-green">${a.total_incentives} ج</td>
+          <td class="amt-red">${(parseFloat(a.total_deductions) + parseFloat(a.total_advances)).toFixed(2)} ج</td>
+          <td class="amt-net">${a.net_pay} ج</td>
+          <td><button class="row-btn btn-edit" onclick='openAdminSalaryModal(${JSON.stringify(a)})'>تعديل</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function filterAdminPayroll() {
+      const q = document.getElementById('adminPayrollSearch').value.trim();
+      if (!q) { renderAdminPayrollTable(allAdminPayrollRows); return; }
+      renderAdminPayrollTable(allAdminPayrollRows.filter(a => a.admin_name.includes(q)));
+    }
+
+    function exportAdminPayrollExcel() {
+      if (allAdminPayrollRows.length === 0) { showToast('مفيش بيانات للتصدير', true); return; }
+      const data = allAdminPayrollRows.map(a => ({
+        'المشرف': a.admin_name,
+        'المرتب الشهري': parseFloat(a.monthly_salary),
+        'أيام العمل': a.working_days,
+        'الحضور الفعلي': a.days_present,
+        'المستحق': parseFloat(a.earned_salary),
+        'حوافز': parseFloat(a.total_incentives),
+        'خصومات وسلف': parseFloat(a.total_deductions) + parseFloat(a.total_advances),
+        'الصافي': parseFloat(a.net_pay)
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'كشف مرتبات المشرفين');
+      XLSX.writeFile(wb, `كشف_مرتبات_المشرفين_${monthNames[selectedMonth - 1]}_${selectedYear}.xlsx`);
+      showToast('تم تصدير الملف بنجاح');
+    }
+
+    function openAdminSalaryModal(a) {
+      document.getElementById('editAdminId').value = a.admin_id;
+      document.getElementById('editAdminNameDisplay').value = a.admin_name;
+      document.getElementById('editAdminSalary').value = a.monthly_salary;
+      document.getElementById('editAdminWorkingDays').value = a.working_days;
+      document.getElementById('editAdminPhone').value = a.admin_phone || '';
+      document.getElementById('adminSalaryMsg').textContent = '';
+      openModal('adminSalaryModal');
+    }
+
+    document.getElementById('adminSalaryForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const id = document.getElementById('editAdminId').value;
+
+      fetch(`/admins/${id}/salary`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          monthly_salary: document.getElementById('editAdminSalary').value,
+          working_days: document.getElementById('editAdminWorkingDays').value,
+          phone: document.getElementById('editAdminPhone').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('adminSalaryMsg').textContent = data.message || data.error;
+        if (data.message) {
+          showToast(data.message);
+          loadAdminPayroll();
+          setTimeout(() => closeModal('adminSalaryModal'), 700);
+        } else {
+          showToast(data.error, true);
+        }
+      })
+      .catch(() => {
+        document.getElementById('adminSalaryMsg').textContent = 'حصل خطأ في الاتصال بالسيرفر';
+      });
+    });
 
     // ==================== تصدير Excel ====================
     function exportPayrollExcel() {
