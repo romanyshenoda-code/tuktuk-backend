@@ -2445,6 +2445,337 @@ app.get('/reports/driver-profile/:driver_id/:year/:month', (req, res) => {
     });
   });
 });
+// ==================== حضور المشرفين ====================
+app.post('/admin-shifts/check-in', (req, res) => {
+  const { admin_id, lat, lng } = req.body;
+
+  db.query('SELECT id FROM admin_shifts WHERE admin_id = ? AND status = "open"', [admin_id], (err, openResults) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحقق' }); }
+    if (openResults.length > 0) return res.status(400).json({ error: 'عندك وردية مفتوحة بالفعل' });
+
+    db.query(
+      `INSERT INTO admin_shifts (admin_id, check_in_time, check_in_lat, check_in_lng, status) VALUES (?, NOW(), ?, ?, 'open')`,
+      [admin_id, lat || null, lng || null],
+      (err, result) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الحضور' }); }
+        res.status(201).json({ message: 'تم تسجيل الحضور بنجاح', shift_id: result.insertId });
+      }
+    );
+  });
+});
+
+app.post('/admin-shifts/check-out', (req, res) => {
+  const { admin_id } = req.body;
+
+  db.query('SELECT id FROM admin_shifts WHERE admin_id = ? AND status = "open"', [admin_id], (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في البحث عن الوردية' }); }
+    if (results.length === 0) return res.status(404).json({ error: 'مفيش وردية مفتوحة' });
+
+    db.query(
+      `UPDATE admin_shifts SET check_out_time = NOW(), status = 'closed' WHERE id = ?`,
+      [results[0].id],
+      (err) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الانصراف' }); }
+        res.json({ message: 'تم تسجيل الانصراف بنجاح' });
+      }
+    );
+  });
+});
+
+app.get('/admin-shifts/open/:admin_id', (req, res) => {
+  const { admin_id } = req.params;
+  db.query('SELECT * FROM admin_shifts WHERE admin_id = ? AND status = "open" LIMIT 1', [admin_id], (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في البحث' }); }
+    res.json(results[0] || {});
+  });
+});
+
+app.get('/admin-shifts', (req, res) => {
+  const { year, month } = req.query;
+  let query = `SELECT admin_shifts.*, admins.name AS admin_name FROM admin_shifts JOIN admins ON admin_shifts.admin_id = admins.id`;
+  const params = [];
+  if (year && month) {
+    query += ' WHERE YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?';
+    params.push(year, month);
+  }
+  query += ' ORDER BY check_in_time DESC LIMIT 300';
+
+  db.query(query, params, (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الورديات' }); }
+    res.json(results);
+  });
+});
+
+// ==================== خصومات المشرفين ====================
+app.post('/admin-deductions', (req, res) => {
+  const { admin_id, amount, reason } = req.body;
+  db.query('INSERT INTO admin_deductions (admin_id, amount, reason) VALUES (?, ?, ?)', [admin_id, amount, reason], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الخصم' }); }
+    res.status(201).json({ message: 'تم تسجيل الخصم بنجاح', id: result.insertId });
+  });
+});
+
+app.get('/admin-deductions', (req, res) => {
+  db.query(
+    `SELECT admin_deductions.*, admins.name AS admin_name FROM admin_deductions JOIN admins ON admin_deductions.admin_id = admins.id ORDER BY created_at DESC LIMIT 500`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الخصومات' }); }
+      res.json(results);
+    }
+  );
+});
+
+app.put('/admin-deductions/:id', (req, res) => {
+  const { id } = req.params;
+  const { admin_id, amount, reason } = req.body;
+  db.query('UPDATE admin_deductions SET admin_id = ?, amount = ?, reason = ? WHERE id = ?', [admin_id, amount, reason, id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التعديل' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الخصم غير موجود' });
+    res.json({ message: 'تم تعديل الخصم بنجاح' });
+  });
+});
+
+app.delete('/admin-deductions/:id', (req, res) => {
+  db.query('DELETE FROM admin_deductions WHERE id = ?', [req.params.id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في الحذف' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الخصم غير موجود' });
+    res.json({ message: 'تم حذف الخصم نهائياً' });
+  });
+});
+
+// ==================== حوافز المشرفين ====================
+app.post('/admin-incentives', (req, res) => {
+  const { admin_id, amount, reason } = req.body;
+  db.query('INSERT INTO admin_incentives (admin_id, amount, reason) VALUES (?, ?, ?)', [admin_id, amount, reason], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الحافز' }); }
+    res.status(201).json({ message: 'تم تسجيل الحافز بنجاح', id: result.insertId });
+  });
+});
+
+app.get('/admin-incentives', (req, res) => {
+  db.query(
+    `SELECT admin_incentives.*, admins.name AS admin_name FROM admin_incentives JOIN admins ON admin_incentives.admin_id = admins.id ORDER BY created_at DESC LIMIT 500`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الحوافز' }); }
+      res.json(results);
+    }
+  );
+});
+
+app.put('/admin-incentives/:id', (req, res) => {
+  const { id } = req.params;
+  const { admin_id, amount, reason } = req.body;
+  db.query('UPDATE admin_incentives SET admin_id = ?, amount = ?, reason = ? WHERE id = ?', [admin_id, amount, reason, id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التعديل' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الحافز غير موجود' });
+    res.json({ message: 'تم تعديل الحافز بنجاح' });
+  });
+});
+
+app.delete('/admin-incentives/:id', (req, res) => {
+  db.query('DELETE FROM admin_incentives WHERE id = ?', [req.params.id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في الحذف' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الحافز غير موجود' });
+    res.json({ message: 'تم حذف الحافز نهائياً' });
+  });
+});
+
+// ==================== سلف المشرفين ====================
+app.post('/admin-advances', (req, res) => {
+  const { admin_id, amount, reason } = req.body;
+  db.query('INSERT INTO admin_advances (admin_id, amount, reason) VALUES (?, ?, ?)', [admin_id, amount, reason], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل السلفة' }); }
+    res.status(201).json({ message: 'تم تسجيل طلب السلفة بنجاح', id: result.insertId });
+  });
+});
+
+app.get('/admin-advances', (req, res) => {
+  db.query(
+    `SELECT admin_advances.*, admins.name AS admin_name FROM admin_advances JOIN admins ON admin_advances.admin_id = admins.id ORDER BY created_at DESC LIMIT 500`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب السلف' }); }
+      res.json(results);
+    }
+  );
+});
+
+app.put('/admin-advances/:id', (req, res) => {
+  const { id } = req.params;
+  const { status, admin_note } = req.body;
+  if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ error: 'حالة غير صحيحة' });
+
+  db.query(
+    'UPDATE admin_advances SET status = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?',
+    [status, admin_note || null, id],
+    (err, result) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في المراجعة' }); }
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+      res.json({ message: status === 'approved' ? 'تمت الموافقة على السلفة' : 'تم رفض السلفة' });
+    }
+  );
+});
+
+app.delete('/admin-advances/:id', (req, res) => {
+  db.query('DELETE FROM admin_advances WHERE id = ?', [req.params.id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في الحذف' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+    res.json({ message: 'تم حذف الطلب نهائياً' });
+  });
+});
+
+// ==================== إجازات المشرفين ====================
+app.post('/admin-leave-requests', (req, res) => {
+  const { admin_id, start_date, end_date, reason } = req.body;
+
+  if (!admin_id || !start_date || !end_date) {
+    return res.status(400).json({ error: 'من فضلك حدد تاريخ بداية ونهاية الإجازة' });
+  }
+  if (end_date < start_date) {
+    return res.status(400).json({ error: 'تاريخ نهاية الإجازة لازم يكون بعد أو نفس تاريخ البداية' });
+  }
+
+  db.query(
+    'INSERT INTO admin_leave_requests (admin_id, start_date, end_date, reason) VALUES (?, ?, ?, ?)',
+    [admin_id, start_date, end_date, reason || null],
+    (err, result) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الطلب' }); }
+      res.status(201).json({ message: 'تم تسجيل طلب الإجازة بنجاح', id: result.insertId });
+    }
+  );
+});
+
+app.get('/admin-leave-requests', (req, res) => {
+  db.query(
+    `SELECT admin_leave_requests.*, admins.name AS admin_name FROM admin_leave_requests JOIN admins ON admin_leave_requests.admin_id = admins.id ORDER BY start_date DESC LIMIT 500`,
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإجازات' }); }
+      res.json(results);
+    }
+  );
+});
+
+app.put('/admin-leave-requests/:id', (req, res) => {
+  const { id } = req.params;
+  const { status, admin_note } = req.body;
+  if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ error: 'حالة غير صحيحة' });
+
+  db.query(
+    'UPDATE admin_leave_requests SET status = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?',
+    [status, admin_note || null, id],
+    (err, result) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في المراجعة' }); }
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+      res.json({ message: status === 'approved' ? 'تمت الموافقة على الإجازة' : 'تم رفض الإجازة' });
+    }
+  );
+});
+
+app.delete('/admin-leave-requests/:id', (req, res) => {
+  db.query('DELETE FROM admin_leave_requests WHERE id = ?', [req.params.id], (err, result) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في الحذف' }); }
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+    res.json({ message: 'تم حذف الطلب نهائياً' });
+  });
+});
+
+// ==================== إعدادات مرتب المشرف ====================
+app.put('/admins/:id/salary', (req, res) => {
+  const { id } = req.params;
+  const { monthly_salary, working_days, phone } = req.body;
+
+  db.query(
+    'UPDATE admins SET monthly_salary = ?, working_days = ?, phone = ? WHERE id = ?',
+    [monthly_salary || 0, working_days || 26, phone || null, id],
+    (err, result) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث بيانات المرتب' }); }
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'المشرف غير موجود' });
+      res.json({ message: 'تم تحديث بيانات المرتب بنجاح' });
+    }
+  );
+});
+
+// ==================== حساب مرتبات كل المشرفين ====================
+app.get('/admin-payroll/calculate-all/:year/:month', (req, res) => {
+  const { year, month } = req.params;
+
+  db.query('SELECT id, name, phone, monthly_salary, working_days FROM admins', (err, admins) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب المشرفين' }); }
+    if (admins.length === 0) return res.json([]);
+
+    db.query(
+      `SELECT admin_id, COUNT(DISTINCT DATE(check_in_time)) AS days_present
+       FROM admin_shifts WHERE YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
+       GROUP BY admin_id`,
+      [year, month],
+      (err, attendanceRows) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' }); }
+
+        db.query(
+          `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_deductions
+           WHERE YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
+          [year, month],
+          (err, dedRows) => {
+            if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' }); }
+
+            db.query(
+              `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_incentives
+               WHERE YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
+              [year, month],
+              (err, incRows) => {
+                if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحوافز' }); }
+
+                db.query(
+                  `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_advances
+                   WHERE status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
+                  [year, month],
+                  (err, advRows) => {
+                    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب السلف' }); }
+
+                    const attMap = {}, dedMap = {}, incMap = {}, advMap = {};
+                    attendanceRows.forEach(r => { attMap[r.admin_id] = r.days_present; });
+                    dedRows.forEach(r => { dedMap[r.admin_id] = parseFloat(r.total); });
+                    incRows.forEach(r => { incMap[r.admin_id] = parseFloat(r.total); });
+                    advRows.forEach(r => { advMap[r.admin_id] = parseFloat(r.total); });
+
+                    const results = admins.map(a => {
+                      const workingDays = a.working_days || 26;
+                      const monthlySalary = parseFloat(a.monthly_salary || 0);
+                      const daysPresent = attMap[a.id] || 0;
+                      const dailyRate = workingDays > 0 ? monthlySalary / workingDays : 0;
+                      const cappedDays = Math.min(daysPresent, workingDays);
+                      const earnedSalary = dailyRate * cappedDays;
+
+                      const deductions = dedMap[a.id] || 0;
+                      const incentives = incMap[a.id] || 0;
+                      const advances = advMap[a.id] || 0;
+                      const netPay = earnedSalary + incentives - deductions - advances;
+
+                      return {
+                        admin_id: a.id,
+                        admin_name: a.name,
+                        admin_phone: a.phone,
+                        monthly_salary: monthlySalary.toFixed(2),
+                        working_days: workingDays,
+                        days_present: daysPresent,
+                        earned_salary: earnedSalary.toFixed(2),
+                        total_incentives: incentives.toFixed(2),
+                        total_deductions: deductions.toFixed(2),
+                        total_advances: advances.toFixed(2),
+                        net_pay: netPay.toFixed(2)
+                      };
+                    });
+
+                    res.json(results);
+                  }
+                );
+              }
+            );
+          }
+        );
+      }
+    );
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
