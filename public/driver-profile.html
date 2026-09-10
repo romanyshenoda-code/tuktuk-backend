@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ملف السائق - Ginger</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+      --gold: #C9A227;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
+    .topbar img.logo { height: 36px; }
+    .topbar h1 { margin: 0; font-size: 16px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.8; font-size: 13px; text-decoration: none; }
+    .topbar-actions { margin-inline-start: auto; display: flex; gap: 8px; }
+    .tb-btn { padding: 8px 16px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: white; border-radius: 20px; font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+    .tb-btn:hover { background: rgba(255,255,255,0.16); }
+
+    .container { max-width: 1000px; margin: 0 auto; padding: 24px; }
+
+    .month-picker { display: flex; align-items: center; gap: 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin-bottom: 22px; flex-wrap: wrap; }
+    .month-picker label { font-size: 13px; font-weight: 700; color: var(--muted); }
+    .month-picker select { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; font-family: inherit; font-size: 13.5px; background: var(--sand); }
+
+    /* هيدر السائق */
+    .profile-header {
+      background: linear-gradient(135deg, var(--asphalt) 0%, #1E4373 100%);
+      border-radius: 18px; padding: 26px; color: white; margin-bottom: 22px;
+      display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+      box-shadow: 0 8px 24px rgba(22,48,92,0.25);
+    }
+    .profile-avatar { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.4); flex-shrink: 0; }
+    .profile-avatar-empty { width: 84px; height: 84px; border-radius: 50%; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; flex-shrink: 0; border: 3px solid rgba(255,255,255,0.3); }
+    .profile-info h2 { margin: 0 0 6px; font-size: 22px; }
+    .profile-info .p-meta { font-size: 13px; opacity: 0.85; display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+    .profile-status { margin-inline-start: auto; }
+    .status-pill { padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; }
+    .status-pill.active { background: rgba(31,111,99,0.25); color: #B8E8DE; }
+    .status-pill.inactive { background: rgba(178,58,30,0.25); color: #F3C9BE; }
+
+    /* قسم المستندات */
+    .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .section-head h3 { font-size: 16.5px; margin: 0; display: flex; align-items: center; gap: 8px; }
+    .section-head h3 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--section-color, var(--nile)); }
+
+    .docs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 26px; }
+    .doc-card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px; text-align: center; }
+    .doc-card img { width: 100%; height: 90px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+    .doc-card .doc-empty { width: 100%; height: 90px; border-radius: 8px; margin-bottom: 8px; background: var(--sand); border: 1px dashed var(--line); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11.5px; }
+    .doc-card .doc-title { font-size: 12px; font-weight: 700; color: var(--asphalt); }
+    .doc-card .doc-sub { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+    .doc-card.warn { border-color: var(--rust); background: #FBEEEA; }
+    .doc-card.warn .doc-title { color: var(--rust); }
+    .doc-card .drug-badge { display: inline-block; margin-top: 4px; padding: 2px 10px; border-radius: 12px; font-size: 10.5px; font-weight: 800; }
+    .drug-badge.negative { background: #E3EEEC; color: var(--nile); }
+    .drug-badge.positive { background: #FBEEEA; color: var(--rust); }
+    .drug-badge.unset { background: var(--sand); color: var(--muted); }
+
+    /* بطاقات الإحصائيات */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .stat-box { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; text-align: center; border-top: 4px solid var(--stat-color, var(--nile)); }
+    .stat-box .sb-num { font-size: 22px; font-weight: 800; color: var(--stat-color, var(--ink)); }
+    .stat-box .sb-label { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 700; }
+
+    /* الرسم البياني */
+    .chart-box { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin-bottom: 26px; }
+    #dailyChart { width: 100%; height: 220px; }
+    .chart-legend { display: flex; gap: 16px; justify-content: center; margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .chart-legend span { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+
+    .highlight-row { display: flex; gap: 14px; margin-bottom: 26px; flex-wrap: wrap; }
+    .highlight-card { flex: 1; min-width: 200px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    .highlight-card .hc-icon { font-size: 22px; }
+    .highlight-card .hc-title { font-size: 12.5px; color: var(--muted); font-weight: 700; margin-top: 6px; }
+    .highlight-card .hc-value { font-size: 17px; font-weight: 800; color: var(--asphalt); margin-top: 3px; }
+
+    /* الإجمالي التراكمي */
+    .cumulative-box {
+      background: linear-gradient(135deg, #FAF5EC 0%, var(--paper) 100%);
+      border: 1px solid var(--gold); border-radius: 14px; padding: 20px; margin-bottom: 26px;
+    }
+    .cum-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-top: 12px; }
+    .cum-item { text-align: center; }
+    .cum-item .ci-num { font-size: 19px; font-weight: 800; }
+    .cum-item .ci-label { font-size: 11px; color: var(--muted); margin-top: 3px; font-weight: 700; }
+
+    .amt-blue { color: var(--asphalt); }
+    .amt-green { color: var(--nile); }
+    .amt-gold { color: var(--gold); }
+    .amt-red { color: var(--rust); }
+
+    .dev-footer { margin-top: 40px; padding: 20px 24px; background: #FFFFFF; border-top: 1px solid #E4DCCB; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center; }
+    .dev-brand { display: flex; align-items: center; gap: 11px; }
+    .dev-mark { width: 40px; height: 40px; flex-shrink: 0; }
+    .dev-brand-text { line-height: 1.25; }
+    .dev-brand-name { font-size: 15px; font-weight: 800; color: #16305C; letter-spacing: 1.5px; }
+    .dev-brand-sub { font-size: 8.5px; color: #8A8272; letter-spacing: 1px; font-weight: 600; }
+    .dev-divider { width: 1px; height: 34px; background: #E4DCCB; }
+    .dev-info { text-align: center; }
+    .dev-name { font-size: 13px; font-weight: 800; color: #16305C; }
+    .dev-role { font-size: 10.5px; color: #8A8272; margin-top: 1px; }
+    .dev-contact { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; background: #25D366; color: white; padding: 8px 16px; border-radius: 22px; font-size: 13px; font-weight: 700; }
+    @media (max-width: 560px) { .dev-footer { flex-direction: column; gap: 13px; } .dev-divider { display: none; } }
+
+    @media print {
+      .topbar, .month-picker, .dev-footer { display: none !important; }
+      body { background: white; }
+      .container { max-width: 100%; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/finance.html" class="back-link">→ رجوع</a>
+    <img class="logo" src="/logo.png" alt="Ginger">
+    <h1 id="pageTitle">ملف السائق</h1>
+    <div class="topbar-actions">
+      <button class="tb-btn" onclick="exportExcel()">📊 Excel</button>
+      <button class="tb-btn" onclick="window.print()">🖨️ طباعة</button>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <div class="month-picker">
+      <label>عرض بيانات شهر:</label>
+      <select id="monthSelect"></select>
+      <select id="yearSelect"></select>
+    </div>
+
+    <div class="profile-header">
+      <img id="profileAvatar" class="profile-avatar hidden" onclick="openPreview(this.src)" style="cursor:pointer;">
+      <div id="profileAvatarEmpty" class="profile-avatar-empty">?</div>
+      <div class="profile-info">
+        <h2 id="profileName">-</h2>
+        <div class="p-meta">
+          <span id="profilePhone">-</span>
+          <span id="profileNationalId">-</span>
+          <span id="profileJoined">-</span>
+        </div>
+      </div>
+      <div class="profile-status">
+        <span class="status-pill" id="profileStatus">-</span>
+      </div>
+    </div>
+
+    <div class="section-head" style="--section-color: var(--asphalt);"><h3><span class="dot"></span>المستندات والصور</h3></div>
+    <div class="docs-grid" id="docsGrid"></div>
+
+    <div class="section-head" style="--section-color: var(--nile);"><h3><span class="dot"></span>أداء الشهر المختار</h3></div>
+    <div class="stats-grid" id="monthStatsGrid"></div>
+
+    <div class="chart-box">
+      <div class="section-head" style="margin-bottom:14px;"><h3><span class="dot"></span>النشاط اليومي</h3></div>
+      <svg id="dailyChart" viewBox="0 0 700 220" preserveAspectRatio="none"></svg>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:var(--nile);"></span> الإيراد اليومي</span>
+        <span><span class="legend-dot" style="background:var(--amber);"></span> عدد الأوردرات</span>
+      </div>
+    </div>
+
+    <div class="highlight-row" id="highlightsRow"></div>
+
+    <div class="section-head" style="--section-color: var(--gold);"><h3><span class="dot"></span>الإجمالي التراكمي (من التسجيل لحد نهاية الشهر ده)</h3></div>
+    <div class="cumulative-box">
+      <div style="font-size:12.5px;color:var(--muted);">نوع الدخل: <strong id="incomeTypeLabel">-</strong></div>
+      <div class="cum-grid" id="cumulativeGrid"></div>
+    </div>
+
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const driverId = params.get('id');
+    if (!driverId) { document.body.innerHTML = '<p style="padding:30px;text-align:center;">رقم السائق غير محدد في الرابط</p>'; throw new Error('no id'); }
+
+    const now = new Date();
+    let selectedYear = parseInt(params.get('year')) || now.getFullYear();
+    let selectedMonth = parseInt(params.get('month')) || (now.getMonth() + 1);
+    const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const incomeLabels = { salary: 'مرتب', commission: 'عمولة', both: 'مرتب + عمولة' };
+    let currentProfileData = null;
+
+    function initMonthPicker() {
+      const monthSelect = document.getElementById('monthSelect');
+      monthSelect.innerHTML = monthNames.map((n, i) => `<option value="${i + 1}">${n}</option>`).join('');
+      monthSelect.value = selectedMonth;
+
+      const yearSelect = document.getElementById('yearSelect');
+      const years = [];
+      for (let y = now.getFullYear() - 2; y <= now.getFullYear() + 1; y++) years.push(y);
+      yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+      yearSelect.value = selectedYear;
+
+      monthSelect.addEventListener('change', () => { selectedMonth = parseInt(monthSelect.value); loadProfile(); });
+      yearSelect.addEventListener('change', () => { selectedYear = parseInt(yearSelect.value); loadProfile(); });
+    }
+
+    function openPreview(src) { window.open(src, '_blank'); }
+
+    function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : '-'; }
+
+    function daysUntil(dateStr) {
+      if (!dateStr) return null;
+      return Math.floor((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
+    }
+
+    function loadProfile() {
+      fetch(`/reports/driver-profile/${driverId}/${selectedYear}/${selectedMonth}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) { document.getElementById('pageTitle').textContent = data.error; return; }
+          currentProfileData = data;
+          renderProfile(data);
+        })
+        .catch(() => { document.getElementById('pageTitle').textContent = 'حصل خطأ في تحميل البيانات'; });
+    }
+
+    function renderProfile(data) {
+      const d = data.driver;
+      document.getElementById('pageTitle').textContent = 'ملف ' + d.name;
+
+      // الهيدر
+      if (d.photo_personal) {
+        const img = document.getElementById('profileAvatar');
+        img.src = '/uploads/' + d.photo_personal;
+        img.classList.remove('hidden');
+        document.getElementById('profileAvatarEmpty').classList.add('hidden');
+      }
+      document.getElementById('profileName').textContent = d.name;
+      document.getElementById('profileAvatarEmpty').textContent = d.name ? d.name.charAt(0) : '?';
+      document.getElementById('profilePhone').textContent = '📱 ' + d.phone;
+      document.getElementById('profileNationalId').textContent = '🪪 ' + (d.national_id || 'مفيش رقم قومي');
+      document.getElementById('profileJoined').textContent = '📅 اتسجّل: ' + formatDate(d.created_at);
+
+      const statusEl = document.getElementById('profileStatus');
+      statusEl.textContent = d.status === 'active' ? 'نشط' : 'غير نشط';
+      statusEl.className = 'status-pill ' + (d.status === 'active' ? 'active' : 'inactive');
+
+      // المستندات
+      const idOk = d.photo_national_id && d.photo_national_id_back;
+      const licOk = d.photo_license && d.photo_license_back;
+      const licDays = daysUntil(d.license_expiry);
+      const licWarn = licDays !== null && licDays <= 30;
+
+      const docsHtml = [
+        docCard('البطاقة (وش)', d.photo_national_id, !d.photo_national_id),
+        docCard('البطاقة (ضهر)', d.photo_national_id_back, !d.photo_national_id_back),
+        docCard('الرخصة (وش)', d.photo_license, !d.photo_license, licWarn),
+        docCard('الرخصة (ضهر)', d.photo_license_back, !d.photo_license_back, licWarn,
+          d.license_expiry ? `تنتهي: ${formatDate(d.license_expiry)}${licDays !== null ? ' (' + (licDays < 0 ? 'منتهية' : licDays + ' يوم') + ')' : ''}` : 'مفيش تاريخ مسجّل'),
+        drugCard(d.photo_drug_test, d.drug_test_result)
+      ];
+      document.getElementById('docsGrid').innerHTML = docsHtml.join('');
+
+      // إحصائيات الشهر
+      const m = data.month_data;
+      document.getElementById('monthStatsGrid').innerHTML = `
+        ${statBox(m.shifts_count, 'ورديات', 'var(--asphalt)')}
+        ${statBox(m.total_orders, 'إجمالي أوردرات', 'var(--nile)')}
+        ${statBox(m.delivery_count, 'توصيل', 'var(--nile)')}
+        ${statBox(m.full_trip_count, 'رحلات كاملة', 'var(--nile)')}
+        ${statBox(m.avg_daily_orders, 'متوسط يومي', 'var(--amber)')}
+        ${statBox(m.total_earning + ' ج', 'مستحقات', 'var(--asphalt)')}
+        ${statBox(m.total_incentives + ' ج', 'حوافز', 'var(--gold)')}
+        ${statBox((parseFloat(m.total_deductions) + parseFloat(m.total_advances)).toFixed(2) + ' ج', 'خصومات وسلف', 'var(--rust)')}
+        ${statBox(m.net_pay + ' ج', 'الصافي', 'var(--ink)')}
+      `;
+
+      // الرسم البياني
+      drawChart(m.daily_data);
+
+      // أبرز الأيام
+      const bestDay = m.best_revenue_day;
+      const busiestDay = m.busiest_day;
+      document.getElementById('highlightsRow').innerHTML = `
+        <div class="highlight-card">
+          <div class="hc-icon">💰</div>
+          <div class="hc-title">أفضل يوم إيراد</div>
+          <div class="hc-value">${bestDay && bestDay.revenue > 0 ? `يوم ${bestDay.day} — ${bestDay.revenue.toFixed(0)} ج` : 'مفيش بيانات'}</div>
+        </div>
+        <div class="highlight-card">
+          <div class="hc-icon">🔥</div>
+          <div class="hc-title">أكتر يوم نشاط</div>
+          <div class="hc-value">${busiestDay && busiestDay.orders > 0 ? `يوم ${busiestDay.day} — ${busiestDay.orders} أوردر` : 'مفيش بيانات'}</div>
+        </div>
+      `;
+
+      // الإجمالي التراكمي
+      document.getElementById('incomeTypeLabel').textContent = incomeLabels[d.income_type] || d.income_type || '-';
+      const cum = data.cumulative;
+      document.getElementById('cumulativeGrid').innerHTML = `
+        ${cumItem(cum.total_earning + ' ج', 'إجمالي المستحقات', 'var(--asphalt)')}
+        ${cumItem(cum.total_incentives + ' ج', 'إجمالي الحوافز', 'var(--gold)')}
+        ${cumItem(cum.total_deductions + ' ج', 'إجمالي الخصومات', 'var(--rust)')}
+        ${cumItem(cum.total_advances + ' ج', 'إجمالي السلف', 'var(--rust)')}
+      `;
+    }
+
+    function docCard(title, filename, missing, warn, sub) {
+      const cls = warn ? 'doc-card warn' : 'doc-card';
+      const img = filename
+        ? `<img src="/uploads/${filename}" onclick="openPreview(this.src)">`
+        : `<div class="doc-empty">غير مرفوعة</div>`;
+      return `<div class="${cls}">${img}<div class="doc-title">${title}</div>${sub ? `<div class="doc-sub">${sub}</div>` : ''}</div>`;
+    }
+
+    function drugCard(filename, result) {
+      const badgeClass = result === 'negative' ? 'negative' : result === 'positive' ? 'positive' : 'unset';
+      const badgeText = result === 'negative' ? 'سلبي' : result === 'positive' ? 'إيجابي' : 'لسه معملش';
+      const warn = result === 'positive';
+      const img = filename
+        ? `<img src="/uploads/${filename}" onclick="openPreview(this.src)">`
+        : `<div class="doc-empty">غير مرفوعة</div>`;
+      return `<div class="doc-card ${warn ? 'warn' : ''}">${img}<div class="doc-title">تحليل المخدرات</div><span class="drug-badge ${badgeClass}">${badgeText}</span></div>`;
+    }
+
+    function statBox(num, label, color) {
+      return `<div class="stat-box" style="--stat-color:${color};"><div class="sb-num">${num}</div><div class="sb-label">${label}</div></div>`;
+    }
+
+    function cumItem(num, label, color) {
+      return `<div class="cum-item"><div class="ci-num" style="color:${color};">${num}</div><div class="ci-label">${label}</div></div>`;
+    }
+
+    function drawChart(dailyData) {
+      const svg = document.getElementById('dailyChart');
+      const W = 700, H = 220, padX = 30, padY = 20;
+      const maxRevenue = Math.max(...dailyData.map(d => d.revenue), 1);
+      const maxOrders = Math.max(...dailyData.map(d => d.orders), 1);
+      const n = dailyData.length;
+      const stepX = (W - padX * 2) / (n - 1 || 1);
+
+      const revPoints = dailyData.map((d, i) => {
+        const x = padX + i * stepX;
+        const y = H - padY - (d.revenue / maxRevenue) * (H - padY * 2);
+        return `${x},${y}`;
+      }).join(' ');
+
+      const ordPoints = dailyData.map((d, i) => {
+        const x = padX + i * stepX;
+        const y = H - padY - (d.orders / maxOrders) * (H - padY * 2);
+        return `${x},${y}`;
+      }).join(' ');
+
+      svg.innerHTML = `
+        <line x1="${padX}" y1="${H - padY}" x2="${W - padX}" y2="${H - padY}" stroke="#E4DCCB" stroke-width="1"/>
+        <polyline points="${revPoints}" fill="none" stroke="#1F6F63" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <polyline points="${ordPoints}" fill="none" stroke="#C97A1A" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.75"/>
+      `;
+    }
+
+    function exportExcel() {
+      if (!currentProfileData) return;
+      const d = currentProfileData.driver;
+      const m = currentProfileData.month_data;
+      const cum = currentProfileData.cumulative;
+
+      const summarySheet = [{
+        'الاسم': d.name, 'التليفون': d.phone, 'الرقم القومي': d.national_id || '-',
+        'ورديات الشهر': m.shifts_count, 'أوردرات الشهر': m.total_orders,
+        'متوسط يومي': m.avg_daily_orders, 'مستحقات الشهر': m.total_earning,
+        'حوافز الشهر': m.total_incentives, 'خصومات الشهر': m.total_deductions,
+        'سلف الشهر': m.total_advances, 'صافي الشهر': m.net_pay,
+        'إجمالي المستحقات التراكمي': cum.total_earning, 'إجمالي الحوافز التراكمي': cum.total_incentives,
+        'إجمالي الخصومات التراكمي': cum.total_deductions, 'إجمالي السلف التراكمي': cum.total_advances
+      }];
+
+      const dailySheet = m.daily_data.map(day => ({
+        'اليوم': day.day, 'عدد الأوردرات': day.orders, 'الإيراد': day.revenue.toFixed(2)
+      }));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summarySheet), 'الملخص');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dailySheet), 'النشاط اليومي');
+      XLSX.writeFile(wb, `ملف_${d.name}_${monthNames[selectedMonth - 1]}_${selectedYear}.xlsx`);
+    }
+
+    initMonthPicker();
+    loadProfile();
+  </script>
+
+  <footer class="dev-footer">
+    <div class="dev-brand">
+      <svg class="dev-mark" viewBox="0 0 68 68" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 34 6 L 58 20 L 58 48 L 34 62 L 10 48 L 10 20 Z" fill="none" stroke="#EA4F1E" stroke-width="3"/>
+        <path d="M 26 22 L 26 46 M 26 22 L 44 22 M 26 33 L 40 33" stroke="#EA4F1E" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div class="dev-brand-text">
+        <div class="dev-brand-name">FUTURE</div>
+        <div class="dev-brand-sub">COMPANY FOR SOLUTIONS</div>
+      </div>
+    </div>
+    <div class="dev-divider"></div>
+    <div class="dev-info">
+      <div class="dev-name">Dr. Romany Shenoda</div>
+      <div class="dev-role">تطوير وصيانة الأنظمة</div>
+    </div>
+    <a href="https://wa.me/201066696216" target="_blank" class="dev-contact">
+      <span>📱</span> 01066696216
+    </a>
+  </footer>
+
+</body>
+</html>

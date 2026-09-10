@@ -2164,6 +2164,189 @@ app.get('/incentives/driver/:driver_id', (req, res) => {
   });
 });
 
+// ==================== ملف السائق الكامل (بيانات + مستندات + أداء شهري + إجمالي تراكمي) ====================
+app.get('/reports/driver-profile/:driver_id/:year/:month', (req, res) => {
+  const { driver_id, year, month } = req.params;
+
+  db.query('SELECT * FROM drivers WHERE id = ?', [driver_id], (err, driverResults) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب بيانات السائق' }); }
+    if (driverResults.length === 0) return res.status(404).json({ error: 'السائق غير موجود' });
+    const driver = driverResults[0];
+
+    db.query('SELECT * FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
+      const settings = settingsResults[0] || {};
+
+      // ==== بيانات الشهر المختار ====
+      db.query(
+        `SELECT DAY(start_time) AS day, COUNT(*) AS orders_count, COALESCE(SUM(price), 0) AS revenue
+         FROM orders WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
+         GROUP BY DAY(start_time) ORDER BY day`,
+        [driver_id, year, month],
+        (err, dailyRows) => {
+          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في البيانات اليومية' }); }
+
+          db.query(
+            `SELECT COUNT(*) AS shifts_count FROM shifts WHERE driver_id = ? AND YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?`,
+            [driver_id, year, month],
+            (err, shiftsResult) => {
+              if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في الورديات' }); }
+
+              db.query(
+                `SELECT order_type, COUNT(*) AS cnt, COALESCE(SUM(price), 0) AS revenue, COALESCE(SUM(driver_earning), 0) AS earning
+                 FROM orders WHERE driver_id = ? AND status = 'closed' AND YEAR(start_time) = ? AND MONTH(start_time) = ?
+                 GROUP BY order_type`,
+                [driver_id, year, month],
+                (err, typeRows) => {
+                  if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في الأوردرات' }); }
+
+                  db.query(
+                    `SELECT COALESCE(SUM(amount), 0) AS total FROM deductions WHERE driver_id = ? AND YEAR(created_at) = ? AND MONTH(created_at) = ?`,
+                    [driver_id, year, month],
+                    (err, monthDedResult) => {
+                      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في الخصومات' }); }
+
+                      db.query(
+                        `SELECT COALESCE(SUM(amount), 0) AS total FROM advances WHERE driver_id = ? AND status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ?`,
+                        [driver_id, year, month],
+                        (err, monthAdvResult) => {
+                          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في السلف' }); }
+
+                          db.query(
+                            `SELECT COALESCE(SUM(amount), 0) AS total FROM incentives WHERE driver_id = ? AND YEAR(created_at) = ? AND MONTH(created_at) = ?`,
+                            [driver_id, year, month],
+                            (err, monthIncResult) => {
+                              if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في الحوافز' }); }
+
+                              // ==== الإجمالي التراكمي من التسجيل لحد نهاية الشهر المختار ====
+                              const endOfMonth = `${year}-${String(month).padStart(2, '0')}-31`;
+
+                              db.query(
+                                `SELECT
+                                   COALESCE(SUM(price), 0) AS total_revenue,
+                                   COALESCE(SUM(driver_earning), 0) AS total_earning
+                                 FROM orders WHERE driver_id = ? AND status = 'closed' AND start_time <= ?`,
+                                [driver_id, endOfMonth],
+                                (err, cumOrdersResult) => {
+                                  if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في الإجمالي التراكمي' }); }
+
+                                  db.query(
+                                    `SELECT COALESCE(SUM(amount), 0) AS total FROM deductions WHERE driver_id = ? AND created_at <= ?`,
+                                    [driver_id, endOfMonth],
+                                    (err, cumDedResult) => {
+                                      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في إجمالي الخصومات' }); }
+
+                                      db.query(
+                                        `SELECT COALESCE(SUM(amount), 0) AS total FROM advances WHERE driver_id = ? AND status = 'approved' AND created_at <= ?`,
+                                        [driver_id, endOfMonth],
+                                        (err, cumAdvResult) => {
+                                          if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في إجمالي السلف' }); }
+
+                                          db.query(
+                                            `SELECT COALESCE(SUM(amount), 0) AS total FROM incentives WHERE driver_id = ? AND created_at <= ?`,
+                                            [driver_id, endOfMonth],
+                                            (err, cumIncResult) => {
+                                              if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في إجمالي الحوافز' }); }
+
+                                              // ==== تجميع كل البيانات ====
+                                              const daysInMonth = new Date(year, month, 0).getDate();
+                                              const dailyMap = {};
+                                              dailyRows.forEach(r => { dailyMap[r.day] = { orders: r.orders_count, revenue: parseFloat(r.revenue) }; });
+
+                                              const dailyData = [];
+                                              for (let d = 1; d <= daysInMonth; d++) {
+                                                dailyData.push({
+                                                  day: d,
+                                                  orders: dailyMap[d] ? dailyMap[d].orders : 0,
+                                                  revenue: dailyMap[d] ? dailyMap[d].revenue : 0
+                                                });
+                                              }
+
+                                              let deliveryCount = 0, fullTripCount = 0, monthRevenue = 0, monthEarning = 0;
+                                              typeRows.forEach(r => {
+                                                if (r.order_type === 'delivery') deliveryCount = r.cnt;
+                                                if (r.order_type === 'full_trip') fullTripCount = r.cnt;
+                                                monthRevenue += parseFloat(r.revenue);
+                                                monthEarning += parseFloat(r.earning);
+                                              });
+
+                                              const totalOrders = deliveryCount + fullTripCount;
+                                              const shiftsCount = shiftsResult[0].shifts_count;
+                                              const avgDaily = shiftsCount > 0 ? (totalOrders / shiftsCount).toFixed(1) : '0';
+
+                                              const bestRevenueDay = dailyData.reduce((best, d) => d.revenue > (best ? best.revenue : -1) ? d : best, null);
+                                              const busiestDay = dailyData.reduce((best, d) => d.orders > (best ? best.orders : -1) ? d : best, null);
+
+                                              const monthDeductions = parseFloat(monthDedResult[0].total);
+                                              const monthAdvances = parseFloat(monthAdvResult[0].total);
+                                              const monthIncentives = parseFloat(monthIncResult[0].total);
+                                              const monthNet = monthEarning + monthIncentives - monthDeductions - monthAdvances;
+
+                                              res.json({
+                                                driver: {
+                                                  id: driver.id,
+                                                  name: driver.name,
+                                                  phone: driver.phone,
+                                                  national_id: driver.national_id,
+                                                  status: driver.status,
+                                                  created_at: driver.created_at,
+                                                  photo_personal: driver.photo_personal,
+                                                  photo_national_id: driver.photo_national_id,
+                                                  photo_national_id_back: driver.photo_national_id_back,
+                                                  photo_license: driver.photo_license,
+                                                  photo_license_back: driver.photo_license_back,
+                                                  license_expiry: driver.license_expiry,
+                                                  photo_drug_test: driver.photo_drug_test,
+                                                  drug_test_result: driver.drug_test_result,
+                                                  income_type: driver.is_customized ? driver.custom_income_type : settings.income_type
+                                                },
+                                                month_data: {
+                                                  shifts_count: shiftsCount,
+                                                  total_orders: totalOrders,
+                                                  delivery_count: deliveryCount,
+                                                  full_trip_count: fullTripCount,
+                                                  avg_daily_orders: avgDaily,
+                                                  total_revenue: monthRevenue.toFixed(2),
+                                                  total_earning: monthEarning.toFixed(2),
+                                                  total_deductions: monthDeductions.toFixed(2),
+                                                  total_advances: monthAdvances.toFixed(2),
+                                                  total_incentives: monthIncentives.toFixed(2),
+                                                  net_pay: monthNet.toFixed(2),
+                                                  best_revenue_day: bestRevenueDay,
+                                                  busiest_day: busiestDay,
+                                                  daily_data: dailyData
+                                                },
+                                                cumulative: {
+                                                  total_revenue: parseFloat(cumOrdersResult[0].total_revenue).toFixed(2),
+                                                  total_earning: parseFloat(cumOrdersResult[0].total_earning).toFixed(2),
+                                                  total_deductions: parseFloat(cumDedResult[0].total).toFixed(2),
+                                                  total_advances: parseFloat(cumAdvResult[0].total).toFixed(2),
+                                                  total_incentives: parseFloat(cumIncResult[0].total).toFixed(2)
+                                                }
+                                              });
+                                            }
+                                          );
+                                        }
+                                      );
+                                    }
+                                  );
+                                }
+                              );
+                            }
+                          );
+                        }
+                      );
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+    });
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
