@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>التوكتوكات - Ginger</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -40,6 +43,7 @@
     .badge-maintenance { background: var(--rust); }
     .row-btn { padding: 6px 12px; font-size: 12.5px; border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: 700; font-family: inherit; margin-inline-end: 5px; }
     .btn-edit { background: var(--asphalt); }
+    .btn-qr { background: var(--orange); }
     .btn-fix { background: var(--amber); }
     .btn-active { background: var(--nile); }
     .btn-delete { background: var(--rust); }
@@ -159,6 +163,22 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="qrModal">
+    <div class="modal-box" style="max-width: 340px; text-align: center;">
+      <div id="qrPrintCard" style="background: white; padding: 24px; border-radius: 14px; border: 2px solid #16305C;">
+        <img src="/logo.png" alt="Ginger" style="height: 40px; margin-bottom: 10px;">
+        <div id="qrCodeBox" style="display: flex; justify-content: center; margin: 12px 0;"></div>
+        <div style="font-size: 20px; font-weight: 800; color: #16305C;" id="qrTuktukNumber">-</div>
+        <div style="font-size: 11px; color: #8A8272; margin-top: 4px;">GINGER — SPICE UP THE ORDINARY</div>
+      </div>
+      <div class="modal-actions" style="margin-top: 16px;">
+        <button type="button" class="btn-modal-cancel" onclick="closeModal('qrModal')">إغلاق</button>
+        <button type="button" class="btn-modal-save" onclick="printQrCard()">🖨️ طباعة</button>
+        <button type="button" class="btn-modal-save" style="background: var(--orange);" onclick="downloadQrPdf()">⬇️ PDF</button>
+      </div>
+    </div>
+  </div>
+
   <div class="confirm-backdrop" id="confirmBackdrop">
     <div class="confirm-box">
       <p id="confirmMessage"></p>
@@ -229,6 +249,7 @@
           <td><span class="badge badge-${t.status}">${t.status === 'active' ? 'نشط' : 'فيه عطل'}</span></td>
           <td>${lastDriversMap[t.id] || '-'}</td>
           <td>
+            <button class="row-btn btn-qr" onclick='openQrCard(${JSON.stringify(t)})'>QR</button>
             <button class="row-btn btn-edit" onclick='openEditTuktuk(${JSON.stringify(t)})'>تعديل</button>
             ${t.status === 'active'
               ? `<button class="row-btn btn-fix" onclick="toggleTuktukStatus(${t.id}, 'maintenance')">تسجيل عطل</button>`
@@ -268,6 +289,57 @@
           showToast(data.message || data.error, !data.message);
           loadTuktuks();
         });
+    }
+
+    let currentQrTuktuk = null;
+
+    function openQrCard(t) {
+      currentQrTuktuk = t;
+      document.getElementById('qrTuktukNumber').textContent = 'توكتوك رقم ' + t.tuktuk_number;
+
+      const box = document.getElementById('qrCodeBox');
+      box.innerHTML = '';
+      new QRCode(box, {
+        text: t.qr_code,
+        width: 180,
+        height: 180,
+        colorDark: '#16305C',
+        colorLight: '#ffffff'
+      });
+
+      openModal('qrModal');
+    }
+
+    function printQrCard() {
+      const cardHtml = document.getElementById('qrPrintCard').outerHTML;
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title>QR - ${currentQrTuktuk ? currentQrTuktuk.tuktuk_number : ''}</title>
+          <style>
+            body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+          </style>
+        </head>
+        <body>${cardHtml}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      setTimeout(() => { printWindow.print(); }, 400);
+    }
+
+    function downloadQrPdf() {
+      const card = document.getElementById('qrPrintCard');
+      html2canvas(card, { scale: 3, backgroundColor: '#ffffff' }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [80, 100] });
+        const imgWidth = 70;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 5, 10, imgWidth, imgHeight);
+        pdf.save(`QR_توكتوك_${currentQrTuktuk ? currentQrTuktuk.tuktuk_number : ''}.pdf`);
+      });
     }
 
     function openEditTuktuk(t) {
