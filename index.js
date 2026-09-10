@@ -2282,6 +2282,27 @@ app.get('/reports/driver-profile/:driver_id/:year/:month', (req, res) => {
                                               const monthIncentives = parseFloat(monthIncResult[0].total);
                                               const monthNet = monthEarning + monthIncentives - monthDeductions - monthAdvances;
 
+                                              // إجازات الشهر المختار
+                                              db.query(
+                                                `SELECT id, start_date, end_date, reason, status, admin_note
+                                                 FROM leave_requests
+                                                 WHERE driver_id = ?
+                                                   AND ((YEAR(start_date) = ? AND MONTH(start_date) = ?)
+                                                     OR (YEAR(end_date) = ? AND MONTH(end_date) = ?))
+                                                 ORDER BY start_date DESC`,
+                                                [driver_id, year, month, year, month],
+                                                (err, leaveRows) => {
+                                                  if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإجازات' }); }
+
+                                                  let totalLeaveDays = 0;
+                                                  leaveRows.forEach(l => {
+                                                    if (l.status === 'approved') {
+                                                      const start = new Date(l.start_date);
+                                                      const end = new Date(l.end_date);
+                                                      totalLeaveDays += Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                                                    }
+                                                  });
+
                                               res.json({
                                                 driver: {
                                                   id: driver.id,
@@ -2314,7 +2335,9 @@ app.get('/reports/driver-profile/:driver_id/:year/:month', (req, res) => {
                                                   net_pay: monthNet.toFixed(2),
                                                   best_revenue_day: bestRevenueDay,
                                                   busiest_day: busiestDay,
-                                                  daily_data: dailyData
+                                                  daily_data: dailyData,
+                                                  leave_requests: leaveRows,
+                                                  total_leave_days: totalLeaveDays
                                                 },
                                                 cumulative: {
                                                   total_revenue: parseFloat(cumOrdersResult[0].total_revenue).toFixed(2),
@@ -2324,6 +2347,8 @@ app.get('/reports/driver-profile/:driver_id/:year/:month', (req, res) => {
                                                   total_incentives: parseFloat(cumIncResult[0].total).toFixed(2)
                                                 }
                                               });
+                                                }
+                                              );
                                             }
                                           );
                                         }
