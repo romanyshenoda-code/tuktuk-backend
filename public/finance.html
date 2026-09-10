@@ -409,6 +409,19 @@
       </form>
       <div id="settingsMsg" class="form-msg"></div>
 
+      <div class="section-head"><h2><span class="dot"></span>إعدادات دخل المشرفين</h2></div>
+      <form id="adminDefaultSalaryForm" class="panel">
+        <div class="fields-row">
+          <div class="field-group">
+            <label>المرتب الافتراضي الشهري (جنيه)</label>
+            <input type="number" id="adminDefaultSalary" placeholder="مثال: 3000">
+          </div>
+          <button type="submit" class="submit-btn">حفظ المرتب الافتراضي</button>
+        </div>
+        <div class="hint" style="margin-top:6px;">أي مشرف "غير مخصص" هياخد المرتب ده تلقائياً. عدد أيام العمل نفس أيام السواقين المحددة تحت.</div>
+      </form>
+      <div id="adminDefaultSalaryMsg" class="form-msg"></div>
+
       <div class="section-head"><h2><span class="dot"></span>إعدادات الراحة وعدد أيام العمل</h2></div>
       <form id="leaveConfigForm" class="panel">
         <div class="fields-row">
@@ -692,12 +705,17 @@
   <div class="modal-backdrop" id="adminSalaryModal">
     <div class="modal-box">
       <h3>تعديل مرتب المشرف</h3>
-      <div class="modal-sub">حدّد المرتب الشهري وأيام العمل المطلوبة</div>
+      <div class="modal-sub">افتراضياً المشرف بياخد المرتب العام. فعّل التخصيص لو عايز مرتب مستقل ليه بس</div>
       <form id="adminSalaryForm">
         <input type="hidden" id="editAdminId">
         <input type="text" id="editAdminNameDisplay" disabled style="background:#F5F0E6;">
-        <input type="number" id="editAdminSalary" placeholder="المرتب الشهري">
-        <input type="number" id="editAdminWorkingDays" placeholder="أيام العمل المطلوبة" value="26">
+
+        <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700; margin:12px 0; cursor:pointer;">
+          <input type="checkbox" id="editAdminCustomized" style="width:auto;" onchange="toggleAdminSalaryField()">
+          نظام مخصص لهذا المشرف
+        </label>
+
+        <input type="number" id="editAdminSalary" placeholder="المرتب الشهري المخصص" disabled>
         <input type="text" id="editAdminPhone" placeholder="رقم التليفون (اختياري)">
         <div class="modal-actions">
           <button type="button" class="btn-modal-cancel" onclick="closeModal('adminSalaryModal')">إلغاء</button>
@@ -915,8 +933,31 @@
         document.getElementById('fullTripCommissionPct').value = data.full_trip_commission_pct || 0;
         document.getElementById('deliveryBasePrice').value = data.delivery_base_price || 0;
         document.getElementById('fullTripBasePrice').value = data.full_trip_base_price || 0;
+        document.getElementById('adminDefaultSalary').value = data.admin_default_salary || 0;
       });
     }
+
+    document.getElementById('adminDefaultSalaryForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      fetch('/payroll-settings/admin-default', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_default_salary: document.getElementById('adminDefaultSalary').value })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('adminDefaultSalaryMsg').textContent = data.message || data.error;
+        if (data.message) {
+          showToast(data.message);
+          if (loadedTabs['admin-payroll']) loadAdminPayroll();
+        } else {
+          showToast(data.error, true);
+        }
+      })
+      .catch(() => {
+        document.getElementById('adminDefaultSalaryMsg').textContent = 'حصل خطأ في الاتصال بالسيرفر';
+      });
+    });
 
     document.getElementById('settingsForm').addEventListener('submit', function(e) {
       e.preventDefault();
@@ -1174,7 +1215,7 @@
           <td class="amt-green">${a.total_incentives} ج</td>
           <td class="amt-red">${(parseFloat(a.total_deductions) + parseFloat(a.total_advances)).toFixed(2)} ج</td>
           <td class="amt-net">${a.net_pay} ج</td>
-          <td><button class="row-btn btn-edit" onclick='openAdminSalaryModal(${JSON.stringify(a)})'>تعديل</button></td>
+          <td><button class="row-btn btn-edit" onclick='openAdminSalaryModal(${JSON.stringify(a)})'>تعديل${a.is_customized ? ' ✓' : ''}</button></td>
         </tr>
       `).join('');
     }
@@ -1204,11 +1245,17 @@
       showToast('تم تصدير الملف بنجاح');
     }
 
+    function toggleAdminSalaryField() {
+      const checked = document.getElementById('editAdminCustomized').checked;
+      document.getElementById('editAdminSalary').disabled = !checked;
+    }
+
     function openAdminSalaryModal(a) {
       document.getElementById('editAdminId').value = a.admin_id;
       document.getElementById('editAdminNameDisplay').value = a.admin_name;
+      document.getElementById('editAdminCustomized').checked = a.is_customized;
       document.getElementById('editAdminSalary').value = a.monthly_salary;
-      document.getElementById('editAdminWorkingDays').value = a.working_days;
+      document.getElementById('editAdminSalary').disabled = !a.is_customized;
       document.getElementById('editAdminPhone').value = a.admin_phone || '';
       document.getElementById('adminSalaryMsg').textContent = '';
       openModal('adminSalaryModal');
@@ -1222,8 +1269,8 @@
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          is_customized: document.getElementById('editAdminCustomized').checked,
           monthly_salary: document.getElementById('editAdminSalary').value,
-          working_days: document.getElementById('editAdminWorkingDays').value,
           phone: document.getElementById('editAdminPhone').value
         })
       })
