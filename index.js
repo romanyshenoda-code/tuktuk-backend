@@ -240,8 +240,15 @@ app.use((req, res, next) => {
   }
 
   if (isAdminPage) {
-    if (req.session && req.session.loggedIn) return next();
-    return res.redirect('/login.html');
+    if (!(req.session && req.session.loggedIn)) return res.redirect('/login.html');
+
+    // طبقة حماية إضافية بباسورد منفصل لصفحة المشرفين بس
+    if (reqPath === '/admins' || reqPath === '/admins.html') {
+      if (req.session && req.session.adminsPageLoggedIn) return next();
+      return res.redirect('/admins-login.html');
+    }
+
+    return next();
   }
 
   if (isDriverPage) {
