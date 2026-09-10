@@ -898,6 +898,14 @@
     loadAdvances();
     loadDeductions();
     loadIncentives();
+
+    // تحديث تلقائي دوري لكل الجداول، من غير حاجة لـ Refresh يدوي
+    setInterval(() => {
+      loadLeaveRequests();
+      loadAdvances();
+      loadDeductions();
+      loadIncentives();
+    }, 10000);
   </script>
 
   <footer class="dev-footer">

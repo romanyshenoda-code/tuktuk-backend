@@ -394,19 +394,24 @@
     }
     checkAdminSession();
     setInterval(checkAdminSession, 15000);
-    fetch('/drivers').then(r => r.json()).then(d => document.getElementById('countDrivers').textContent = d.length);
-    fetch('/tuktuks').then(r => r.json()).then(d => {
-      document.getElementById('countTuktuks').textContent = d.length;
 
-      const maintCount = d.filter(t => t.status === 'maintenance').length;
-      const subAlerts = document.getElementById('tuktuksSubAlerts');
-      if (maintCount > 0) {
-        subAlerts.style.display = 'flex';
-        animateSmallRing('maintRing', 'countMaintAlert', maintCount, d.length || 1);
-      } else {
-        subAlerts.style.display = 'none';
-      }
-    });
+    function loadDriversAndTuktuksCounts() {
+      fetch('/drivers').then(r => r.json()).then(d => document.getElementById('countDrivers').textContent = d.length);
+      fetch('/tuktuks').then(r => r.json()).then(d => {
+        document.getElementById('countTuktuks').textContent = d.length;
+
+        const maintCount = d.filter(t => t.status === 'maintenance').length;
+        const subAlerts = document.getElementById('tuktuksSubAlerts');
+        if (maintCount > 0) {
+          subAlerts.style.display = 'flex';
+          animateSmallRing('maintRing', 'countMaintAlert', maintCount, d.length || 1);
+        } else {
+          subAlerts.style.display = 'none';
+        }
+      });
+    }
+    loadDriversAndTuktuksCounts();
+
     // إحصائيات اليوم بالدايرتين المتحركتين
     function animateSmallRing(ringId, numId, value, maxForRing) {
       const circumference = 2 * Math.PI * 26; // 163.4
@@ -428,56 +433,69 @@
       }, 150);
     }
 
-    fetch('/dashboard/today-status')
-      .then(r => r.json())
-      .then(d => {
-        const shiftMax = Math.max(d.shifts.open, d.shifts.closed_today, 1);
-        animateDonut('shiftOpenRing', 'shiftOpenNum', d.shifts.open, shiftMax);
-        animateDonut('shiftClosedRing', 'shiftClosedNum', d.shifts.closed_today, shiftMax);
+    function loadTodayStatus() {
+      fetch('/dashboard/today-status')
+        .then(r => r.json())
+        .then(d => {
+          const shiftMax = Math.max(d.shifts.open, d.shifts.closed_today, 1);
+          animateDonut('shiftOpenRing', 'shiftOpenNum', d.shifts.open, shiftMax);
+          animateDonut('shiftClosedRing', 'shiftClosedNum', d.shifts.closed_today, shiftMax);
 
-        const orderMax = Math.max(d.orders.open, d.orders.closed_today, 1);
-        animateDonut('orderOpenRing', 'orderOpenNum', d.orders.open, orderMax);
-        animateDonut('orderClosedRing', 'orderClosedNum', d.orders.closed_today, orderMax);
-      })
-      .catch(err => console.error(err));
+          const orderMax = Math.max(d.orders.open, d.orders.closed_today, 1);
+          animateDonut('orderOpenRing', 'orderOpenNum', d.orders.open, orderMax);
+          animateDonut('orderClosedRing', 'orderClosedNum', d.orders.closed_today, orderMax);
+        })
+        .catch(err => console.error(err));
+    }
+    loadTodayStatus();
+
     fetch('/admins').then(r => r.json()).then(d => document.getElementById('countAdmins').textContent = d.length);
 
-    Promise.all([
-      fetch('/leave-requests').then(r => r.json()),
-      fetch('/advances').then(r => r.json())
-    ]).then(([leaves, advances]) => {
-      const pending = leaves.filter(l => l.status === 'pending').length + advances.filter(a => a.status === 'pending').length;
-      const el = document.getElementById('countPendingRequests');
-      el.textContent = pending;
+    function loadPendingRequestsBadge() {
+      Promise.all([
+        fetch('/leave-requests').then(r => r.json()),
+        fetch('/advances').then(r => r.json())
+      ]).then(([leaves, advances]) => {
+        const pending = leaves.filter(l => l.status === 'pending').length + advances.filter(a => a.status === 'pending').length;
+        const el = document.getElementById('countPendingRequests');
+        el.textContent = pending;
 
-      if (pending > 0) {
-        const dot = document.createElement('div');
-        dot.className = 'alert-dot';
-        dot.textContent = pending;
-        document.getElementById('hrAlertDot').appendChild(dot);
-      }
-    });
+        const hrDot = document.getElementById('hrAlertDot');
+        hrDot.innerHTML = '';
+        if (pending > 0) {
+          const dot = document.createElement('div');
+          dot.className = 'alert-dot';
+          dot.textContent = pending;
+          hrDot.appendChild(dot);
+        }
+      });
+    }
+    loadPendingRequestsBadge();
 
     // الإحصائيات السريعة
-    fetch('/dashboard/stats')
-      .then(r => r.json())
-      .then(s => {
-        document.getElementById('qsTopDriver').textContent = s.top_driver ? s.top_driver.name : 'لا يوجد';
-        document.getElementById('qsTopMaint').textContent = s.top_maintenance
-          ? `${s.top_maintenance.tuktuk_number} (${s.top_maintenance.times}×)`
-          : 'لا يوجد';
-        document.getElementById('qsAvgOrders').textContent = s.avg_orders_per_day;
-      })
-      .catch(() => {
-        document.getElementById('qsTopDriver').textContent = '-';
-        document.getElementById('qsTopMaint').textContent = '-';
-        document.getElementById('qsAvgOrders').textContent = '-';
-      });
+    function loadQuickStats() {
+      fetch('/dashboard/stats')
+        .then(r => r.json())
+        .then(s => {
+          document.getElementById('qsTopDriver').textContent = s.top_driver ? s.top_driver.name : 'لا يوجد';
+          document.getElementById('qsTopMaint').textContent = s.top_maintenance
+            ? `${s.top_maintenance.tuktuk_number} (${s.top_maintenance.times}×)`
+            : 'لا يوجد';
+          document.getElementById('qsAvgOrders').textContent = s.avg_orders_per_day;
+        })
+        .catch(() => {
+          document.getElementById('qsTopDriver').textContent = '-';
+          document.getElementById('qsTopMaint').textContent = '-';
+          document.getElementById('qsAvgOrders').textContent = '-';
+        });
+    }
+    loadQuickStats();
 
     // تنبيهات
-    fetch('/dashboard/alerts')
-      .then(r => r.json())
-      .then(data => {
+    function loadDashboardAlerts() {
+      fetch('/dashboard/alerts')
+        .then(r => r.json())
+        .then(data => {
         const operational = data.operational || [];
         const documents = data.documents || [];
         const counts = data.counts || { missing_docs: 0, license_expiry: 0 };
@@ -512,6 +530,17 @@
         }
       })
       .catch(() => {});
+    }
+    loadDashboardAlerts();
+
+    // تحديث تلقائي دوري لكل بيانات الداشبورد الحية، من غير حاجة لـ Refresh يدوي
+    setInterval(() => {
+      loadDriversAndTuktuksCounts();
+      loadTodayStatus();
+      loadPendingRequestsBadge();
+      loadQuickStats();
+      loadDashboardAlerts();
+    }, 10000);
   </script>
   <footer class="dev-footer">
     <div class="dev-brand">
