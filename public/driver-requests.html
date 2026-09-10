@@ -103,12 +103,19 @@
   <script>
     let currentDriverId = null;
     const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+    function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : '-'; }
 
     fetch('/api/driver-session').then(res => res.json()).then(data => {
       if (!data.loggedIn) { window.location.href = '/driver-login.html'; return; }
       currentDriverId = data.driverId;
       loadLeaveHistory();
       loadAdvanceHistory();
+
+      // تحديث تلقائي دوري لسجل الطلبات، من غير حاجة لـ Refresh يدوي
+      setInterval(() => {
+        loadLeaveHistory();
+        loadAdvanceHistory();
+      }, 10000);
     });
 
     function loadLeaveHistory() {
@@ -119,7 +126,7 @@
           if (data.length === 0) { el.innerHTML = '<div class="empty-note">مفيش طلبات سابقة</div>'; return; }
           el.innerHTML = data.map(r => `
             <div class="history-item">
-              <span>${r.start_date} إلى ${r.end_date}</span>
+              <span>${formatDate(r.start_date)} إلى ${formatDate(r.end_date)}</span>
               <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
             </div>
           `).join('');

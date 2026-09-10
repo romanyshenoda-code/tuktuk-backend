@@ -206,6 +206,12 @@
       loadShiftStatus();
       loadNotifications();
       loadDriverStats();
+
+      // تحديث تلقائي دوري لحالة الوردية والإشعارات، من غير حاجة لـ Refresh يدوي
+      setInterval(() => {
+        loadShiftStatus();
+        loadNotifications();
+      }, 10000);
     });
 
     function loadDriverStats() {

@@ -221,7 +221,13 @@
       loadLeaveHistory();
       loadAdvanceHistory();
       loadNotifications();
-      setInterval(loadNotifications, 30000);
+
+      // تحديث تلقائي دوري لسجل الطلبات والإشعارات، من غير حاجة لـ Refresh يدوي
+      setInterval(() => {
+        loadLeaveHistory();
+        loadAdvanceHistory();
+        loadNotifications();
+      }, 10000);
     }
 
     function toggleNotifPanel() {
