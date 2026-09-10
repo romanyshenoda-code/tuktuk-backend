@@ -2716,83 +2716,130 @@ app.put('/admins/:id/salary', (req, res) => {
 });
 
 // ==================== حساب مرتبات كل المشرفين ====================
+// ==================== حساب مرتبات كل المشرفين ====================
 app.get('/admin-payroll/calculate-all/:year/:month', (req, res) => {
   const { year, month } = req.params;
 
-  db.query('SELECT id, name, phone, monthly_salary, working_days FROM admins', (err, admins) => {
+  db.query('SELECT id, name, phone, monthly_salary, working_days, is_customized FROM admins', (err, admins) => {
     if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب المشرفين' }); }
     if (admins.length === 0) return res.json([]);
 
-    db.query(
-      `SELECT admin_id, COUNT(DISTINCT DATE(check_in_time)) AS days_present
-       FROM admin_shifts WHERE YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
-       GROUP BY admin_id`,
-      [year, month],
-      (err, attendanceRows) => {
-        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' }); }
+    db.query('SELECT admin_default_salary FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, settingsResults) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإعدادات' }); }
+      const defaultSalary = parseFloat((settingsResults[0] || {}).admin_default_salary || 0);
+
+      db.query('SELECT working_days_per_month FROM leave_config ORDER BY id DESC LIMIT 1', (err, leaveResults) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب أيام العمل' }); }
+        const sharedWorkingDays = parseInt((leaveResults[0] || {}).working_days_per_month) || 26;
 
         db.query(
-          `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_deductions
-           WHERE YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
+          `SELECT admin_id, COUNT(DISTINCT DATE(check_in_time)) AS days_present
+           FROM admin_shifts WHERE YEAR(check_in_time) = ? AND MONTH(check_in_time) = ?
+           GROUP BY admin_id`,
           [year, month],
-          (err, dedRows) => {
-            if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' }); }
+          (err, attendanceRows) => {
+            if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' }); }
 
             db.query(
-              `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_incentives
+              `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_deductions
                WHERE YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
               [year, month],
-              (err, incRows) => {
-                if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحوافز' }); }
+              (err, dedRows) => {
+                if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' }); }
 
                 db.query(
-                  `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_advances
-                   WHERE status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
+                  `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_incentives
+                   WHERE YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
                   [year, month],
-                  (err, advRows) => {
-                    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب السلف' }); }
+                  (err, incRows) => {
+                    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحوافز' }); }
 
-                    const attMap = {}, dedMap = {}, incMap = {}, advMap = {};
-                    attendanceRows.forEach(r => { attMap[r.admin_id] = r.days_present; });
-                    dedRows.forEach(r => { dedMap[r.admin_id] = parseFloat(r.total); });
-                    incRows.forEach(r => { incMap[r.admin_id] = parseFloat(r.total); });
-                    advRows.forEach(r => { advMap[r.admin_id] = parseFloat(r.total); });
+                    db.query(
+                      `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_advances
+                       WHERE status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
+                      [year, month],
+                      (err, advRows) => {
+                        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب السلف' }); }
 
-                    const results = admins.map(a => {
-                      const workingDays = a.working_days || 26;
-                      const monthlySalary = parseFloat(a.monthly_salary || 0);
-                      const daysPresent = attMap[a.id] || 0;
-                      const dailyRate = workingDays > 0 ? monthlySalary / workingDays : 0;
-                      const cappedDays = Math.min(daysPresent, workingDays);
-                      const earnedSalary = dailyRate * cappedDays;
+                        const attMap = {}, dedMap = {}, incMap = {}, advMap = {};
+                        attendanceRows.forEach(r => { attMap[r.admin_id] = r.days_present; });
+                        dedRows.forEach(r => { dedMap[r.admin_id] = parseFloat(r.total); });
+                        incRows.forEach(r => { incMap[r.admin_id] = parseFloat(r.total); });
+                        advRows.forEach(r => { advMap[r.admin_id] = parseFloat(r.total); });
 
-                      const deductions = dedMap[a.id] || 0;
-                      const incentives = incMap[a.id] || 0;
-                      const advances = advMap[a.id] || 0;
-                      const netPay = earnedSalary + incentives - deductions - advances;
+                        const results = admins.map(a => {
+                          const workingDays = sharedWorkingDays;
+                          const monthlySalary = a.is_customized ? parseFloat(a.monthly_salary || 0) : defaultSalary;
+                          const daysPresent = attMap[a.id] || 0;
+                          const dailyRate = workingDays > 0 ? monthlySalary / workingDays : 0;
+                          const cappedDays = Math.min(daysPresent, workingDays);
+                          const earnedSalary = dailyRate * cappedDays;
 
-                      return {
-                        admin_id: a.id,
-                        admin_name: a.name,
-                        admin_phone: a.phone,
-                        monthly_salary: monthlySalary.toFixed(2),
-                        working_days: workingDays,
-                        days_present: daysPresent,
-                        earned_salary: earnedSalary.toFixed(2),
-                        total_incentives: incentives.toFixed(2),
-                        total_deductions: deductions.toFixed(2),
-                        total_advances: advances.toFixed(2),
-                        net_pay: netPay.toFixed(2)
-                      };
-                    });
+                          const deductions = dedMap[a.id] || 0;
+                          const incentives = incMap[a.id] || 0;
+                          const advances = advMap[a.id] || 0;
+                          const netPay = earnedSalary + incentives - deductions - advances;
 
-                    res.json(results);
+                          return {
+                            admin_id: a.id,
+                            admin_name: a.name,
+                            admin_phone: a.phone,
+                            is_customized: !!a.is_customized,
+                            monthly_salary: monthlySalary.toFixed(2),
+                            working_days: workingDays,
+                            days_present: daysPresent,
+                            earned_salary: earnedSalary.toFixed(2),
+                            total_incentives: incentives.toFixed(2),
+                            total_deductions: deductions.toFixed(2),
+                            total_advances: advances.toFixed(2),
+                            net_pay: netPay.toFixed(2)
+                          };
+                        });
+
+                        res.json(results);
+                      }
+                    );
                   }
                 );
               }
             );
           }
         );
+      });
+    });
+  });
+});
+
+// تحديث إعدادات مرتب المشرف (مع التخصيص)
+app.put('/admins/:id/salary', (req, res) => {
+  const { id } = req.params;
+  const { is_customized, monthly_salary, phone } = req.body;
+
+  db.query(
+    'UPDATE admins SET is_customized = ?, monthly_salary = ?, phone = ? WHERE id = ?',
+    [is_customized ? 1 : 0, monthly_salary || 0, phone || null, id],
+    (err, result) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث بيانات المرتب' }); }
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'المشرف غير موجود' });
+      res.json({ message: 'تم تحديث بيانات المرتب بنجاح' });
+    }
+  );
+});
+
+// تحديث المرتب الافتراضي العام للمشرفين (من تبويب الإعدادات)
+app.put('/payroll-settings/admin-default', (req, res) => {
+  const { admin_default_salary } = req.body;
+
+  db.query('SELECT id FROM payroll_settings ORDER BY id DESC LIMIT 1', (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ' }); }
+    if (results.length === 0) return res.status(404).json({ error: 'مفيش إعدادات موجودة أصلاً' });
+
+    db.query(
+      'UPDATE payroll_settings SET admin_default_salary = ? WHERE id = ?',
+      [admin_default_salary || 0, results[0].id],
+      (err) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحديث' }); }
+        res.json({ message: 'تم تحديث المرتب الافتراضي للمشرفين بنجاح' });
       }
     );
   });
