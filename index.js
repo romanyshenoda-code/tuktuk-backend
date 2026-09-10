@@ -200,12 +200,12 @@ app.get('/api/admin-session', (req, res) => {
     return res.json({ loggedIn: false });
   }
 
-  db.query('SELECT id FROM admins WHERE id = ?', [req.session.adminId], (err, results) => {
+  db.query('SELECT id, name FROM admins WHERE id = ?', [req.session.adminId], (err, results) => {
     if (err || results.length === 0) {
       req.session.destroy(() => {});
       return res.json({ loggedIn: false });
     }
-    res.json({ loggedIn: true });
+    res.json({ loggedIn: true, adminId: results[0].id, adminName: results[0].name });
   });
 });
 

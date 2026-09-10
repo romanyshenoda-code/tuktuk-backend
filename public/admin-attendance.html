@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حضور المشرف - Ginger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E1B16; --asphalt: #16305C; --sand: #F3EEE3; --paper: #FFFFFF;
+      --orange: #EA4F1E; --nile: #1F6F63; --rust: #B23A1E; --amber: #C97A1A; --line: #E4DCCB; --muted: #8A8272;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: var(--sand); margin: 0; color: var(--ink); }
+
+    .topbar { background: var(--asphalt); color: var(--sand); padding: 16px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 4px solid var(--orange); }
+    .topbar img { height: 34px; }
+    .topbar h1 { margin: 0; font-size: 15.5px; font-weight: 700; }
+    .back-link { color: var(--sand); opacity: 0.85; font-size: 13px; text-decoration: none; margin-inline-end: auto; }
+
+    .wrap { max-width: 480px; margin: 0 auto; padding: 24px 16px; }
+    .hidden { display: none !important; }
+
+    .status-banner {
+      padding: 14px 18px; border-radius: 12px; font-size: 14px; font-weight: 700;
+      margin-bottom: 22px; text-align: center;
+    }
+    .status-open { background: #E3EEEC; color: var(--nile); }
+    .status-closed { background: #F6E1DC; color: var(--rust); }
+
+    .card { background: var(--paper); border-radius: 16px; padding: 26px 20px; text-align: center; border: 1px solid var(--line); }
+    .card .icon-big { font-size: 48px; margin-bottom: 12px; }
+    .card h3 { margin: 0 0 6px; font-size: 17px; }
+    .card p { font-size: 13px; color: var(--muted); margin: 0 0 20px; }
+
+    button.action-btn {
+      width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: 800;
+      font-family: inherit; cursor: pointer; color: white;
+    }
+    .btn-nile { background: var(--nile); }
+    .btn-rust { background: var(--rust); }
+    button.action-btn:disabled { background: #C9C2B2 !important; }
+
+    .result { margin-top: 14px; font-size: 13.5px; background: var(--sand); padding: 10px 12px; border-radius: 8px; min-height: 14px; color: #6B6455; }
+    .shift-time { font-size: 12.5px; color: var(--muted); margin-top: 14px; }
+
+    .dev-footer {
+      margin-top: 40px; padding: 20px 24px; background: #FFFFFF;
+      border-top: 1px solid #E4DCCB;
+      display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center;
+    }
+    .dev-brand { display: flex; align-items: center; gap: 11px; }
+    .dev-mark { width: 40px; height: 40px; flex-shrink: 0; }
+    .dev-brand-text { line-height: 1.25; }
+    .dev-brand-name { font-size: 15px; font-weight: 800; color: #16305C; letter-spacing: 1.5px; }
+    .dev-brand-sub { font-size: 8.5px; color: #8A8272; letter-spacing: 1px; font-weight: 600; }
+    .dev-divider { width: 1px; height: 34px; background: #E4DCCB; }
+    .dev-info { text-align: center; }
+    .dev-name { font-size: 13px; font-weight: 800; color: #16305C; }
+    .dev-role { font-size: 10.5px; color: #8A8272; margin-top: 1px; }
+    .dev-contact {
+      display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+      background: #25D366; color: white; padding: 8px 16px; border-radius: 22px;
+      font-size: 13px; font-weight: 700;
+    }
+    @media (max-width: 560px) {
+      .dev-footer { flex-direction: column; gap: 13px; padding: 22px 16px; }
+      .dev-divider { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/index.html" class="back-link">→ الرئيسية</a>
+    <img src="/logo.png" alt="Ginger">
+    <h1>حضور المشرف</h1>
+  </div>
+
+  <div class="wrap">
+
+    <div class="status-banner status-closed hidden" id="statusClosed">🔴 لسه ما سجّلتش حضورك النهاردة</div>
+    <div class="status-banner status-open hidden" id="statusOpen">🟢 وردية شغالة دلوقتي</div>
+
+    <div class="card" id="checkinCard">
+      <div class="icon-big">✅</div>
+      <h3>تسجيل حضور</h3>
+      <p>هيتسجل موقعك وقت الحضور تلقائياً</p>
+      <button class="action-btn btn-nile" onclick="checkIn()">تسجيل الحضور</button>
+      <div class="result" id="resultCheckin">جاهز</div>
+    </div>
+
+    <div class="card hidden" id="checkoutCard">
+      <div class="icon-big">🚪</div>
+      <h3>تسجيل انصراف</h3>
+      <p>هتقفل وردية النهاردة</p>
+      <div class="shift-time" id="shiftTimeInfo"></div>
+      <button class="action-btn btn-rust" onclick="checkOut()" style="margin-top:16px;">تسجيل الانصراف</button>
+      <div class="result" id="resultCheckout">جاهز</div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentAdminId = null;
+
+    fetch('/api/admin-session').then(res => res.json()).then(data => {
+      if (!data.loggedIn) { window.location.href = '/login.html'; return; }
+      currentAdminId = data.adminId;
+      checkShiftStatus();
+    });
+
+    function checkShiftStatus() {
+      fetch('/admin-shifts/open/' + currentAdminId)
+        .then(res => res.json())
+        .then(data => {
+          if (data.id) {
+            document.getElementById('statusOpen').classList.remove('hidden');
+            document.getElementById('statusClosed').classList.add('hidden');
+            document.getElementById('checkinCard').classList.add('hidden');
+            document.getElementById('checkoutCard').classList.remove('hidden');
+            document.getElementById('shiftTimeInfo').textContent =
+              'دخلت الساعة: ' + new Date(data.check_in_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+          } else {
+            document.getElementById('statusClosed').classList.remove('hidden');
+            document.getElementById('statusOpen').classList.add('hidden');
+            document.getElementById('checkinCard').classList.remove('hidden');
+            document.getElementById('checkoutCard').classList.add('hidden');
+          }
+        });
+    }
+
+    function checkIn() {
+      const resultDiv = document.getElementById('resultCheckin');
+      if (!navigator.geolocation) { resultDiv.textContent = 'المتصفح مش بيدعم تحديد الموقع'; return; }
+
+      resultDiv.textContent = 'جاري تحديد موقعك...';
+
+      navigator.geolocation.getCurrentPosition(function(position) {
+        fetch('/admin-shifts/check-in', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            admin_id: currentAdminId,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          resultDiv.textContent = data.message || data.error;
+          if (data.message) checkShiftStatus();
+        })
+        .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
+      }, function(error) {
+        resultDiv.textContent = 'حصل خطأ في تحديد الموقع: ' + error.message;
+      });
+    }
+
+    function checkOut() {
+      const resultDiv = document.getElementById('resultCheckout');
+      resultDiv.textContent = 'جاري تسجيل الانصراف...';
+
+      fetch('/admin-shifts/check-out', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_id: currentAdminId })
+      })
+      .then(res => res.json())
+      .then(data => {
+        resultDiv.textContent = data.message || data.error;
+        if (data.message) checkShiftStatus();
+      })
+      .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
+    }
+  </script>
+
+  <footer class="dev-footer">
+    <div class="dev-brand">
+      <svg class="dev-mark" viewBox="0 0 68 68" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 34 6 L 58 20 L 58 48 L 34 62 L 10 48 L 10 20 Z" fill="none" stroke="#EA4F1E" stroke-width="3"/>
+        <path d="M 26 22 L 26 46 M 26 22 L 44 22 M 26 33 L 40 33" stroke="#EA4F1E" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div class="dev-brand-text">
+        <div class="dev-brand-name">FUTURE</div>
+        <div class="dev-brand-sub">COMPANY FOR SOLUTIONS</div>
+      </div>
+    </div>
+    <div class="dev-divider"></div>
+    <div class="dev-info">
+      <div class="dev-name">Dr. Romany Shenoda</div>
+      <div class="dev-role">تطوير وصيانة الأنظمة</div>
+    </div>
+    <a href="https://wa.me/201066696216" target="_blank" class="dev-contact">
+      <span>📱</span> 01066696216
+    </a>
+  </footer>
+
+</body>
+</html>
