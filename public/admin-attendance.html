@@ -73,6 +73,31 @@
     .status-rejected { background: var(--rust); }
     .empty-hist { text-align: center; color: var(--muted); font-size: 12.5px; padding: 14px; }
 
+    .bell-wrap { position: relative; }
+    .bell-btn {
+      background: rgba(255,255,255,0.1); border: none; color: var(--sand); font-size: 19px;
+      width: 38px; height: 38px; border-radius: 50%; cursor: pointer; position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .bell-btn:hover { background: rgba(255,255,255,0.18); }
+    .bell-dot {
+      position: absolute; top: -2px; inset-inline-end: -2px; background: var(--rust); color: white;
+      font-size: 10px; font-weight: 800; min-width: 17px; height: 17px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid var(--asphalt);
+    }
+    .notif-panel {
+      position: absolute; top: 46px; inset-inline-end: 0; width: 300px; max-height: 360px; overflow-y: auto;
+      background: var(--paper); border-radius: 12px; box-shadow: 0 10px 28px rgba(22,19,15,0.22);
+      border: 1px solid var(--line); display: none; z-index: 200;
+    }
+    .notif-panel.open { display: block; }
+    .notif-panel h4 { margin: 0; padding: 13px 16px; font-size: 13.5px; border-bottom: 1px solid var(--line); color: var(--asphalt); }
+    .notif-item { padding: 12px 16px; font-size: 12.5px; border-bottom: 1px solid #F5F0E6; color: var(--ink); line-height: 1.6; cursor: pointer; }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item.unread { background: #FBF3E3; font-weight: 700; }
+    .notif-item .notif-time { font-size: 10.5px; color: var(--muted); margin-top: 3px; font-weight: 400; }
+    .notif-empty { padding: 20px; text-align: center; color: var(--muted); font-size: 12.5px; }
+
     .dev-footer {
       margin-top: 40px; padding: 20px 24px; background: #FFFFFF;
       border-top: 1px solid #E4DCCB;
@@ -104,6 +129,16 @@
     <a href="/index.html" class="back-link">→ الرئيسية</a>
     <img src="/logo.png" alt="Ginger">
     <h1>حضور المشرف</h1>
+    <div class="bell-wrap hidden" id="bellWrap">
+      <button class="bell-btn" onclick="toggleNotifPanel()">
+        🔔
+        <span class="bell-dot hidden" id="bellDot">0</span>
+      </button>
+      <div class="notif-panel" id="notifPanel">
+        <h4>الإشعارات</h4>
+        <div id="notifList"><div class="notif-empty">مفيش إشعارات لسه</div></div>
+      </div>
+    </div>
   </div>
 
   <div class="wrap">
@@ -181,9 +216,65 @@
     function showAttendanceUI() {
       document.getElementById('loginCard').classList.add('hidden');
       document.getElementById('requestsSection').classList.remove('hidden');
+      document.getElementById('bellWrap').classList.remove('hidden');
       checkShiftStatus();
       loadLeaveHistory();
       loadAdvanceHistory();
+      loadNotifications();
+      setInterval(loadNotifications, 30000);
+    }
+
+    function toggleNotifPanel() {
+      document.getElementById('notifPanel').classList.toggle('open');
+    }
+
+    document.addEventListener('click', function(e) {
+      const wrap = document.getElementById('bellWrap');
+      if (wrap && !wrap.contains(e.target)) {
+        document.getElementById('notifPanel').classList.remove('open');
+      }
+    });
+
+    function timeAgo(dateStr) {
+      const diffMin = Math.floor((new Date() - new Date(dateStr)) / 60000);
+      if (diffMin < 1) return 'الآن';
+      if (diffMin < 60) return `من ${diffMin} دقيقة`;
+      const diffH = Math.floor(diffMin / 60);
+      if (diffH < 24) return `من ${diffH} ساعة`;
+      return `من ${Math.floor(diffH / 24)} يوم`;
+    }
+
+    function loadNotifications() {
+      if (!currentAdminId) return;
+      fetch('/admin-notifications/' + currentAdminId)
+        .then(res => res.json())
+        .then(data => {
+          const unreadCount = data.filter(n => !n.is_read).length;
+          const dot = document.getElementById('bellDot');
+          if (unreadCount > 0) {
+            dot.textContent = unreadCount;
+            dot.classList.remove('hidden');
+          } else {
+            dot.classList.add('hidden');
+          }
+
+          const list = document.getElementById('notifList');
+          if (data.length === 0) {
+            list.innerHTML = '<div class="notif-empty">مفيش إشعارات لسه</div>';
+            return;
+          }
+          list.innerHTML = data.map(n => `
+            <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markNotifRead(${n.id})">
+              ${n.message}
+              <div class="notif-time">${timeAgo(n.created_at)}</div>
+            </div>
+          `).join('');
+        })
+        .catch(() => {});
+    }
+
+    function markNotifRead(id) {
+      fetch(`/admin-notifications/${id}/read`, { method: 'PUT' }).then(() => loadNotifications());
     }
 
     function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : '-'; }
