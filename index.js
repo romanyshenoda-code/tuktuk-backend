@@ -2740,63 +2740,86 @@ app.get('/admin-payroll/calculate-all/:year/:month', (req, res) => {
           (err, attendanceRows) => {
             if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحضور' }); }
 
+            // أيام الإجازة المعتمدة (بتتحسب زي أيام حضور)
             db.query(
-              `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_deductions
-               WHERE YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
-              [year, month],
-              (err, dedRows) => {
-                if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' }); }
+              `SELECT admin_id, start_date, end_date FROM admin_leave_requests
+               WHERE status = 'approved'
+                 AND ((YEAR(start_date) = ? AND MONTH(start_date) = ?)
+                   OR (YEAR(end_date) = ? AND MONTH(end_date) = ?))`,
+              [year, month, year, month],
+              (err, leaveRows) => {
+                if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الإجازات' }); }
+
+                const leaveDaysMap = {};
+                leaveRows.forEach(l => {
+                  const start = new Date(l.start_date);
+                  const end = new Date(l.end_date);
+                  const days = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                  leaveDaysMap[l.admin_id] = (leaveDaysMap[l.admin_id] || 0) + days;
+                });
 
                 db.query(
-                  `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_incentives
+                  `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_deductions
                    WHERE YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
                   [year, month],
-                  (err, incRows) => {
-                    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحوافز' }); }
+                  (err, dedRows) => {
+                    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الخصومات' }); }
 
                     db.query(
-                      `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_advances
-                       WHERE status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
+                      `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_incentives
+                       WHERE YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
                       [year, month],
-                      (err, advRows) => {
-                        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب السلف' }); }
+                      (err, incRows) => {
+                        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب الحوافز' }); }
 
-                        const attMap = {}, dedMap = {}, incMap = {}, advMap = {};
-                        attendanceRows.forEach(r => { attMap[r.admin_id] = r.days_present; });
-                        dedRows.forEach(r => { dedMap[r.admin_id] = parseFloat(r.total); });
-                        incRows.forEach(r => { incMap[r.admin_id] = parseFloat(r.total); });
-                        advRows.forEach(r => { advMap[r.admin_id] = parseFloat(r.total); });
+                        db.query(
+                          `SELECT admin_id, COALESCE(SUM(amount),0) AS total FROM admin_advances
+                           WHERE status = 'approved' AND YEAR(created_at) = ? AND MONTH(created_at) = ? GROUP BY admin_id`,
+                          [year, month],
+                          (err, advRows) => {
+                            if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في حساب السلف' }); }
 
-                        const results = admins.map(a => {
-                          const workingDays = a.is_customized ? (parseInt(a.working_days) || sharedWorkingDays) : sharedWorkingDays;
-                          const monthlySalary = a.is_customized ? parseFloat(a.monthly_salary || 0) : defaultSalary;
-                          const daysPresent = attMap[a.id] || 0;
-                          const dailyRate = workingDays > 0 ? monthlySalary / workingDays : 0;
-                          const cappedDays = Math.min(daysPresent, workingDays);
-                          const earnedSalary = dailyRate * cappedDays;
+                            const attMap = {}, dedMap = {}, incMap = {}, advMap = {};
+                            attendanceRows.forEach(r => { attMap[r.admin_id] = r.days_present; });
+                            dedRows.forEach(r => { dedMap[r.admin_id] = parseFloat(r.total); });
+                            incRows.forEach(r => { incMap[r.admin_id] = parseFloat(r.total); });
+                            advRows.forEach(r => { advMap[r.admin_id] = parseFloat(r.total); });
 
-                          const deductions = dedMap[a.id] || 0;
-                          const incentives = incMap[a.id] || 0;
-                          const advances = advMap[a.id] || 0;
-                          const netPay = earnedSalary + incentives - deductions - advances;
+                            const results = admins.map(a => {
+                              const workingDays = a.is_customized ? (parseInt(a.working_days) || sharedWorkingDays) : sharedWorkingDays;
+                              const monthlySalary = a.is_customized ? parseFloat(a.monthly_salary || 0) : defaultSalary;
+                              const daysPresent = attMap[a.id] || 0;
+                              const leaveDays = leaveDaysMap[a.id] || 0;
 
-                          return {
-                            admin_id: a.id,
-                            admin_name: a.name,
-                            admin_phone: a.phone,
-                            is_customized: !!a.is_customized,
-                            monthly_salary: monthlySalary.toFixed(2),
-                            working_days: workingDays,
-                            days_present: daysPresent,
-                            earned_salary: earnedSalary.toFixed(2),
-                            total_incentives: incentives.toFixed(2),
-                            total_deductions: deductions.toFixed(2),
-                            total_advances: advances.toFixed(2),
-                            net_pay: netPay.toFixed(2)
-                          };
-                        });
+                              const dailyRate = workingDays > 0 ? monthlySalary / workingDays : 0;
+                              const totalCreditedDays = Math.min(daysPresent + leaveDays, workingDays);
+                              const earnedSalary = dailyRate * totalCreditedDays;
 
-                        res.json(results);
+                              const deductions = dedMap[a.id] || 0;
+                              const incentives = incMap[a.id] || 0;
+                              const advances = advMap[a.id] || 0;
+                              const netPay = earnedSalary + incentives - deductions - advances;
+
+                              return {
+                                admin_id: a.id,
+                                admin_name: a.name,
+                                admin_phone: a.phone,
+                                is_customized: !!a.is_customized,
+                                monthly_salary: monthlySalary.toFixed(2),
+                                working_days: workingDays,
+                                days_present: daysPresent,
+                                leave_days: leaveDays,
+                                earned_salary: earnedSalary.toFixed(2),
+                                total_incentives: incentives.toFixed(2),
+                                total_deductions: deductions.toFixed(2),
+                                total_advances: advances.toFixed(2),
+                                net_pay: netPay.toFixed(2)
+                              };
+                            });
+
+                            res.json(results);
+                          }
+                        );
                       }
                     );
                   }
