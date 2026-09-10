@@ -151,6 +151,18 @@
     .sm-driver-checkbox { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-size: 13px; cursor: pointer; }
     .sm-driver-checkbox input { width: auto; }
 
+    .date-filter-bar {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px 16px; margin-bottom: 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+    }
+    .date-filter-bar .field-group { display: flex; flex-direction: column; min-width: 100px; }
+    .date-filter-bar .field-group label { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .date-filter-bar select { padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-family: inherit; font-size: 13.5px; }
+    .date-filter-reset {
+      padding: 9px 16px; background: var(--line); color: var(--ink); border: none; border-radius: 8px;
+      font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer; height: 39px;
+    }
+
     /* قالب الفاتورة (مخفي، يُستخدم وقت الطباعة بس) */
     .invoice-print-area { display: none; }
     @media print {
@@ -207,6 +219,22 @@
       </div>
       <button class="bulk-print-btn" onclick="bulkPrintInvoices()">🖨️ طباعة فواتير اليوم</button>
       <button class="smart-print-btn" onclick="openSmartPrintModal()">⚡ طباعة ذكية</button>
+    </div>
+
+    <div class="date-filter-bar">
+      <div class="field-group">
+        <label>السنة</label>
+        <select id="ordersFilterYear"><option value="">كل السنين</option></select>
+      </div>
+      <div class="field-group">
+        <label>الشهر</label>
+        <select id="ordersFilterMonth"><option value="">كل الشهور</option></select>
+      </div>
+      <div class="field-group">
+        <label>اليوم</label>
+        <select id="ordersFilterDay"><option value="">كل الأيام</option></select>
+      </div>
+      <button class="date-filter-reset" onclick="resetOrdersDateFilter()">مسح الفلتر</button>
     </div>
 
     <div class="section-head">
@@ -343,10 +371,52 @@
       `).join('');
     }
 
+    function initOrdersDateFilter() {
+      const now = new Date();
+      const yearSelect = document.getElementById('ordersFilterYear');
+      const years = [];
+      for (let y = now.getFullYear() - 2; y <= now.getFullYear() + 1; y++) years.push(y);
+      yearSelect.innerHTML = '<option value="">كل السنين</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+      const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+      document.getElementById('ordersFilterMonth').innerHTML = '<option value="">كل الشهور</option>' +
+        monthNames.map((n, i) => `<option value="${i + 1}">${n}</option>`).join('');
+
+      document.getElementById('ordersFilterDay').innerHTML = '<option value="">كل الأيام</option>' +
+        Array.from({ length: 31 }, (_, i) => i + 1).map(d => `<option value="${d}">${d}</option>`).join('');
+
+      [yearSelect, document.getElementById('ordersFilterMonth'), document.getElementById('ordersFilterDay')]
+        .forEach(el => el.addEventListener('change', filterOrders));
+    }
+
+    function resetOrdersDateFilter() {
+      document.getElementById('ordersFilterYear').value = '';
+      document.getElementById('ordersFilterMonth').value = '';
+      document.getElementById('ordersFilterDay').value = '';
+      filterOrders();
+    }
+
     function filterOrders() {
       const q = document.getElementById('orderSearch').value.trim();
-      if (!q) { renderOrders(allOrders); return; }
-      renderOrders(allOrders.filter(o => o.driver_name.includes(q)));
+      const year = document.getElementById('ordersFilterYear').value;
+      const month = document.getElementById('ordersFilterMonth').value;
+      const day = document.getElementById('ordersFilterDay').value;
+
+      const filtered = allOrders.filter(o => {
+        if (q && !o.driver_name.includes(q)) return false;
+
+        if (year || month || day) {
+          if (!o.start_time) return false;
+          const d = new Date(o.start_time);
+          if (year && d.getFullYear() != year) return false;
+          if (month && (d.getMonth() + 1) != month) return false;
+          if (day && d.getDate() != day) return false;
+        }
+
+        return true;
+      });
+
+      renderOrders(filtered);
     }
 
     async function cancelOrder(id) {
@@ -461,6 +531,12 @@
     }
 
     // ==================== الطباعة الذكية ====================
+    function toggleSmCollectMode() {
+      const mode = document.querySelector('input[name="smCollectMode"]:checked').value;
+      document.getElementById('smSingleHoursBox').classList.toggle('hidden', mode !== 'single');
+      document.getElementById('smSlicedBox').classList.toggle('hidden', mode !== 'sliced');
+    }
+
     function toggleSmDriversList() {
       const mode = document.querySelector('input[name="smMode"]:checked').value;
       document.getElementById('smRandomCountBox').classList.toggle('hidden', mode !== 'random');
@@ -482,48 +558,69 @@
       openModal('smartPrintModal');
     }
 
+    function shuffleArray(arr) {
+      return arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(v => v[1]);
+    }
+
     function executeSmartPrint() {
-      const hours = parseInt(document.getElementById('smHours').value);
-      const mode = document.querySelector('input[name="smMode"]:checked').value;
+      const collectMode = document.querySelector('input[name="smCollectMode"]:checked').value;
+      const driverMode = document.querySelector('input[name="smMode"]:checked').value;
       const msg = document.getElementById('smartPrintMsg');
+      msg.textContent = '';
 
-      const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+      // كل الأوردرات المقفولة كنقطة بداية
+      let closedOrders = allOrders.filter(o => o.status === 'closed' && o.end_time);
 
-      let eligibleOrders = allOrders.filter(o => {
-        if (o.status !== 'closed' || !o.end_time) return false;
-        return new Date(o.end_time) >= cutoff;
-      });
-
-      if (eligibleOrders.length === 0) {
-        msg.textContent = 'مفيش أوردرات مقفولة في الفترة دي';
-        return;
+      // فلترة السواقين (بتتطبق قبل أي حاجة تانية)
+      let selectedDriverIds = null;
+      if (driverMode === 'random') {
+        const count = parseInt(document.getElementById('smRandomCount').value) || 5;
+        const uniqueDriverIds = [...new Set(closedOrders.map(o => o.driver_id))];
+        selectedDriverIds = shuffleArray(uniqueDriverIds).slice(0, count);
+      } else if (driverMode === 'specific') {
+        selectedDriverIds = Array.from(document.querySelectorAll('.sm-driver-check:checked')).map(cb => cb.value);
+        if (selectedDriverIds.length === 0) { msg.textContent = 'اختار سائق واحد على الأقل'; return; }
+      }
+      if (selectedDriverIds) {
+        closedOrders = closedOrders.filter(o => selectedDriverIds.map(String).includes(String(o.driver_id)));
       }
 
-      let selectedDriverIds = null;
+      let finalOrders = [];
 
-      if (mode === 'random') {
-        const count = parseInt(document.getElementById('smRandomCount').value) || 5;
-        const uniqueDriverIds = [...new Set(eligibleOrders.map(o => o.driver_id))];
-        const shuffled = uniqueDriverIds.sort(() => 0.5 - Math.random());
-        selectedDriverIds = shuffled.slice(0, count);
-      } else if (mode === 'specific') {
-        selectedDriverIds = Array.from(document.querySelectorAll('.sm-driver-check:checked')).map(cb => cb.value);
-        if (selectedDriverIds.length === 0) {
-          msg.textContent = 'اختار سائق واحد على الأقل';
-          return;
+      if (collectMode === 'single') {
+        // فترة واحدة زمنية بسيطة
+        const hours = parseInt(document.getElementById('smHours').value);
+        const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+        finalOrders = closedOrders.filter(o => new Date(o.end_time) >= cutoff);
+
+      } else {
+        // موزّعة على شرائح اليوم كامل (من نص الليل لحد دلوقتي)
+        const interval = parseInt(document.getElementById('smSliceInterval').value);
+        const countPerSlice = parseInt(document.getElementById('smSliceCount').value) || 4;
+
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+
+        for (let sliceStart = new Date(startOfDay); sliceStart < now; sliceStart.setHours(sliceStart.getHours() + interval)) {
+          const sliceEnd = new Date(sliceStart);
+          sliceEnd.setHours(sliceEnd.getHours() + interval);
+
+          const sliceOrders = closedOrders.filter(o => {
+            const t = new Date(o.end_time);
+            return t >= sliceStart && t < sliceEnd;
+          });
+
+          const picked = shuffleArray(sliceOrders).slice(0, countPerSlice);
+          finalOrders = finalOrders.concat(picked);
         }
       }
 
-      if (selectedDriverIds) {
-        eligibleOrders = eligibleOrders.filter(o => selectedDriverIds.map(String).includes(String(o.driver_id)));
-      }
-
-      if (eligibleOrders.length === 0) {
+      if (finalOrders.length === 0) {
         msg.textContent = 'مفيش أوردرات تطابق الاختيار ده';
         return;
       }
 
-      document.getElementById('invoicePrintArea').innerHTML = eligibleOrders.map(buildInvoiceHtml).join('');
+      document.getElementById('invoicePrintArea').innerHTML = finalOrders.map(buildInvoiceHtml).join('');
       closeModal('smartPrintModal');
       window.print();
     }
@@ -554,6 +651,7 @@
 
     document.getElementById('bulkPrintDate').valueAsDate = new Date();
     loadDriversForBulkPrint();
+    initOrdersDateFilter();
 
     loadActiveOrders();
     loadOrders();
@@ -590,9 +688,17 @@
   <div class="modal-backdrop" id="smartPrintModal">
     <div class="modal-box smart-modal-box">
       <h3>⚡ طباعة ذكية للفواتير</h3>
-      <div class="modal-sub">حدد الفترة والسواقين، وهيتم تجهيز الفواتير للطباعة فوراً</div>
+      <div class="modal-sub">اختار طريقة التجميع، وهيتم تجهيز كل الفواتير للطباعة فوراً فاتورة فاتورة</div>
 
       <div class="sm-section">
+        <label class="sm-label">طريقة التجميع</label>
+        <div class="sm-radio-row">
+          <label class="sm-radio-item"><input type="radio" name="smCollectMode" value="single" checked onchange="toggleSmCollectMode()"> فترة واحدة</label>
+          <label class="sm-radio-item"><input type="radio" name="smCollectMode" value="sliced" onchange="toggleSmCollectMode()"> موزّعة على شرائح اليوم</label>
+        </div>
+      </div>
+
+      <div class="sm-section" id="smSingleHoursBox">
         <label class="sm-label">الفترة الزمنية</label>
         <select id="smHours">
           <option value="1">آخر ساعة</option>
@@ -601,6 +707,22 @@
           <option value="12">آخر 12 ساعة</option>
           <option value="24">آخر 24 ساعة</option>
         </select>
+      </div>
+
+      <div class="sm-section hidden" id="smSlicedBox">
+        <label class="sm-label">كل كام ساعة تاخد فواتير؟</label>
+        <select id="smSliceInterval">
+          <option value="1">كل ساعة</option>
+          <option value="2">كل ساعتين</option>
+          <option value="3" selected>كل 3 ساعات</option>
+          <option value="4">كل 4 ساعات</option>
+          <option value="6">كل 6 ساعات</option>
+        </select>
+        <label class="sm-label" style="margin-top:10px;">عدد الفواتير العشوائي من كل شريحة</label>
+        <input type="number" id="smSliceCount" value="4" min="1">
+        <div class="hint" style="margin-top:6px; font-size:11.5px; color: var(--muted);">
+          مثال: "كل 3 ساعات" + "4 فواتير" = هياخد 4 فواتير عشوائية من كل شريحة 3 ساعات على مدار اليوم كامل (24 ساعة ÷ 3 = 8 شرائح × 4 = لحد 32 فاتورة)
+        </div>
       </div>
 
       <div class="sm-section">
