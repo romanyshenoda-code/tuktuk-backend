@@ -55,6 +55,24 @@
     .password-wrap input { padding-inline-end: 42px !important; }
     .toggle-eye { position: absolute; top: 50%; transform: translateY(-50%); inset-inline-end: 12px; cursor: pointer; font-size: 17px; background: none; border: none; padding: 0; }
 
+    .section-title { font-size: 15px; font-weight: 800; margin: 26px 0 12px; color: var(--asphalt); }
+    .req-card { background: var(--paper); border-radius: 14px; padding: 18px; border: 1px solid var(--line); margin-bottom: 14px; }
+    .req-card h4 { margin: 0 0 12px; font-size: 14.5px; }
+    .req-card input, .req-card textarea { width: 100%; padding: 11px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 8px; font-family: inherit; font-size: 13.5px; background: var(--sand); }
+    .req-card input:focus, .req-card textarea:focus { outline: 2px solid var(--amber); background: var(--paper); }
+    .req-btn { width: 100%; padding: 11px; border: none; border-radius: 8px; font-family: inherit; font-weight: 800; font-size: 14px; cursor: pointer; color: white; }
+    .req-btn.leave { background: var(--amber); }
+    .req-btn.advance { background: var(--asphalt); }
+
+    .history-item { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; font-size: 13px; }
+    .history-item .hi-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .history-item .hi-reason { color: var(--muted); font-size: 12px; }
+    .status-badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11px; font-weight: 700; color: white; }
+    .status-pending { background: var(--amber); }
+    .status-approved { background: var(--nile); }
+    .status-rejected { background: var(--rust); }
+    .empty-hist { text-align: center; color: var(--muted); font-size: 12.5px; padding: 14px; }
+
     .dev-footer {
       margin-top: 40px; padding: 20px 24px; background: #FFFFFF;
       border-top: 1px solid #E4DCCB;
@@ -125,6 +143,29 @@
       <div class="result" id="resultCheckout">جاهز</div>
     </div>
 
+    <div id="requestsSection" class="hidden">
+      <div class="section-title">📅 طلب إجازة</div>
+      <div class="req-card">
+        <h4>حدد تاريخ الإجازة</h4>
+        <input type="date" id="leaveStart">
+        <input type="date" id="leaveEnd">
+        <textarea id="leaveReason" placeholder="سبب الإجازة (اختياري)" rows="2"></textarea>
+        <button class="req-btn leave" onclick="requestLeave()">إرسال طلب الإجازة</button>
+        <div class="result" id="resultLeave">جاهز</div>
+      </div>
+      <div id="leaveHistory"></div>
+
+      <div class="section-title">💵 طلب سلفة</div>
+      <div class="req-card">
+        <h4>حدد مبلغ السلفة</h4>
+        <input type="number" id="advanceAmount" placeholder="المبلغ">
+        <textarea id="advanceReason" placeholder="سبب السلفة (اختياري)" rows="2"></textarea>
+        <button class="req-btn advance" onclick="requestAdvance()">إرسال طلب السلفة</button>
+        <div class="result" id="resultAdvance">جاهز</div>
+      </div>
+      <div id="advanceHistory"></div>
+    </div>
+
   </div>
 
   <script>
@@ -135,9 +176,100 @@
       input.type = input.type === 'password' ? 'text' : 'password';
     }
 
+    const statusText = { pending: 'قيد المراجعة', approved: 'موافق عليه', rejected: 'مرفوض' };
+
     function showAttendanceUI() {
       document.getElementById('loginCard').classList.add('hidden');
+      document.getElementById('requestsSection').classList.remove('hidden');
       checkShiftStatus();
+      loadLeaveHistory();
+      loadAdvanceHistory();
+    }
+
+    function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : '-'; }
+
+    function requestLeave() {
+      const start_date = document.getElementById('leaveStart').value;
+      const end_date = document.getElementById('leaveEnd').value;
+      const reason = document.getElementById('leaveReason').value;
+      const resultDiv = document.getElementById('resultLeave');
+
+      if (!start_date || !end_date) { resultDiv.textContent = 'من فضلك اختر تاريخ البداية والنهاية'; return; }
+
+      fetch('/admin-leave-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_id: currentAdminId, start_date, end_date, reason })
+      })
+      .then(res => res.json())
+      .then(data => {
+        resultDiv.textContent = data.message || data.error;
+        if (data.message) {
+          document.getElementById('leaveStart').value = '';
+          document.getElementById('leaveEnd').value = '';
+          document.getElementById('leaveReason').value = '';
+          loadLeaveHistory();
+        }
+      })
+      .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
+    }
+
+    function loadLeaveHistory() {
+      fetch('/admin-leave-requests').then(res => res.json()).then(data => {
+        const mine = data.filter(r => r.admin_id == currentAdminId);
+        const box = document.getElementById('leaveHistory');
+        if (mine.length === 0) { box.innerHTML = '<div class="empty-hist">مفيش طلبات إجازة لسه</div>'; return; }
+        box.innerHTML = mine.map(r => `
+          <div class="history-item">
+            <div class="hi-top">
+              <span>${formatDate(r.start_date)} → ${formatDate(r.end_date)}</span>
+              <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
+            </div>
+            ${r.reason ? `<div class="hi-reason">${r.reason}</div>` : ''}
+          </div>
+        `).join('');
+      });
+    }
+
+    function requestAdvance() {
+      const amount = document.getElementById('advanceAmount').value;
+      const reason = document.getElementById('advanceReason').value;
+      const resultDiv = document.getElementById('resultAdvance');
+
+      if (!amount) { resultDiv.textContent = 'من فضلك اكتب المبلغ'; return; }
+
+      fetch('/admin-advances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_id: currentAdminId, amount, reason })
+      })
+      .then(res => res.json())
+      .then(data => {
+        resultDiv.textContent = data.message || data.error;
+        if (data.message) {
+          document.getElementById('advanceAmount').value = '';
+          document.getElementById('advanceReason').value = '';
+          loadAdvanceHistory();
+        }
+      })
+      .catch(() => { resultDiv.textContent = 'حصل خطأ في الاتصال بالسيرفر'; });
+    }
+
+    function loadAdvanceHistory() {
+      fetch('/admin-advances').then(res => res.json()).then(data => {
+        const mine = data.filter(r => r.admin_id == currentAdminId);
+        const box = document.getElementById('advanceHistory');
+        if (mine.length === 0) { box.innerHTML = '<div class="empty-hist">مفيش طلبات سلف لسه</div>'; return; }
+        box.innerHTML = mine.map(r => `
+          <div class="history-item">
+            <div class="hi-top">
+              <span>${r.amount} جنيه</span>
+              <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
+            </div>
+            ${r.reason ? `<div class="hi-reason">${r.reason}</div>` : ''}
+          </div>
+        `).join('');
+      });
     }
 
     // نتأكد الأول لو فيه جلسة شغالة بالفعل (من تسجيل دخول سابق في index.html مثلاً)
