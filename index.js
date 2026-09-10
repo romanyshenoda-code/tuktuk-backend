@@ -73,8 +73,7 @@ app.get('/api/logout', (req, res) => {
 
 // ==================== إدارة الأدمنية (مع تشفير) ====================
 app.get('/admins', (req, res) => {
-  db.query('SELECT id, name, username, created_at FROM admins', (err, results) => {
-    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الأدمنية' }); }
+  db.query('SELECT id, name, username, created_at, monthly_salary, working_days, phone FROM admins', (err, results) => {
     res.json(results);
   });
 });
