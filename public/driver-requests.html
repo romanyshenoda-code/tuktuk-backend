@@ -111,6 +111,8 @@
       loadAdvanceHistory();
     });
 
+    function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB') : '-'; }
+
     function loadLeaveHistory() {
       fetch('/leave-requests/driver/' + currentDriverId)
         .then(res => res.json())
@@ -119,7 +121,7 @@
           if (data.length === 0) { el.innerHTML = '<div class="empty-note">مفيش طلبات سابقة</div>'; return; }
           el.innerHTML = data.map(r => `
             <div class="history-item">
-              <span>${r.start_date} إلى ${r.end_date}</span>
+              <span>${formatDate(r.start_date)} إلى ${formatDate(r.end_date)}</span>
               <span class="status-badge status-${r.status}">${statusText[r.status]}</span>
             </div>
           `).join('');
