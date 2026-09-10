@@ -2604,15 +2604,26 @@ app.put('/admin-advances/:id', (req, res) => {
   const { status, admin_note } = req.body;
   if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ error: 'حالة غير صحيحة' });
 
-  db.query(
-    'UPDATE admin_advances SET status = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?',
-    [status, admin_note || null, id],
-    (err, result) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في المراجعة' }); }
-      if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
-      res.json({ message: status === 'approved' ? 'تمت الموافقة على السلفة' : 'تم رفض السلفة' });
-    }
-  );
+  db.query('SELECT admin_id, amount FROM admin_advances WHERE id = ?', [id], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+    const request = results[0];
+
+    db.query(
+      'UPDATE admin_advances SET status = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?',
+      [status, admin_note || null, id],
+      (err) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في المراجعة' }); }
+
+        const statusText = status === 'approved' ? 'تمت الموافقة' : 'تم الرفض';
+        const message = `${statusText} على طلب سلفتك بمبلغ ${request.amount} جنيه`;
+
+        db.query('INSERT INTO admin_notifications (admin_id, message) VALUES (?, ?)', [request.admin_id, message], (err) => {
+          if (err) console.error(err);
+          res.json({ message: status === 'approved' ? 'تمت الموافقة على السلفة' : 'تم رفض السلفة' });
+        });
+      }
+    );
+  });
 });
 
 app.delete('/admin-advances/:id', (req, res) => {
@@ -2659,15 +2670,26 @@ app.put('/admin-leave-requests/:id', (req, res) => {
   const { status, admin_note } = req.body;
   if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ error: 'حالة غير صحيحة' });
 
-  db.query(
-    'UPDATE admin_leave_requests SET status = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?',
-    [status, admin_note || null, id],
-    (err, result) => {
-      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في المراجعة' }); }
-      if (result.affectedRows === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
-      res.json({ message: status === 'approved' ? 'تمت الموافقة على الإجازة' : 'تم رفض الإجازة' });
-    }
-  );
+  db.query('SELECT admin_id, start_date, end_date FROM admin_leave_requests WHERE id = ?', [id], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ error: 'الطلب غير موجود' });
+    const request = results[0];
+
+    db.query(
+      'UPDATE admin_leave_requests SET status = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?',
+      [status, admin_note || null, id],
+      (err) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في المراجعة' }); }
+
+        const statusText = status === 'approved' ? 'تمت الموافقة' : 'تم الرفض';
+        const message = `${statusText} على طلب إجازتك من ${request.start_date} إلى ${request.end_date}`;
+
+        db.query('INSERT INTO admin_notifications (admin_id, message) VALUES (?, ?)', [request.admin_id, message], (err) => {
+          if (err) console.error(err);
+          res.json({ message: status === 'approved' ? 'تمت الموافقة على الإجازة' : 'تم رفض الإجازة' });
+        });
+      }
+    );
+  });
 });
 
 app.delete('/admin-leave-requests/:id', (req, res) => {
@@ -2774,6 +2796,24 @@ app.get('/admin-payroll/calculate-all/:year/:month', (req, res) => {
         );
       }
     );
+  });
+});
+app.get('/admin-notifications/:admin_id', (req, res) => {
+  const { admin_id } = req.params;
+  db.query(
+    'SELECT * FROM admin_notifications WHERE admin_id = ? ORDER BY created_at DESC LIMIT 30',
+    [admin_id],
+    (err, results) => {
+      if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في جلب الإشعارات' }); }
+      res.json(results);
+    }
+  );
+});
+
+app.put('/admin-notifications/:id/read', (req, res) => {
+  db.query('UPDATE admin_notifications SET is_read = TRUE WHERE id = ?', [req.params.id], (err) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ' }); }
+    res.json({ message: 'تم' });
   });
 });
 
