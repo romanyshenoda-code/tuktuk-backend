@@ -2702,11 +2702,11 @@ app.delete('/admin-leave-requests/:id', (req, res) => {
 // ==================== إعدادات مرتب المشرف ====================
 app.put('/admins/:id/salary', (req, res) => {
   const { id } = req.params;
-  const { monthly_salary, working_days, phone } = req.body;
+  const { is_customized, monthly_salary, working_days, phone } = req.body;
 
   db.query(
-    'UPDATE admins SET monthly_salary = ?, working_days = ?, phone = ? WHERE id = ?',
-    [monthly_salary || 0, working_days || 26, phone || null, id],
+    'UPDATE admins SET is_customized = ?, monthly_salary = ?, working_days = ?, phone = ? WHERE id = ?',
+    [is_customized ? 1 : 0, monthly_salary || 0, working_days || 26, phone || null, id],
     (err, result) => {
       if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث بيانات المرتب' }); }
       if (result.affectedRows === 0) return res.status(404).json({ error: 'المشرف غير موجود' });
@@ -2768,7 +2768,7 @@ app.get('/admin-payroll/calculate-all/:year/:month', (req, res) => {
                         advRows.forEach(r => { advMap[r.admin_id] = parseFloat(r.total); });
 
                         const results = admins.map(a => {
-                          const workingDays = sharedWorkingDays;
+                          const workingDays = a.is_customized ? (parseInt(a.working_days) || sharedWorkingDays) : sharedWorkingDays;
                           const monthlySalary = a.is_customized ? parseFloat(a.monthly_salary || 0) : defaultSalary;
                           const daysPresent = attMap[a.id] || 0;
                           const dailyRate = workingDays > 0 ? monthlySalary / workingDays : 0;

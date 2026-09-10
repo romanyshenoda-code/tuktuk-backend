@@ -716,6 +716,7 @@
         </label>
 
         <input type="number" id="editAdminSalary" placeholder="المرتب الشهري المخصص" disabled>
+        <input type="number" id="editAdminWorkingDays" placeholder="أيام العمل المخصصة" disabled>
         <input type="text" id="editAdminPhone" placeholder="رقم التليفون (اختياري)">
         <div class="modal-actions">
           <button type="button" class="btn-modal-cancel" onclick="closeModal('adminSalaryModal')">إلغاء</button>
@@ -1248,6 +1249,7 @@
     function toggleAdminSalaryField() {
       const checked = document.getElementById('editAdminCustomized').checked;
       document.getElementById('editAdminSalary').disabled = !checked;
+      document.getElementById('editAdminWorkingDays').disabled = !checked;
     }
 
     function openAdminSalaryModal(a) {
@@ -1256,6 +1258,8 @@
       document.getElementById('editAdminCustomized').checked = a.is_customized;
       document.getElementById('editAdminSalary').value = a.monthly_salary;
       document.getElementById('editAdminSalary').disabled = !a.is_customized;
+      document.getElementById('editAdminWorkingDays').value = a.working_days;
+      document.getElementById('editAdminWorkingDays').disabled = !a.is_customized;
       document.getElementById('editAdminPhone').value = a.admin_phone || '';
       document.getElementById('adminSalaryMsg').textContent = '';
       openModal('adminSalaryModal');
@@ -1271,6 +1275,7 @@
         body: JSON.stringify({
           is_customized: document.getElementById('editAdminCustomized').checked,
           monthly_salary: document.getElementById('editAdminSalary').value,
+          working_days: document.getElementById('editAdminWorkingDays').value,
           phone: document.getElementById('editAdminPhone').value
         })
       })
