@@ -1160,7 +1160,7 @@
         return `
           <tr>
             <td><span class="perf-rank ${rankClass[i] || ''}">${i + 1}</span></td>
-            <td>${p.driver_name}</td>
+            <td><a href="/driver-profile.html?id=${p.driver_id}&year=${selectedYear}&month=${selectedMonth}" style="color: var(--asphalt); font-weight: 700; text-decoration: none; border-bottom: 1px dashed var(--asphalt);" onclick="event.stopPropagation();">${p.driver_name}</a></td>
             <td>${p.days_worked}</td>
             <td>${p.total_orders}</td>
             <td>${p.delivery_count}</td>
