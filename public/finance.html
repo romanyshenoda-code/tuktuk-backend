@@ -548,6 +548,7 @@
         <div class="breakdown-card">
           <h4>المصروفات</h4>
           <div class="breakdown-item"><span>مرتبات وعمولات السواقين</span><span id="repPayroll">-</span></div>
+          <div class="breakdown-item"><span>مرتبات المشرفين</span><span id="repAdminPay">-</span></div>
           <div class="breakdown-item"><span>صيانة التوكتوكات</span><span id="repMaintenance">-</span></div>
           <div class="breakdown-item"><span>مصروفات أخرى</span><span id="repGeneral">-</span></div>
           <div class="breakdown-item"><span>الإجمالي</span><span id="repTotalExpenses">-</span></div>
@@ -1433,6 +1434,7 @@
       totalIncentives = totalIncentives || 0;
       totalAdminPay = totalAdminPay || 0;
       document.getElementById('expAdminPay').textContent = totalAdminPay.toFixed(0) + ' ج';
+      document.getElementById('repAdminPay').textContent = totalAdminPay.toFixed(2) + ' ج';
 
       fetch(`/tuktuk-maintenance?year=${selectedYear}&month=${selectedMonth}`).then(res => res.json()).then(maintData => {
         const totalMaintenance = maintData.reduce((sum, m) => sum + parseFloat(m.cost), 0);
