@@ -229,6 +229,9 @@ const driverProtectedPages = [
 
 app.use((req, res, next) => {
   const reqPath = req.path;
+  if (reqPath === '/admins.html' || reqPath === '/admins') {
+    console.log('### MIDDLEWARE HIT FOR ADMINS:', reqPath, '| loggedIn:', !!(req.session && req.session.loggedIn), '| adminsPageLoggedIn:', !!(req.session && req.session.adminsPageLoggedIn));
+  }
   const isAdminPage = adminProtectedPages.includes(reqPath);
   const isDriverPage = driverProtectedPages.includes(reqPath);
   const isFinancePage = (reqPath === '/finance' || reqPath === '/finance.html');
