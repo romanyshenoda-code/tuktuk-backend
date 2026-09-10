@@ -2919,7 +2919,7 @@ app.get('/api/admins-page-logout', (req, res) => {
 });
 
 app.get('/api/admins-page-session', (req, res) => {
-  res.json({ loggedIn: !!(req.session && req.session.adminsPageLoggedIn) });
+  res.json({ loggedIn: !!(req.session && req.session.adminsPageLoggedIn), test: 'نسخة جديدة شغالة' });
 });
 
 // ==================== تغيير/ضبط باسورد صفحة المشرفين ====================
