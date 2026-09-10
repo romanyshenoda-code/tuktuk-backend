@@ -32,6 +32,12 @@
     tbody tr:hover { background: #F3E9DA; }
     td { border-bottom: 1px solid var(--line); }
     .table-scroll { overflow-x: auto; }
+    .table-box { max-height: 480px; overflow-y: auto; }
+    .table-box::-webkit-scrollbar { width: 7px; }
+    .table-box::-webkit-scrollbar-track { background: #FAF7F0; }
+    .table-box::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+    .table-box::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    .table-box thead th { position: sticky; top: 0; z-index: 5; }
     .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; color: white; }
     .badge-open { background: var(--nile); }
     .badge-closed { background: var(--muted); }
@@ -241,7 +247,7 @@
       <h2>سجل كل الأوردرات</h2>
       <input type="text" id="orderSearch" class="search-input" placeholder="بحث باسم السائق..." oninput="filterOrders()">
     </div>
-    <div class="panel table-scroll">
+    <div class="panel table-scroll table-box">
       <table id="ordersTable">
         <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>وقت الفتح</th><th>وقت الغلق</th><th>مدة الرحلة</th><th>المسافة (كم)</th><th>السعر</th><th>مستحقات السائق</th><th>صورة التسليم</th><th>الحالة</th><th>طباعة</th><th>إجراء</th></tr></thead>
         <tbody></tbody>
