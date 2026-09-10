@@ -118,6 +118,39 @@
       font-family: inherit; font-weight: 800; font-size: 13.5px; cursor: pointer; height: 39px;
     }
 
+    /* بحث السائق (بديل القائمة المنسدلة) */
+    .driver-picker { position: relative; min-width: 220px; }
+    .driver-picker input { width: 100%; }
+    .driver-picker-results {
+      position: absolute; top: 100%; inset-inline-start: 0; inset-inline-end: 0; z-index: 60;
+      background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+      max-height: 220px; overflow-y: auto; display: none; margin-top: 4px;
+      box-shadow: 0 8px 22px rgba(30,27,22,0.16);
+    }
+    .driver-picker-results.open { display: block; }
+    .driver-picker-item { padding: 10px 13px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #F5F0E6; display: flex; justify-content: space-between; }
+    .driver-picker-item:last-child { border-bottom: none; }
+    .driver-picker-item:hover, .driver-picker-item.highlight { background: #F3E9DA; }
+    .driver-picker-item.all-option { font-weight: 800; color: var(--nile); }
+    .driver-picker-item .d-id { font-size: 11px; color: var(--muted); font-weight: 700; }
+
+    /* زرار الطباعة الذكية */
+    .smart-print-btn {
+      padding: 10px 18px; background: var(--purple, #5B4B8A); color: white; border: none; border-radius: 8px;
+      font-family: inherit; font-weight: 800; font-size: 13.5px; cursor: pointer; height: 39px;
+    }
+
+    /* مودال الطباعة الذكية */
+    .smart-modal-box { max-width: 420px; }
+    .smart-modal-box .sm-section { margin-bottom: 16px; }
+    .smart-modal-box .sm-label { font-size: 12.5px; font-weight: 800; color: var(--asphalt); margin-bottom: 8px; display: block; }
+    .sm-radio-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .sm-radio-item { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+    .sm-radio-item input { width: auto; }
+    .sm-drivers-list { max-height: 160px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+    .sm-driver-checkbox { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-size: 13px; cursor: pointer; }
+    .sm-driver-checkbox input { width: auto; }
+
     /* قالب الفاتورة (مخفي، يُستخدم وقت الطباعة بس) */
     .invoice-print-area { display: none; }
     @media print {
@@ -166,9 +199,14 @@
       </div>
       <div class="field-group">
         <label>السائق</label>
-        <select id="bulkPrintDriver"><option value="">اختار سائق...</option></select>
+        <div class="driver-picker">
+          <input type="text" id="bulkPrintDriverSearch" placeholder="ابحث بالاسم أو الرقم، أو اختار الكل..." autocomplete="off">
+          <input type="hidden" id="bulkPrintDriver">
+          <div class="driver-picker-results" id="bulkPrintDriverResults"></div>
+        </div>
       </div>
       <button class="bulk-print-btn" onclick="bulkPrintInvoices()">🖨️ طباعة فواتير اليوم</button>
+      <button class="smart-print-btn" onclick="openSmartPrintModal()">⚡ طباعة ذكية</button>
     </div>
 
     <div class="section-head">
@@ -372,16 +410,135 @@
       });
     }
 
+
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    // ==================== بحث السائق (بديل القائمة المنسدلة) ====================
+    let allDriversForOrders = [];
+
+    function loadDriversForBulkPrint() {
+      fetch('/drivers').then(res => res.json()).then(data => {
+        allDriversForOrders = data;
+        setupDriverSearchPicker('bulkPrintDriverSearch', 'bulkPrintDriver', 'bulkPrintDriverResults');
+      });
+    }
+
+    function setupDriverSearchPicker(searchId, hiddenId, resultsId) {
+      const searchInput = document.getElementById(searchId);
+      const hiddenInput = document.getElementById(hiddenId);
+      const resultsBox = document.getElementById(resultsId);
+
+      function renderResults(query) {
+        const q = query.trim().toLowerCase();
+        const filtered = q
+          ? allDriversForOrders.filter(d => d.name.toLowerCase().includes(q) || String(d.id).includes(q))
+          : allDriversForOrders;
+
+        let html = `<div class="driver-picker-item all-option" data-id="all" data-name="كل السواقين">✓ كل السواقين</div>`;
+        html += filtered.slice(0, 50).map(d => `
+          <div class="driver-picker-item" data-id="${d.id}" data-name="${d.name}">
+            <span>${d.name}</span><span class="d-id">#${d.id}</span>
+          </div>
+        `).join('');
+        resultsBox.innerHTML = html;
+
+        resultsBox.querySelectorAll('.driver-picker-item').forEach(item => {
+          item.addEventListener('click', () => {
+            hiddenInput.value = item.dataset.id;
+            searchInput.value = item.dataset.name;
+            resultsBox.classList.remove('open');
+          });
+        });
+        resultsBox.classList.add('open');
+      }
+
+      searchInput.addEventListener('focus', () => renderResults(searchInput.value));
+      searchInput.addEventListener('input', () => { hiddenInput.value = ''; renderResults(searchInput.value); });
+      document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !resultsBox.contains(e.target)) resultsBox.classList.remove('open');
+      });
+    }
+
+    // ==================== الطباعة الذكية ====================
+    function toggleSmDriversList() {
+      const mode = document.querySelector('input[name="smMode"]:checked').value;
+      document.getElementById('smRandomCountBox').classList.toggle('hidden', mode !== 'random');
+      document.getElementById('smDriversListBox').classList.toggle('hidden', mode !== 'specific');
+
+      if (mode === 'specific') {
+        const box = document.getElementById('smDriversList');
+        box.innerHTML = allDriversForOrders.map(d => `
+          <label class="sm-driver-checkbox">
+            <input type="checkbox" value="${d.id}" class="sm-driver-check">
+            ${d.name}
+          </label>
+        `).join('');
+      }
+    }
+
+    function openSmartPrintModal() {
+      document.getElementById('smartPrintMsg').textContent = '';
+      openModal('smartPrintModal');
+    }
+
+    function executeSmartPrint() {
+      const hours = parseInt(document.getElementById('smHours').value);
+      const mode = document.querySelector('input[name="smMode"]:checked').value;
+      const msg = document.getElementById('smartPrintMsg');
+
+      const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+      let eligibleOrders = allOrders.filter(o => {
+        if (o.status !== 'closed' || !o.end_time) return false;
+        return new Date(o.end_time) >= cutoff;
+      });
+
+      if (eligibleOrders.length === 0) {
+        msg.textContent = 'مفيش أوردرات مقفولة في الفترة دي';
+        return;
+      }
+
+      let selectedDriverIds = null;
+
+      if (mode === 'random') {
+        const count = parseInt(document.getElementById('smRandomCount').value) || 5;
+        const uniqueDriverIds = [...new Set(eligibleOrders.map(o => o.driver_id))];
+        const shuffled = uniqueDriverIds.sort(() => 0.5 - Math.random());
+        selectedDriverIds = shuffled.slice(0, count);
+      } else if (mode === 'specific') {
+        selectedDriverIds = Array.from(document.querySelectorAll('.sm-driver-check:checked')).map(cb => cb.value);
+        if (selectedDriverIds.length === 0) {
+          msg.textContent = 'اختار سائق واحد على الأقل';
+          return;
+        }
+      }
+
+      if (selectedDriverIds) {
+        eligibleOrders = eligibleOrders.filter(o => selectedDriverIds.map(String).includes(String(o.driver_id)));
+      }
+
+      if (eligibleOrders.length === 0) {
+        msg.textContent = 'مفيش أوردرات تطابق الاختيار ده';
+        return;
+      }
+
+      document.getElementById('invoicePrintArea').innerHTML = eligibleOrders.map(buildInvoiceHtml).join('');
+      closeModal('smartPrintModal');
+      window.print();
+    }
+
     function bulkPrintInvoices() {
       const dateVal = document.getElementById('bulkPrintDate').value;
       const driverId = document.getElementById('bulkPrintDriver').value;
+      const driverSearchVal = document.getElementById('bulkPrintDriverSearch').value.trim();
 
       if (!dateVal) { showToast('اختار التاريخ الأول', true); return; }
-      if (!driverId) { showToast('اختار السائق الأول', true); return; }
+      if (!driverId && !driverSearchVal) { showToast('اختار السائق الأول (أو اختار كل السواقين)', true); return; }
 
       const dayOrders = allOrders.filter(o => {
         if (o.status !== 'closed' || !o.end_time) return false;
-        if (String(o.driver_id) !== String(driverId)) return false;
+        if (driverId !== 'all' && String(o.driver_id) !== String(driverId)) return false;
         const orderDate = new Date(o.end_time).toISOString().split('T')[0];
         return orderDate === dateVal;
       });
@@ -429,6 +586,49 @@
   </footer>
 
   <div class="invoice-print-area" id="invoicePrintArea"></div>
+
+  <div class="modal-backdrop" id="smartPrintModal">
+    <div class="modal-box smart-modal-box">
+      <h3>⚡ طباعة ذكية للفواتير</h3>
+      <div class="modal-sub">حدد الفترة والسواقين، وهيتم تجهيز الفواتير للطباعة فوراً</div>
+
+      <div class="sm-section">
+        <label class="sm-label">الفترة الزمنية</label>
+        <select id="smHours">
+          <option value="1">آخر ساعة</option>
+          <option value="3" selected>آخر 3 ساعات</option>
+          <option value="6">آخر 6 ساعات</option>
+          <option value="12">آخر 12 ساعة</option>
+          <option value="24">آخر 24 ساعة</option>
+        </select>
+      </div>
+
+      <div class="sm-section">
+        <label class="sm-label">اختيار السواقين</label>
+        <div class="sm-radio-row">
+          <label class="sm-radio-item"><input type="radio" name="smMode" value="all" checked onchange="toggleSmDriversList()"> كل السواقين</label>
+          <label class="sm-radio-item"><input type="radio" name="smMode" value="random" onchange="toggleSmDriversList()"> عشوائي</label>
+          <label class="sm-radio-item"><input type="radio" name="smMode" value="specific" onchange="toggleSmDriversList()"> سواقين معينين</label>
+        </div>
+      </div>
+
+      <div class="sm-section hidden" id="smRandomCountBox">
+        <label class="sm-label">عدد السواقين العشوائي</label>
+        <input type="number" id="smRandomCount" value="5" min="1">
+      </div>
+
+      <div class="sm-section hidden" id="smDriversListBox">
+        <label class="sm-label">اختار السواقين</label>
+        <div class="sm-drivers-list" id="smDriversList"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancel" onclick="closeModal('smartPrintModal')">إلغاء</button>
+        <button type="button" class="btn-modal-save" onclick="executeSmartPrint()">🖨️ طباعة الآن</button>
+      </div>
+      <div id="smartPrintMsg" class="form-msg"></div>
+    </div>
+  </div>
 
 </body>
 </html>
