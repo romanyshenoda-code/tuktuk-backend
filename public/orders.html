@@ -177,7 +177,7 @@
     </div>
     <div class="panel table-scroll">
       <table id="ordersTable">
-        <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>وقت الفتح</th><th>وقت الغلق</th><th>مدة الرحلة</th><th>المسافة (كم)</th><th>السعر</th><th>مستحقات السائق</th><th>صورة التسليم</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <thead><tr><th>الرقم</th><th>السائق</th><th>النوع</th><th>وقت الفتح</th><th>وقت الغلق</th><th>مدة الرحلة</th><th>المسافة (كم)</th><th>السعر</th><th>مستحقات السائق</th><th>صورة التسليم</th><th>الحالة</th><th>طباعة</th><th>إجراء</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -278,7 +278,7 @@
     function renderOrders(data) {
       const tbody = document.querySelector('#ordersTable tbody');
       if (data.length === 0) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="12">مفيش أوردرات مسجلة</td></tr>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="13">مفيش أوردرات مسجلة</td></tr>`;
         return;
       }
       const statusLabel = { open: 'مفتوح', closed: 'مقفول', cancelled: 'ملغي' };
@@ -299,10 +299,8 @@
               : `<span class="no-thumb">مفيش صورة</span>`}
           </td>
           <td><span class="badge badge-${o.status}">${statusLabel[o.status]}</span></td>
-          <td>
-            ${o.status === 'closed' ? `<button class="row-btn btn-print" onclick='printSingleInvoice(${JSON.stringify(o)})'>🖨️ طباعة</button>` : ''}
-            <button class="row-btn btn-delete" onclick="deleteOrder(${o.id})">حذف نهائي</button>
-          </td>
+          <td>${o.status === 'closed' ? `<button class="row-btn btn-print" onclick='printSingleInvoice(${JSON.stringify(o)})'>🖨️ طباعة</button>` : '-'}</td>
+          <td><button class="row-btn btn-delete" onclick="deleteOrder(${o.id})">حذف نهائي</button></td>
         </tr>
       `).join('');
     }
