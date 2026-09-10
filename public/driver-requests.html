@@ -142,29 +142,44 @@
     }
 
     function requestLeave() {
-      const start_date = document.getElementById('leaveStart').value;
-      const end_date = document.getElementById('leaveEnd').value;
-      const reason = document.getElementById('leaveReason').value;
-      const resultDiv = document.getElementById('resultLeave');
+  const start_date = document.getElementById('leaveStart').value;
+  const end_date = document.getElementById('leaveEnd').value;
+  const reason = document.getElementById('leaveReason').value;
+  const resultDiv = document.getElementById('resultLeave');
 
-      if (!start_date || !end_date) { resultDiv.textContent = 'من فضلك اختر تاريخ البداية والنهاية'; return; }
+  if (!start_date || !end_date) {
+    resultDiv.textContent = 'من فضلك اختر تاريخ البداية والنهاية';
+    return;
+  }
 
-      fetch('/leave-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ driver_id: currentDriverId, start_date, end_date, reason })
-      })
-      .then(res => res.json())
-      .then(data => {
-        resultDiv.textContent = data.message || data.error;
-        if (data.message) {
-          document.getElementById('leaveStart').value = '';
-          document.getElementById('leaveEnd').value = '';
-          document.getElementById('leaveReason').value = '';
-          loadLeaveHistory();
-        }
-      });
+  // منع تاريخ نهاية أقدم من تاريخ البداية
+  if (new Date(end_date) < new Date(start_date)) {
+    resultDiv.textContent = '❌ تاريخ نهاية الإجازة لازم يكون بعد تاريخ البداية';
+    return;
+  }
+
+  fetch('/leave-requests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      driver_id: currentDriverId,
+      start_date,
+      end_date,
+      reason
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    resultDiv.textContent = data.message || data.error;
+
+    if (data.message) {
+      document.getElementById('leaveStart').value = '';
+      document.getElementById('leaveEnd').value = '';
+      document.getElementById('leaveReason').value = '';
+      loadLeaveHistory();
     }
+  });
+}
 
     function requestAdvance() {
       const amount = document.getElementById('advanceAmount').value;
