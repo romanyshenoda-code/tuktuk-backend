@@ -485,6 +485,30 @@
 
     <!-- تبويب الإعدادات -->
     <div class="tab-panel" id="tab-settings" style="--tab-color: var(--asphalt);">
+
+      <div class="section-head"><h2><span class="dot"></span>الباسوردات المحمية</h2></div>
+      <div class="admin-req-forms">
+        <form id="financePasswordForm" class="admin-req-form" style="--arf-color: var(--nile);">
+          <h4>🔐 باسورد قسم المالية</h4>
+          <div id="financePassOldWrap">
+            <input type="password" id="financePassOld" placeholder="الباسورد القديم" style="margin-bottom:8px;">
+          </div>
+          <input type="password" id="financePassNew" placeholder="الباسورد الجديد" style="margin-bottom:10px;">
+          <button type="submit" class="admin-req-btn" style="background: var(--nile);">حفظ</button>
+          <div id="financePassMsg" class="form-msg"></div>
+        </form>
+
+        <form id="adminsPasswordForm" class="admin-req-form" style="--arf-color: var(--asphalt);">
+          <h4>🔐 باسورد صفحة المشرفين</h4>
+          <div id="adminsPassOldWrap">
+            <input type="password" id="adminsPassOld" placeholder="الباسورد القديم" style="margin-bottom:8px;">
+          </div>
+          <input type="password" id="adminsPassNew" placeholder="الباسورد الجديد" style="margin-bottom:10px;">
+          <button type="submit" class="admin-req-btn" style="background: var(--asphalt);">حفظ</button>
+          <div id="adminsPassMsg" class="form-msg"></div>
+        </form>
+      </div>
+
       <div class="section-head"><h2><span class="dot"></span>إعدادات الدخل العامة</h2></div>
       <form id="settingsForm" class="panel">
         <div class="fields-row">
@@ -1737,6 +1761,53 @@
       fetch(`/admin-advances/${id}`, { method: 'DELETE' })
         .then(res => res.json()).then(data => { showToast(data.message || data.error, !data.message); loadAdminAdvanceRequests(); });
     }
+
+    // ==================== تغيير باسوردات المالية وصفحة المشرفين ====================
+    document.getElementById('financePasswordForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const msg = document.getElementById('financePassMsg');
+      fetch('/api/finance-password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          old_password: document.getElementById('financePassOld').value,
+          new_password: document.getElementById('financePassNew').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        msg.textContent = data.message || data.error;
+        if (data.message) {
+          showToast(data.message);
+          document.getElementById('financePasswordForm').reset();
+        } else {
+          showToast(data.error, true);
+        }
+      });
+    });
+
+    document.getElementById('adminsPasswordForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const msg = document.getElementById('adminsPassMsg');
+      fetch('/api/admins-page-password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          old_password: document.getElementById('adminsPassOld').value,
+          new_password: document.getElementById('adminsPassNew').value
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        msg.textContent = data.message || data.error;
+        if (data.message) {
+          showToast(data.message);
+          document.getElementById('adminsPasswordForm').reset();
+        } else {
+          showToast(data.error, true);
+        }
+      });
+    });
 
     function toggleAdminSalaryField() {
       const checked = document.getElementById('editAdminCustomized').checked;
