@@ -2886,6 +2886,97 @@ app.put('/admin-notifications/:id/read', (req, res) => {
   });
 });
 
+// ==================== نظام حماية صفحة المشرفين بباسورد منفصل ====================
+function requireAdminsPageLogin(req, res, next) {
+  if (req.session && req.session.adminsPageLoggedIn) return next();
+  return res.redirect('/admins-login.html');
+}
+
+app.post('/api/admins-page-login', (req, res) => {
+  const { password } = req.body;
+  db.query('SELECT * FROM admins_page_password', (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الدخول' }); }
+    if (results.length === 0) return res.status(401).json({ error: 'مفيش باسورد مسجّل لصفحة المشرفين لسه' });
+
+    const isMatch = results.some(r => bcrypt.compareSync(password, r.password || ''));
+    if (!isMatch) return res.status(401).json({ error: 'الباسورد غلط' });
+
+    req.session.adminsPageLoggedIn = true;
+    res.json({ message: 'تم تسجيل الدخول بنجاح' });
+  });
+});
+
+app.get('/api/admins-page-logout', (req, res) => {
+  req.session.adminsPageLoggedIn = false;
+  res.redirect('/admins-login.html');
+});
+
+app.get('/api/admins-page-session', (req, res) => {
+  res.json({ loggedIn: !!(req.session && req.session.adminsPageLoggedIn) });
+});
+
+// ==================== تغيير/ضبط باسورد صفحة المشرفين ====================
+app.put('/api/admins-page-password', (req, res) => {
+  const { old_password, new_password } = req.body;
+
+  if (!new_password || new_password.length < 4) {
+    return res.status(400).json({ error: 'الباسورد الجديد لازم يكون 4 حروف/أرقام على الأقل' });
+  }
+
+  db.query('SELECT * FROM admins_page_password', (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحقق' }); }
+
+    const hashed = bcrypt.hashSync(new_password, 10);
+
+    if (results.length === 0) {
+      // أول مرة - مفيش باسورد قديم يتأكد منه
+      db.query('INSERT INTO admins_page_password (password) VALUES (?)', [hashed], (err) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الباسورد' }); }
+        res.json({ message: 'تم ضبط باسورد صفحة المشرفين لأول مرة بنجاح' });
+      });
+    } else {
+      // موجود بالفعل - لازم تأكيد بالباسورد القديم
+      const isMatch = results.some(r => bcrypt.compareSync(old_password || '', r.password || ''));
+      if (!isMatch) return res.status(401).json({ error: 'الباسورد القديم غلط' });
+
+      db.query('UPDATE admins_page_password SET password = ? WHERE id = ?', [hashed, results[0].id], (err) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' }); }
+        res.json({ message: 'تم تغيير باسورد صفحة المشرفين بنجاح' });
+      });
+    }
+  });
+});
+
+// ==================== تغيير/ضبط باسورد المالية (نفس المنطق) ====================
+app.put('/api/finance-password', (req, res) => {
+  const { old_password, new_password } = req.body;
+
+  if (!new_password || new_password.length < 4) {
+    return res.status(400).json({ error: 'الباسورد الجديد لازم يكون 4 حروف/أرقام على الأقل' });
+  }
+
+  db.query('SELECT * FROM finance_admin', (err, results) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في التحقق' }); }
+
+    const hashed = bcrypt.hashSync(new_password, 10);
+
+    if (results.length === 0) {
+      db.query('INSERT INTO finance_admin (password) VALUES (?)', [hashed], (err) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تسجيل الباسورد' }); }
+        res.json({ message: 'تم ضبط باسورد المالية لأول مرة بنجاح' });
+      });
+    } else {
+      const isMatch = results.some(r => bcrypt.compareSync(old_password || '', r.password || ''));
+      if (!isMatch) return res.status(401).json({ error: 'الباسورد القديم غلط' });
+
+      db.query('UPDATE finance_admin SET password = ? WHERE id = ?', [hashed, results[0].id], (err) => {
+        if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث الباسورد' }); }
+        res.json({ message: 'تم تغيير باسورد المالية بنجاح' });
+      });
+    }
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`السيرفر شغال على http://localhost:${PORT}`);
 });
