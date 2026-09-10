@@ -230,7 +230,7 @@
 
         fetch('/tuktuks').then(res => res.json()).then(data => {
           allTuktuks = data;
-          renderTuktuks(data);
+          filterTuktuks();
         });
       });
     }
@@ -403,6 +403,9 @@
     });
 
     loadTuktuks();
+
+    // تحديث تلقائي دوري للجدول (حالة التوكتوك وآخر سائق)، من غير حاجة لـ Refresh يدوي
+    setInterval(loadTuktuks, 10000);
   </script>
   <footer class="dev-footer">
     <div class="dev-brand">

@@ -215,7 +215,7 @@
     function loadAllShifts() {
       fetch('/shifts').then(res => res.json()).then(data => {
         allShifts = data;
-        renderShifts(data);
+        filterShifts();
       });
     }
 
@@ -263,6 +263,12 @@
 
     loadOpenShifts();
     loadAllShifts();
+
+    // تحديث تلقائي دوري للورديات المفتوحة والسجل الكامل، من غير حاجة لـ Refresh يدوي
+    setInterval(() => {
+      loadOpenShifts();
+      loadAllShifts();
+    }, 10000);
   </script>
   <footer class="dev-footer">
     <div class="dev-brand">

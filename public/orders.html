@@ -220,7 +220,7 @@
     function loadOrders() {
       fetch('/orders').then(res => res.json()).then(data => {
         allOrders = data;
-        renderOrders(data);
+        filterOrders();
       });
     }
 
@@ -286,6 +286,12 @@
 
     loadActiveOrders();
     loadOrders();
+
+    // تحديث تلقائي دوري للأوردرات الشغالة والسجل الكامل، من غير حاجة لـ Refresh يدوي
+    setInterval(() => {
+      loadActiveOrders();
+      loadOrders();
+    }, 10000);
   </script>
   <footer class="dev-footer">
     <div class="dev-brand">
