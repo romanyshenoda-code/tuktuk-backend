@@ -1040,6 +1040,15 @@
       });
     });
 
+    // تحديث تلقائي دوري لطلبات المشرفين (إجازات وسلف) لو التبويب مفتوح، من غير حاجة لـ Refresh يدوي
+    setInterval(() => {
+      const tabOpen = document.getElementById('tab-admin-performance').classList.contains('active');
+      if (tabOpen) {
+        loadAdminLeaveRequests();
+        loadAdminAdvanceRequests();
+      }
+    }, 10000);
+
     function showToast(msg, isError) {
       const t = document.getElementById('toast');
       t.textContent = msg;
