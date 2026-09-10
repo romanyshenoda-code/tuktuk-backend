@@ -1296,13 +1296,17 @@
         document.getElementById('expCommission').textContent = totalCommission.toFixed(0) + ' ج';
         document.getElementById('expIncentives').textContent = totalIncentives.toFixed(0) + ' ج';
 
-        // نضيف إجمالي مرتبات المشرفين لحساب المصروفات
+        // نضيف إجمالي مرتبات وحوافز المشرفين لحساب المصروفات
         fetch(`/admin-payroll/calculate-all/${selectedYear}/${selectedMonth}?t=${Date.now()}`)
           .then(res => res.json())
           .then(adminResults => {
             let totalAdminPay = 0;
-            adminResults.forEach(a => { totalAdminPay += parseFloat(a.earned_salary || 0); });
-            loadFinancialSummary(totalRevenue, totalGross, totalIncentives, totalAdminPay);
+            let totalAdminIncentives = 0;
+            adminResults.forEach(a => {
+              totalAdminPay += parseFloat(a.earned_salary || 0);
+              totalAdminIncentives += parseFloat(a.total_incentives || 0);
+            });
+            loadFinancialSummary(totalRevenue, totalGross, totalIncentives + totalAdminIncentives, totalAdminPay);
           })
           .catch(() => {
             loadFinancialSummary(totalRevenue, totalGross, totalIncentives, 0);
