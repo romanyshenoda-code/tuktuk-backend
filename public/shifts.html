@@ -32,6 +32,24 @@
     tbody tr:hover { background: #F3E9DA; }
     td { border-bottom: 1px solid var(--line); }
     .table-scroll { overflow-x: auto; }
+    .table-box { max-height: 480px; overflow-y: auto; }
+    .table-box::-webkit-scrollbar { width: 7px; }
+    .table-box::-webkit-scrollbar-track { background: #FAF7F0; }
+    .table-box::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+    .table-box::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    .table-box thead th { position: sticky; top: 0; z-index: 5; }
+
+    .date-filter-bar {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px 16px; margin-bottom: 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+    }
+    .date-filter-bar .field-group { display: flex; flex-direction: column; min-width: 100px; }
+    .date-filter-bar .field-group label { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .date-filter-bar select { padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-family: inherit; font-size: 13.5px; }
+    .date-filter-reset {
+      padding: 9px 16px; background: var(--line); color: var(--ink); border: none; border-radius: 8px;
+      font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer; height: 39px;
+    }
     .badge { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 700; color: white; }
     .badge-open { background: var(--nile); }
     .badge-closed { background: var(--muted); }
@@ -109,11 +127,27 @@
       </table>
     </div>
 
+    <div class="date-filter-bar">
+      <div class="field-group">
+        <label>السنة</label>
+        <select id="shiftsFilterYear"><option value="">كل السنين</option></select>
+      </div>
+      <div class="field-group">
+        <label>الشهر</label>
+        <select id="shiftsFilterMonth"><option value="">كل الشهور</option></select>
+      </div>
+      <div class="field-group">
+        <label>اليوم</label>
+        <select id="shiftsFilterDay"><option value="">كل الأيام</option></select>
+      </div>
+      <button class="date-filter-reset" onclick="resetShiftsDateFilter()">مسح الفلتر</button>
+    </div>
+
     <div class="section-head">
       <h2>سجل كل الورديات</h2>
       <input type="text" id="shiftSearch" class="search-input" placeholder="بحث باسم السائق أو التوكتوك..." oninput="filterShifts()">
     </div>
-    <div class="panel table-scroll">
+    <div class="panel table-scroll table-box">
       <table id="shiftsTable">
         <thead><tr><th>الرقم</th><th>السائق</th><th>التوكتوك</th><th>الحضور</th><th>الانصراف</th><th>الصور</th><th>الحالة</th><th>إجراء</th></tr></thead>
         <tbody></tbody>
@@ -240,12 +274,52 @@
       `).join('');
     }
 
+    function initShiftsDateFilter() {
+      const now = new Date();
+      const yearSelect = document.getElementById('shiftsFilterYear');
+      const years = [];
+      for (let y = now.getFullYear() - 2; y <= now.getFullYear() + 1; y++) years.push(y);
+      yearSelect.innerHTML = '<option value="">كل السنين</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+      const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+      document.getElementById('shiftsFilterMonth').innerHTML = '<option value="">كل الشهور</option>' +
+        monthNames.map((n, i) => `<option value="${i + 1}">${n}</option>`).join('');
+
+      document.getElementById('shiftsFilterDay').innerHTML = '<option value="">كل الأيام</option>' +
+        Array.from({ length: 31 }, (_, i) => i + 1).map(d => `<option value="${d}">${d}</option>`).join('');
+
+      [yearSelect, document.getElementById('shiftsFilterMonth'), document.getElementById('shiftsFilterDay')]
+        .forEach(el => el.addEventListener('change', filterShifts));
+    }
+
+    function resetShiftsDateFilter() {
+      document.getElementById('shiftsFilterYear').value = '';
+      document.getElementById('shiftsFilterMonth').value = '';
+      document.getElementById('shiftsFilterDay').value = '';
+      filterShifts();
+    }
+
     function filterShifts() {
       const q = document.getElementById('shiftSearch').value.trim();
-      if (!q) { renderShifts(allShifts); return; }
-      renderShifts(allShifts.filter(s =>
-        s.driver_name.includes(q) || String(s.tuktuk_number).includes(q)
-      ));
+      const year = document.getElementById('shiftsFilterYear').value;
+      const month = document.getElementById('shiftsFilterMonth').value;
+      const day = document.getElementById('shiftsFilterDay').value;
+
+      const filtered = allShifts.filter(s => {
+        if (q && !(s.driver_name.includes(q) || String(s.tuktuk_number).includes(q))) return false;
+
+        if (year || month || day) {
+          if (!s.check_in_time) return false;
+          const d = new Date(s.check_in_time);
+          if (year && d.getFullYear() != year) return false;
+          if (month && (d.getMonth() + 1) != month) return false;
+          if (day && d.getDate() != day) return false;
+        }
+
+        return true;
+      });
+
+      renderShifts(filtered);
     }
 
     async function deleteShift(id) {
@@ -263,6 +337,7 @@
 
     loadOpenShifts();
     loadAllShifts();
+    initShiftsDateFilter();
 
     // تحديث تلقائي دوري للورديات المفتوحة والسجل الكامل، من غير حاجة لـ Refresh يدوي
     setInterval(() => {
