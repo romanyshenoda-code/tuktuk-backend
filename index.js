@@ -484,6 +484,15 @@ app.get('/tuktuks', (req, res) => {
 });
 
 // تعديل كامل لبيانات التوكتوك (رقم، حالة، QR)
+app.put('/tuktuks/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (!['active', 'maintenance'].includes(status)) return res.status(400).json({ error: 'حالة غير صحيحة' });
+  db.query('UPDATE tuktuks SET status = ? WHERE id = ?', [status, id], (err) => {
+    if (err) { console.error(err); return res.status(500).json({ error: 'حصل خطأ في تحديث حالة التوكتوك' }); }
+    res.json({ message: 'تم تحديث حالة التوكتوك بنجاح' });
+  });
+});
 app.put('/tuktuks/:id', (req, res) => {
   const { id } = req.params;
   const { tuktuk_number, qr_code, status } = req.body;
