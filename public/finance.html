@@ -292,7 +292,8 @@
         <div class="num" id="statExpenses">-</div>
         <div class="lbl">إجمالي المصروفات</div>
         <div class="exp-breakdown">
-          <div class="exp-row"><span>مرتبات</span><span class="exp-val" id="expSalary">-</span></div>
+          <div class="exp-row"><span>مرتبات السواقين</span><span class="exp-val" id="expSalary">-</span></div>
+          <div class="exp-row"><span>مرتبات المشرفين</span><span class="exp-val" id="expAdminPay">-</span></div>
           <div class="exp-row"><span>عمولات</span><span class="exp-val" id="expCommission">-</span></div>
           <div class="exp-row"><span>حوافز</span><span class="exp-val" id="expIncentives">-</span></div>
           <div class="exp-row"><span>صيانة</span><span class="exp-val" id="expMaintenance">-</span></div>
@@ -1142,7 +1143,19 @@
         document.getElementById('expSalary').textContent = totalSalary.toFixed(0) + ' ج';
         document.getElementById('expCommission').textContent = totalCommission.toFixed(0) + ' ج';
         document.getElementById('expIncentives').textContent = totalIncentives.toFixed(0) + ' ج';
-        loadFinancialSummary(totalRevenue, totalGross, totalIncentives);
+
+        // نضيف إجمالي مرتبات المشرفين لحساب المصروفات
+        fetch(`/admin-payroll/calculate-all/${selectedYear}/${selectedMonth}?t=${Date.now()}`)
+          .then(res => res.json())
+          .then(adminResults => {
+            let totalAdminPay = 0;
+            adminResults.forEach(a => { totalAdminPay += parseFloat(a.earned_salary || 0); });
+            loadFinancialSummary(totalRevenue, totalGross, totalIncentives, totalAdminPay);
+          })
+          .catch(() => {
+            loadFinancialSummary(totalRevenue, totalGross, totalIncentives, 0);
+          });
+
         renderPayrollTable(allPayrollRows);
       })
       .catch(err => {
@@ -1416,15 +1429,18 @@
       }).join('');
     }
 
-    function loadFinancialSummary(totalRevenue, totalPayroll, totalIncentives) {
+    function loadFinancialSummary(totalRevenue, totalPayroll, totalIncentives, totalAdminPay) {
       totalIncentives = totalIncentives || 0;
+      totalAdminPay = totalAdminPay || 0;
+      document.getElementById('expAdminPay').textContent = totalAdminPay.toFixed(0) + ' ج';
+
       fetch(`/tuktuk-maintenance?year=${selectedYear}&month=${selectedMonth}`).then(res => res.json()).then(maintData => {
         const totalMaintenance = maintData.reduce((sum, m) => sum + parseFloat(m.cost), 0);
 
         fetch(`/general-expenses?year=${selectedYear}&month=${selectedMonth}`).then(res => res.json()).then(genData => {
           const totalGeneral = genData.reduce((sum, g) => sum + parseFloat(g.amount), 0);
 
-          const totalExpenses = totalPayroll + totalIncentives + totalMaintenance + totalGeneral;
+          const totalExpenses = totalPayroll + totalAdminPay + totalIncentives + totalMaintenance + totalGeneral;
           const netProfit = totalRevenue - totalExpenses;
 
           document.getElementById('statExpenses').textContent = totalExpenses.toFixed(2) + ' ج';
@@ -1442,7 +1458,7 @@
           bigNumEl.textContent = netProfit.toFixed(2) + ' جنيه';
           bigNumEl.classList.remove('positive', 'negative');
           bigNumEl.classList.add(netProfit >= 0 ? 'positive' : 'negative');
-          renderDonut(totalPayroll, totalIncentives, totalMaintenance, totalGeneral);
+          renderDonut(totalPayroll + totalAdminPay, totalIncentives, totalMaintenance, totalGeneral);
         });
       });
     }
