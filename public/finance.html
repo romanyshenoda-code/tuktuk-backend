@@ -331,7 +331,8 @@
           <div class="exp-row"><span>مرتبات السواقين</span><span class="exp-val" id="expSalary">-</span></div>
           <div class="exp-row"><span>مرتبات المشرفين</span><span class="exp-val" id="expAdminPay">-</span></div>
           <div class="exp-row"><span>عمولات</span><span class="exp-val" id="expCommission">-</span></div>
-          <div class="exp-row"><span>حوافز</span><span class="exp-val" id="expIncentives">-</span></div>
+          <div class="exp-row"><span>حوافز السواقين</span><span class="exp-val" id="expIncentives">-</span></div>
+          <div class="exp-row"><span>حوافز المشرفين</span><span class="exp-val" id="expAdminIncentives">-</span></div>
           <div class="exp-row"><span>صيانة</span><span class="exp-val" id="expMaintenance">-</span></div>
           <div class="exp-row"><span>مصروفات أخرى</span><span class="exp-val" id="expGeneral">-</span></div>
         </div>
@@ -658,7 +659,9 @@
         <div class="breakdown-card">
           <h4>المصروفات</h4>
           <div class="breakdown-item"><span>مرتبات وعمولات السواقين</span><span id="repPayroll">-</span></div>
+          <div class="breakdown-item"><span>حوافز السواقين</span><span id="repDriverIncentives">-</span></div>
           <div class="breakdown-item"><span>مرتبات المشرفين</span><span id="repAdminPay">-</span></div>
+          <div class="breakdown-item"><span>حوافز المشرفين</span><span id="repAdminIncentives">-</span></div>
           <div class="breakdown-item"><span>صيانة التوكتوكات</span><span id="repMaintenance">-</span></div>
           <div class="breakdown-item"><span>مصروفات أخرى</span><span id="repGeneral">-</span></div>
           <div class="breakdown-item"><span>الإجمالي</span><span id="repTotalExpenses">-</span></div>
@@ -1306,10 +1309,11 @@
               totalAdminPay += parseFloat(a.earned_salary || 0);
               totalAdminIncentives += parseFloat(a.total_incentives || 0);
             });
-            loadFinancialSummary(totalRevenue, totalGross, totalIncentives + totalAdminIncentives, totalAdminPay);
+            document.getElementById('expAdminIncentives').textContent = totalAdminIncentives.toFixed(0) + ' ج';
+            loadFinancialSummary(totalRevenue, totalGross, totalIncentives + totalAdminIncentives, totalAdminPay, totalIncentives, totalAdminIncentives);
           })
           .catch(() => {
-            loadFinancialSummary(totalRevenue, totalGross, totalIncentives, 0);
+            loadFinancialSummary(totalRevenue, totalGross, totalIncentives, 0, totalIncentives, 0);
           });
 
         renderPayrollTable(allPayrollRows);
@@ -1893,11 +1897,15 @@
       }).join('');
     }
 
-    function loadFinancialSummary(totalRevenue, totalPayroll, totalIncentives, totalAdminPay) {
+    function loadFinancialSummary(totalRevenue, totalPayroll, totalIncentives, totalAdminPay, driverIncentivesOnly, adminIncentivesOnly) {
       totalIncentives = totalIncentives || 0;
       totalAdminPay = totalAdminPay || 0;
+      driverIncentivesOnly = driverIncentivesOnly || 0;
+      adminIncentivesOnly = adminIncentivesOnly || 0;
       document.getElementById('expAdminPay').textContent = totalAdminPay.toFixed(0) + ' ج';
       document.getElementById('repAdminPay').textContent = totalAdminPay.toFixed(2) + ' ج';
+      document.getElementById('repDriverIncentives').textContent = driverIncentivesOnly.toFixed(2) + ' ج';
+      document.getElementById('repAdminIncentives').textContent = adminIncentivesOnly.toFixed(2) + ' ج';
 
       fetch(`/tuktuk-maintenance?year=${selectedYear}&month=${selectedMonth}`).then(res => res.json()).then(maintData => {
         const totalMaintenance = maintData.reduce((sum, m) => sum + parseFloat(m.cost), 0);
