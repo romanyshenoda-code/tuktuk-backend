@@ -229,9 +229,6 @@ const driverProtectedPages = [
 
 app.use((req, res, next) => {
   const reqPath = req.path;
-  if (reqPath === '/admins.html' || reqPath === '/admins') {
-    console.log('### MIDDLEWARE HIT FOR ADMINS:', reqPath, '| loggedIn:', !!(req.session && req.session.loggedIn), '| adminsPageLoggedIn:', !!(req.session && req.session.adminsPageLoggedIn));
-  }
   const isAdminPage = adminProtectedPages.includes(reqPath);
   const isDriverPage = driverProtectedPages.includes(reqPath);
   const isFinancePage = (reqPath === '/finance' || reqPath === '/finance.html');
@@ -2922,7 +2919,7 @@ app.get('/api/admins-page-logout', (req, res) => {
 });
 
 app.get('/api/admins-page-session', (req, res) => {
-  res.json({ loggedIn: !!(req.session && req.session.adminsPageLoggedIn), test: 'نسخة جديدة شغالة' });
+  res.json({ loggedIn: !!(req.session && req.session.adminsPageLoggedIn) });
 });
 
 // ==================== تغيير/ضبط باسورد صفحة المشرفين ====================
