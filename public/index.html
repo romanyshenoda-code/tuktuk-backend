@@ -224,6 +224,16 @@
     .donut-closed .mini-donut-fg { stroke: var(--rust); color: var(--rust); }
     .donut-closed .num { color: var(--rust); }
     .sc-footer { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+    .protected-label {
+  margin-top: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #B23A1E;
+  background: #FFF2EC;
+  padding: 4px 9px;
+  border-radius: 20px;
+  display: inline-block;
+}
   </style>
 </head>
 <body>
@@ -288,11 +298,12 @@
           </div>
         </div>
       </a>
-      <a href="/admins.html" class="module-card">
-        <div class="icon">🛡️</div>
-        <div class="count" id="countAdmins">-</div>
-        <div class="label">مشرفين</div>
-      </a>
+      <a href="/api/admins-page-logout" class="module-card">
+  <div class="icon">🛡️</div>
+  <div class="count" id="countAdmins">-</div>
+  <div class="label">مشرفين</div>
+  <div class="protected-label">🔑 محمي بكلمة مرور</div>
+</a>
       <a href="/tuktuks.html" class="module-card tuktuks-pro">
         <div class="icon">🛺</div>
         <div class="count" id="countTuktuks">-</div>

@@ -62,13 +62,48 @@
       .dev-divider { display: none; }
     }
   
-    .password-wrap { position: relative; }
-    .password-wrap input { padding-inline-end: 42px !important; }
-    .toggle-eye {
-      position: absolute; top: 50%; transform: translateY(-50%);
-      inset-inline-end: 12px; cursor: pointer; font-size: 17px;
-      background: none; border: none; padding: 0; line-height: 1;
-    }
+    .password-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.password-wrap input {
+  width: 100%;
+  padding-left: 50px !important;
+  padding-right: 14px !important;
+}
+
+.toggle-eye {
+  position: absolute !important;
+  left: 8px !important;
+  right: auto !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+
+  background: transparent !important;
+  border: none !important;
+  border-radius: 50% !important;
+
+  font-size: 17px !important;
+  line-height: 1 !important;
+  cursor: pointer;
+}
+
+.toggle-eye:hover {
+  background: #E9E4DA !important;
+  filter: none !important;
+}
   </style>
 </head>
 <body>
@@ -78,20 +113,39 @@
     <h2>قسم المالية والرواتب</h2>
     <div class="sub">دخول محمي — للمخوّلين فقط</div>
     <div class="password-wrap">
-      <input type="password" id="password" placeholder="كلمة المرور الخاصة بالمالية">
-      <button type="button" class="toggle-eye" id="eyePassword" onclick="togglePasswordVisibility('password', 'eyePassword')">👁️</button>
-    </div>
+  <input
+    type="password"
+    id="password"
+    placeholder="كلمة المرور الخاصة بالمالية"
+  >
+
+  <button
+    type="button"
+    class="toggle-eye"
+    id="eyePassword"
+    onclick="togglePasswordVisibility()"
+    aria-label="إظهار أو إخفاء كلمة المرور"
+  >
+    👁️
+  </button>
+</div>
     <button onclick="login()">دخول</button>
     <div id="msg"></div>
   </div>
 
   <script>
-    function togglePasswordVisibility(inputId, eyeId) {
-      const input = document.getElementById(inputId);
-      const eye = document.getElementById(eyeId);
-      if (input.type === 'password') { input.type = 'text'; eye.textContent = '🙈'; }
-      else { input.type = 'password'; eye.textContent = '👁️'; }
-    }
+    function togglePasswordVisibility() {
+  const input = document.getElementById('password');
+  const eye = document.getElementById('eyePassword');
+
+  if (input.type === 'password') {
+    input.type = 'text';
+    eye.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    eye.textContent = '👁️';
+  }
+}
 
     function login() {
       const password = document.getElementById('password').value;
